@@ -4210,3 +4210,398 @@ export const contentReport = pgTable(
       .where(sql`${table.reporterId} IS NOT NULL AND ${table.status} IN ('open', 'in_review')`)
   ]
 );
+
+export const ncctInstitutionType = pgEnum('NCCT_INSTITUTION_TYPE', [
+  'VAMNICOM',
+  'RICM',
+  'ICM',
+  'PACS',
+  'SHG',
+  'DAIRY',
+  'OTHER'
+]);
+
+export const ncctNominationStatus = pgEnum('NCCT_NOMINATION_STATUS', [
+  'PENDING',
+  'APPROVED',
+  'REJECTED',
+  'WAITLISTED',
+  'WITHDRAWN'
+]);
+
+export const ncctBatchStatus = pgEnum('NCCT_BATCH_STATUS', ['DRAFT', 'OPEN', 'RUNNING', 'COMPLETED', 'CANCELLED']);
+
+export const ncctAssessmentStatus = pgEnum('NCCT_ASSESSMENT_STATUS', ['SCHEDULED', 'SUBMITTED', 'PASSED', 'FAILED']);
+
+export const ncctJobStatus = pgEnum('NCCT_JOB_STATUS', ['DRAFT', 'OPEN', 'CLOSED']);
+
+export const ncctApplicationStatus = pgEnum('NCCT_APPLICATION_STATUS', [
+  'APPLIED',
+  'SHORTLISTED',
+  'SELECTED',
+  'REJECTED',
+  'WITHDRAWN'
+]);
+
+export const ncctInstitution = pgTable(
+  'ncct_institution',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    code: varchar().notNull(),
+    name: varchar().notNull(),
+    type: ncctInstitutionType().default('OTHER').notNull(),
+    district: varchar().notNull(),
+    state: varchar().notNull(),
+    contactEmail: varchar('contact_email'),
+    active: boolean().default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.organizationId],
+      foreignColumns: [organization.id],
+      name: 'ncct_institution_organization_id_fkey'
+    }).onDelete('cascade'),
+    unique('ncct_institution_org_code_key').on(table.organizationId, table.code),
+    index('idx_ncct_institution_org').on(table.organizationId),
+    index('idx_ncct_institution_region').on(table.state, table.district)
+  ]
+);
+
+export const ncctTrainee = pgTable(
+  'ncct_trainee',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    institutionId: uuid('institution_id').notNull(),
+    profileId: uuid('profile_id'),
+    traineeNumber: varchar('trainee_number').notNull(),
+    cooperativeName: varchar('cooperative_name'),
+    district: varchar().notNull(),
+    state: varchar().notNull(),
+    phone: varchar(),
+    skills: text()
+      .array()
+      .default(sql`ARRAY[]::text[]`)
+      .notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.organizationId],
+      foreignColumns: [organization.id],
+      name: 'ncct_trainee_organization_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.institutionId],
+      foreignColumns: [ncctInstitution.id],
+      name: 'ncct_trainee_institution_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.profileId],
+      foreignColumns: [profile.id],
+      name: 'ncct_trainee_profile_id_fkey'
+    }).onDelete('set null'),
+    unique('ncct_trainee_org_number_key').on(table.organizationId, table.traineeNumber),
+    index('idx_ncct_trainee_institution').on(table.institutionId),
+    index('idx_ncct_trainee_profile').on(table.profileId)
+  ]
+);
+
+export const ncctProgramme = pgTable(
+  'ncct_programme',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    title: varchar().notNull(),
+    description: text().notNull(),
+    status: varchar().default('DRAFT').notNull(),
+    language: varchar().default('en').notNull(),
+    publishedAt: timestamp('published_at', { withTimezone: true, mode: 'string' }),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.organizationId],
+      foreignColumns: [organization.id],
+      name: 'ncct_programme_organization_id_fkey'
+    }).onDelete('cascade'),
+    index('idx_ncct_programme_org').on(table.organizationId),
+    index('idx_ncct_programme_status').on(table.status)
+  ]
+);
+
+export const ncctProgrammeStep = pgTable(
+  'ncct_programme_step',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    programmeId: uuid('programme_id').notNull(),
+    courseId: uuid('course_id').notNull(),
+    position: integer().notNull(),
+    prerequisiteStepId: uuid('prerequisite_step_id'),
+    required: boolean().default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.programmeId],
+      foreignColumns: [ncctProgramme.id],
+      name: 'ncct_programme_step_programme_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.courseId],
+      foreignColumns: [course.id],
+      name: 'ncct_programme_step_course_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.prerequisiteStepId],
+      foreignColumns: [table.id],
+      name: 'ncct_programme_step_prerequisite_id_fkey'
+    }).onDelete('set null'),
+    unique('ncct_programme_step_position_key').on(table.programmeId, table.position),
+    index('idx_ncct_programme_step_programme').on(table.programmeId)
+  ]
+);
+
+export const ncctBatch = pgTable(
+  'ncct_batch',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    programmeId: uuid('programme_id').notNull(),
+    institutionId: uuid('institution_id').notNull(),
+    name: varchar().notNull(),
+    startsOn: date('starts_on', { mode: 'string' }).notNull(),
+    endsOn: date('ends_on', { mode: 'string' }).notNull(),
+    capacity: integer().notNull(),
+    status: ncctBatchStatus().default('DRAFT').notNull(),
+    instructorProfileId: uuid('instructor_profile_id'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.programmeId],
+      foreignColumns: [ncctProgramme.id],
+      name: 'ncct_batch_programme_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.institutionId],
+      foreignColumns: [ncctInstitution.id],
+      name: 'ncct_batch_institution_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.instructorProfileId],
+      foreignColumns: [profile.id],
+      name: 'ncct_batch_instructor_profile_id_fkey'
+    }).onDelete('set null'),
+    index('idx_ncct_batch_programme').on(table.programmeId),
+    index('idx_ncct_batch_institution').on(table.institutionId),
+    index('idx_ncct_batch_dates').on(table.startsOn, table.endsOn)
+  ]
+);
+
+export const ncctNomination = pgTable(
+  'ncct_nomination',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    batchId: uuid('batch_id').notNull(),
+    traineeId: uuid('trainee_id').notNull(),
+    nominatedByProfileId: uuid('nominated_by_profile_id'),
+    status: ncctNominationStatus().default('PENDING').notNull(),
+    decisionByProfileId: uuid('decision_by_profile_id'),
+    decisionAt: timestamp('decision_at', { withTimezone: true, mode: 'string' }),
+    decisionNote: text('decision_note'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.batchId],
+      foreignColumns: [ncctBatch.id],
+      name: 'ncct_nomination_batch_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.traineeId],
+      foreignColumns: [ncctTrainee.id],
+      name: 'ncct_nomination_trainee_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.nominatedByProfileId],
+      foreignColumns: [profile.id],
+      name: 'ncct_nomination_nominated_by_fkey'
+    }).onDelete('set null'),
+    foreignKey({
+      columns: [table.decisionByProfileId],
+      foreignColumns: [profile.id],
+      name: 'ncct_nomination_decision_by_fkey'
+    }).onDelete('set null'),
+    unique('ncct_nomination_batch_trainee_key').on(table.batchId, table.traineeId),
+    index('idx_ncct_nomination_status').on(table.status)
+  ]
+);
+
+export const ncctAssessment = pgTable(
+  'ncct_assessment',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    batchId: uuid('batch_id').notNull(),
+    traineeId: uuid('trainee_id').notNull(),
+    evaluatorProfileId: uuid('evaluator_profile_id'),
+    title: varchar().notNull(),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true, mode: 'string' }).notNull(),
+    score: integer(),
+    status: ncctAssessmentStatus().default('SCHEDULED').notNull(),
+    feedback: text(),
+    decidedAt: timestamp('decided_at', { withTimezone: true, mode: 'string' }),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.batchId],
+      foreignColumns: [ncctBatch.id],
+      name: 'ncct_assessment_batch_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.traineeId],
+      foreignColumns: [ncctTrainee.id],
+      name: 'ncct_assessment_trainee_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.evaluatorProfileId],
+      foreignColumns: [profile.id],
+      name: 'ncct_assessment_evaluator_profile_id_fkey'
+    }).onDelete('set null'),
+    index('idx_ncct_assessment_batch').on(table.batchId),
+    index('idx_ncct_assessment_evaluator').on(table.evaluatorProfileId)
+  ]
+);
+
+export const ncctCredential = pgTable(
+  'ncct_credential',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    traineeId: uuid('trainee_id').notNull(),
+    programmeId: uuid('programme_id').notNull(),
+    batchId: uuid('batch_id').notNull(),
+    certificateNumber: varchar('certificate_number').notNull(),
+    verificationToken: varchar('verification_token').notNull(),
+    issuedAt: timestamp('issued_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true, mode: 'string' }),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.traineeId],
+      foreignColumns: [ncctTrainee.id],
+      name: 'ncct_credential_trainee_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.programmeId],
+      foreignColumns: [ncctProgramme.id],
+      name: 'ncct_credential_programme_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.batchId],
+      foreignColumns: [ncctBatch.id],
+      name: 'ncct_credential_batch_id_fkey'
+    }).onDelete('cascade'),
+    unique('ncct_credential_number_key').on(table.certificateNumber),
+    unique('ncct_credential_token_key').on(table.verificationToken),
+    index('idx_ncct_credential_trainee').on(table.traineeId)
+  ]
+);
+
+export const ncctJob = pgTable(
+  'ncct_job',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    employerName: varchar('employer_name').notNull(),
+    title: varchar().notNull(),
+    description: text().notNull(),
+    location: varchar().notNull(),
+    skills: text()
+      .array()
+      .default(sql`ARRAY[]::text[]`)
+      .notNull(),
+    status: ncctJobStatus().default('DRAFT').notNull(),
+    createdByProfileId: uuid('created_by_profile_id'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.organizationId],
+      foreignColumns: [organization.id],
+      name: 'ncct_job_organization_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.createdByProfileId],
+      foreignColumns: [profile.id],
+      name: 'ncct_job_created_by_profile_id_fkey'
+    }).onDelete('set null'),
+    index('idx_ncct_job_org_status').on(table.organizationId, table.status)
+  ]
+);
+
+export const ncctJobApplication = pgTable(
+  'ncct_job_application',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    jobId: uuid('job_id').notNull(),
+    traineeId: uuid('trainee_id').notNull(),
+    status: ncctApplicationStatus().default('APPLIED').notNull(),
+    coverNote: text('cover_note'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.jobId],
+      foreignColumns: [ncctJob.id],
+      name: 'ncct_job_application_job_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.traineeId],
+      foreignColumns: [ncctTrainee.id],
+      name: 'ncct_job_application_trainee_id_fkey'
+    }).onDelete('cascade'),
+    unique('ncct_job_application_job_trainee_key').on(table.jobId, table.traineeId),
+    index('idx_ncct_job_application_status').on(table.status)
+  ]
+);

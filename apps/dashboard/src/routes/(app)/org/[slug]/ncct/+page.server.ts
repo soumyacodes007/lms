@@ -1,0 +1,38 @@
+import { classroomio, getApiHeaders } from '$lib/utils/services/api';
+import { type ServerApiResult, safeServerApi } from '$lib/utils/services/api/server';
+
+type NcctOverview = {
+  success: true;
+  data: {
+    summary: {
+      institutions: number;
+      trainees: number;
+      programmes: number;
+      batches: number;
+      pendingNominations: number;
+      credentials: number;
+      jobs: number;
+    };
+    institutions: Array<{ id: string; code: string; name: string; district: string; state: string; type: string }>;
+    trainees: Array<{ id: string; traineeNumber: string; district: string; state: string; skills: string[] }>;
+    programmes: Array<{ id: string; title: string; description: string; status: string }>;
+    batches: Array<{ id: string; name: string; startsOn: string; endsOn: string; status: string; capacity: number }>;
+    jobs: Array<{ id: string; employerName: string; title: string; location: string; status: string }>;
+  };
+};
+
+export const load = async ({ params, parent, cookies }) => {
+  const { orgId } = await parent();
+  const siteName = params.slug;
+  if (!orgId) return { orgName: siteName, overview: null };
+
+  const result: Promise<ServerApiResult<NcctOverview>> = safeServerApi(() =>
+    classroomio.ncct.overview.$get({}, getApiHeaders(cookies, orgId))
+  );
+  const response = await result;
+
+  return {
+    orgName: siteName,
+    overview: response.ok ? response.body.data : null
+  };
+};

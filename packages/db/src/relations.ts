@@ -16,6 +16,16 @@ import {
   group,
   groupAttendance,
   groupmember,
+  ncctAssessment,
+  ncctBatch,
+  ncctCredential,
+  ncctInstitution,
+  ncctJob,
+  ncctJobApplication,
+  ncctNomination,
+  ncctProgramme,
+  ncctProgrammeStep,
+  ncctTrainee,
   lesson,
   lessonComment,
   lessonCompletion,
@@ -50,6 +60,152 @@ export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   ssoProviders: many(ssoProvider)
+}));
+
+export const ncctInstitutionRelations = relations(ncctInstitution, ({ one, many }) => ({
+  organization: one(organization, {
+    fields: [ncctInstitution.organizationId],
+    references: [organization.id]
+  }),
+  trainees: many(ncctTrainee),
+  batches: many(ncctBatch)
+}));
+
+export const ncctTraineeRelations = relations(ncctTrainee, ({ one, many }) => ({
+  organization: one(organization, {
+    fields: [ncctTrainee.organizationId],
+    references: [organization.id]
+  }),
+  institution: one(ncctInstitution, {
+    fields: [ncctTrainee.institutionId],
+    references: [ncctInstitution.id]
+  }),
+  profile: one(profile, {
+    fields: [ncctTrainee.profileId],
+    references: [profile.id]
+  }),
+  nominations: many(ncctNomination),
+  assessments: many(ncctAssessment),
+  credentials: many(ncctCredential),
+  applications: many(ncctJobApplication)
+}));
+
+export const ncctProgrammeRelations = relations(ncctProgramme, ({ one, many }) => ({
+  organization: one(organization, {
+    fields: [ncctProgramme.organizationId],
+    references: [organization.id]
+  }),
+  steps: many(ncctProgrammeStep),
+  batches: many(ncctBatch),
+  credentials: many(ncctCredential)
+}));
+
+export const ncctProgrammeStepRelations = relations(ncctProgrammeStep, ({ one }) => ({
+  programme: one(ncctProgramme, {
+    fields: [ncctProgrammeStep.programmeId],
+    references: [ncctProgramme.id]
+  }),
+  course: one(course, {
+    fields: [ncctProgrammeStep.courseId],
+    references: [course.id]
+  }),
+  prerequisite: one(ncctProgrammeStep, {
+    fields: [ncctProgrammeStep.prerequisiteStepId],
+    references: [ncctProgrammeStep.id],
+    relationName: 'programmeStepPrerequisite'
+  })
+}));
+
+export const ncctBatchRelations = relations(ncctBatch, ({ one, many }) => ({
+  programme: one(ncctProgramme, {
+    fields: [ncctBatch.programmeId],
+    references: [ncctProgramme.id]
+  }),
+  institution: one(ncctInstitution, {
+    fields: [ncctBatch.institutionId],
+    references: [ncctInstitution.id]
+  }),
+  instructor: one(profile, {
+    fields: [ncctBatch.instructorProfileId],
+    references: [profile.id]
+  }),
+  nominations: many(ncctNomination),
+  assessments: many(ncctAssessment),
+  credentials: many(ncctCredential)
+}));
+
+export const ncctNominationRelations = relations(ncctNomination, ({ one }) => ({
+  batch: one(ncctBatch, {
+    fields: [ncctNomination.batchId],
+    references: [ncctBatch.id]
+  }),
+  trainee: one(ncctTrainee, {
+    fields: [ncctNomination.traineeId],
+    references: [ncctTrainee.id]
+  }),
+  nominatedBy: one(profile, {
+    fields: [ncctNomination.nominatedByProfileId],
+    references: [profile.id],
+    relationName: 'nominationNominatedBy'
+  }),
+  decisionBy: one(profile, {
+    fields: [ncctNomination.decisionByProfileId],
+    references: [profile.id],
+    relationName: 'nominationDecisionBy'
+  })
+}));
+
+export const ncctAssessmentRelations = relations(ncctAssessment, ({ one }) => ({
+  batch: one(ncctBatch, {
+    fields: [ncctAssessment.batchId],
+    references: [ncctBatch.id]
+  }),
+  trainee: one(ncctTrainee, {
+    fields: [ncctAssessment.traineeId],
+    references: [ncctTrainee.id]
+  }),
+  evaluator: one(profile, {
+    fields: [ncctAssessment.evaluatorProfileId],
+    references: [profile.id]
+  })
+}));
+
+export const ncctCredentialRelations = relations(ncctCredential, ({ one }) => ({
+  trainee: one(ncctTrainee, {
+    fields: [ncctCredential.traineeId],
+    references: [ncctTrainee.id]
+  }),
+  programme: one(ncctProgramme, {
+    fields: [ncctCredential.programmeId],
+    references: [ncctProgramme.id]
+  }),
+  batch: one(ncctBatch, {
+    fields: [ncctCredential.batchId],
+    references: [ncctBatch.id]
+  })
+}));
+
+export const ncctJobRelations = relations(ncctJob, ({ one, many }) => ({
+  organization: one(organization, {
+    fields: [ncctJob.organizationId],
+    references: [organization.id]
+  }),
+  createdBy: one(profile, {
+    fields: [ncctJob.createdByProfileId],
+    references: [profile.id]
+  }),
+  applications: many(ncctJobApplication)
+}));
+
+export const ncctJobApplicationRelations = relations(ncctJobApplication, ({ one }) => ({
+  job: one(ncctJob, {
+    fields: [ncctJobApplication.jobId],
+    references: [ncctJob.id]
+  }),
+  trainee: one(ncctTrainee, {
+    fields: [ncctJobApplication.traineeId],
+    references: [ncctTrainee.id]
+  })
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

@@ -1,0 +1,1 @@
+export { ncctRouter } from './ncct';
