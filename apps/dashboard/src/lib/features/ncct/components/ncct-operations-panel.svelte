@@ -6,6 +6,7 @@
   import { Textarea } from '@cio/ui/base/textarea';
   import { Badge } from '@cio/ui/base/badge';
   import { classroomio } from '$lib/utils/services/api';
+  import { summarizeNcctResources } from '../operations-summary';
 
   type Institution = { id: string; name: string; code: string };
   type Trainee = { id: string; institutionId: string; traineeNumber: string; district: string; state: string };
@@ -99,6 +100,7 @@
   let visibleResources = $derived(
     resourceFilter === 'ALL' ? resources : resources.filter((resource) => resource.type === resourceFilter)
   );
+  let resourceSummaries = $derived(summarizeNcctResources(resources, resourceBookings));
 
   let logisticsBatchId = $state('');
   let logisticsTraineeId = $state('');
@@ -361,6 +363,21 @@
     <Badge variant="secondary">{resources.length} registered resources</Badge>
     <span>Centre operations remain linked to the batch and trainee records.</span>
   </div>
+  {#if resourceSummaries.length > 0}
+    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {#each resourceSummaries as summary}
+        <div class="rounded-lg border p-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-sm font-medium">{summary.type}</p>
+            <Badge variant="outline">{summary.active}/{summary.total} active</Badge>
+          </div>
+          <p class="ui:text-muted-foreground mt-2 text-xs">
+            Capacity {summary.capacity} · {summary.booked} booked
+          </p>
+        </div>
+      {/each}
+    </div>
+  {/if}
   <div class="mt-5 space-y-2">
     <div class="flex items-center justify-between gap-3">
       <h3 class="font-medium">Upcoming timetable</h3>
