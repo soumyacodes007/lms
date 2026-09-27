@@ -94,6 +94,7 @@ import { ROLE } from '@cio/utils/constants';
 import { assertNcctApplicationTransition, assertNcctJobApplicationAllowed } from './employment';
 import { assertNcctAssessmentResultAllowed, assertNcctAssessmentSlotAvailable } from './assessments';
 import { assertNcctSyncDeviceActive } from './sync';
+import { assertNcctCredentialIssuanceAllowed } from './credentials';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -1347,12 +1348,13 @@ export async function issueCredential(
   actorProfileId?: string,
   orgRole?: number
 ) {
-  const [trainees, programmes, batches, assessments, enrollments] = await Promise.all([
+  const [trainees, programmes, batches, assessments, enrollments, credentials] = await Promise.all([
     listNcctTrainees(organizationId),
     listNcctProgrammes(organizationId),
     listNcctBatches(organizationId),
     listNcctAssessments(organizationId),
-    listNcctEnrollments(organizationId)
+    listNcctEnrollments(organizationId),
+    listNcctCredentials(organizationId)
   ]);
   if (!trainees.some((trainee) => trainee.id === data.traineeId)) {
     throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
@@ -1380,6 +1382,11 @@ export async function issueCredential(
   );
   if (!passed)
     throw new AppError('A passed assessment is required before issuing a credential', 'NCCT_ASSESSMENT_REQUIRED', 409);
+
+  assertNcctCredentialIssuanceAllowed(
+    credentials.map(({ credential }) => credential),
+    data
+  );
 
   const verificationToken = randomUUID().replaceAll('-', '');
   const certificateNumber =
