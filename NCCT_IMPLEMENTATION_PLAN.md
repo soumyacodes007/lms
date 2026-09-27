@@ -17,18 +17,20 @@ The first working version is English only. Digital attendance is deferred. One c
 
 ## Feature slices
 
+Current delivery status: the end-to-end English SIH demo path is implemented and pushed in small feature commits. The remaining work is centre membership permissions, encrypted offline caching, richer analytics, multilingual content, and the deferred attendance hardware flow.
+
 | Slice | Data and backend | User interface and acceptance target |
 | --- | --- | --- |
-| 1. Institution and trainee foundation | Institutions, centre membership, trainee cooperative affiliation, district/state, profile fields, role permissions | Central admin manages institutions; centre coordinator sees only their centre; trainee sees a complete training history. |
-| 2. Programmes and nominations | Programme, ordered course steps, prerequisites, applications, nominations, approval decisions, seat allocation | Coordinator publishes a programme; institution nominates a trainee; approver accepts/rejects; approved trainee is enrolled; next course unlocks after prerequisite completion. |
-| 3. Scheduled batches | Extend cohorts with programme, centre, dates, capacity, instructor assignments, enrolment status | Batch creation, calendar, roster, seat count, waitlist, and progress dashboard work for a centre. |
-| 4. Timetable and logistics | Sessions, rooms, hostel beds, meal/transport needs, resource reservations, collision checks | Coordinators assign sessions and resources; conflicts and capacity problems are visible before saving. |
-| 5. Assessment and evaluator workflow | Practical assessment events, evaluator assignment, rubric/results, interview slot, decision record | Evaluators see assigned assessments, enter outcomes, and coordinators can review pending certification decisions. |
-| 6. Skills and credential registry | Skill taxonomy, trainee skills, certificate links, verification token/public record, revocation status | A certificate has a verifiable public page/QR URL; authorised employers can search certified trainees with trainee-controlled visibility. |
-| 7. Employment exchange | Employer accounts, vacancies, skill requirements, applications, status history, placement outcome | Employer posts a job; eligible trainee applies; employer reviews; centre sees placement outcomes. |
-| 8. Career counselling | Profile-aware guidance service, course/job suggestions, conversation history and guardrails | Trainee receives explainable suggestions tied to their skills, certificates, and open jobs; unsupported claims are avoided. |
-| 9. Offline centre PC | Local encrypted queue/cache, device identity, idempotent sync API, conflict policy, sync status | A centre can view cached programmes and capture permitted nomination/progress actions without internet; reconnecting syncs once and reports conflicts. |
-| 10. NCCT analytics | Institution/batch/programme reporting queries and exports | Central dashboard shows nominations, approvals, enrolment, progress, completion, certification, and placements by centre/district/state. |
+| 1. Institution and trainee foundation | **In progress:** institutions, trainee affiliations, profile fields, directory visibility, and audit events are implemented. Centre membership permissions remain. | Central admin can manage and edit the multi-centre directory; centre-scoped roles are the next foundation slice. |
+| 2. Programmes and nominations | **Implemented:** programmes, ordered steps, prerequisites, nominations, approval decisions, capacity checks, and enrolment. | The nomination-to-enrolment flow works in the dashboard. |
+| 3. Scheduled batches | **Implemented:** programme batches, dates, capacity, instructors, enrolments, and progress dashboard. | Batch creation and ordered progress are available. |
+| 4. Timetable and logistics | **Implemented:** sessions, centre resources, hostel/logistics records, collision checks, and capacity-aware bookings. | Conflicting schedules and exhausted resource capacity return visible errors. |
+| 5. Assessment and evaluator workflow | **Implemented:** practical assessments, evaluator decisions, enrolment/date validation, credential gating, and audit events. | A passed assessment plus batch enrolment is required before issuance. |
+| 6. Skills and credential registry | **Implemented:** trainee skills, public verification token/page, revocation, and directory visibility controls. | Employers can search visible certified trainees. |
+| 7. Employment exchange | **Implemented:** vacancies, applications, shortlist/select/reject actions, and application status history. Separate employer accounts can follow. | The dashboard shows the employment pipeline and recent transitions. |
+| 8. Career counselling | **Implemented for the demo:** profile-aware job matching, conversation history, and explainable suggestions. | Guidance is tied to the trainee’s skills and open jobs. |
+| 9. Offline centre PC | **In progress:** device identity, idempotent nomination/progress queue, conflict policy, and visible sync status are implemented. Encrypted cache and full offline course content remain. | Centres can queue permitted actions and retain conflicts for retry/review. |
+| 10. NCCT analytics | **Implemented for the demo:** central summary metrics, region/status breakdowns, placement metrics, audit history, and CSV export. | Central operators can review and export the current NCCT operating picture. |
 
 ## Delivery order
 
