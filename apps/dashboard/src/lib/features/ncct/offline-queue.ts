@@ -42,6 +42,9 @@ export function createNcctOfflineQueue(
     pendingCount() {
       return readQueue(deviceId, storage).length;
     },
+    pendingEvents() {
+      return readQueue(deviceId, storage);
+    },
     enqueue(event: NcctQueuedEvent) {
       const events = readQueue(deviceId, storage);
       if (events.some((queued) => queued.eventId === event.eventId)) return events.length;

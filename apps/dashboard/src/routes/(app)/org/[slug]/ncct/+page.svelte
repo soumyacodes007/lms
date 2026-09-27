@@ -16,6 +16,7 @@
     saveNcctOfflineSnapshot
   } from '$lib/features/ncct/offline-cache';
   import { createNcctOfflineQueue, type NcctQueuedEvent } from '$lib/features/ncct/offline-queue';
+  import { summarizeNcctQueue } from '$lib/features/ncct/queue-summary';
   import { summarizeNcctNominations } from '$lib/features/ncct/nomination-summary';
   import NcctSetupPanel from '$lib/features/ncct/components/ncct-setup-panel.svelte';
   import NcctProgrammePanel from '$lib/features/ncct/components/ncct-programme-panel.svelte';
@@ -47,6 +48,7 @@
 
   let syncDeviceId = $state<string | null>(null);
   let pendingSync = $state(0);
+  let pendingEventSummaries = $state<Array<{ eventType: string; total: number }>>([]);
   let isOnline = $state(true);
   let syncMessage = $state('Offline centre sync is ready to configure.');
   let lastSyncAt = $state<string | null>(null);
@@ -57,6 +59,17 @@
   let decisionId = $state<string | null>(null);
   let decisionNotes = $state<Record<string, string>>({});
   let actionMessage = $state('');
+
+  function refreshPendingQueue() {
+    if (!syncQueue) {
+      pendingSync = 0;
+      pendingEventSummaries = [];
+      return;
+    }
+    const events = syncQueue.pendingEvents();
+    pendingSync = events.length;
+    pendingEventSummaries = summarizeNcctQueue(events);
+  }
 
   async function decideNomination(nominationId: string, status: 'APPROVED' | 'REJECTED' | 'WAITLISTED') {
     decisionId = nominationId;
@@ -98,7 +111,7 @@
         return false;
       }
     });
-    pendingSync = syncQueue.pendingCount();
+    refreshPendingQueue();
   }
 
   function queueOfflineEvent(event: NcctQueuedEvent) {
@@ -107,7 +120,7 @@
       return false;
     }
     syncQueue.enqueue(event);
-    pendingSync = syncQueue.pendingCount();
+    refreshPendingQueue();
     syncMessage = 'The action is queued for the next successful sync.';
     return true;
   }
@@ -115,7 +128,7 @@
   async function flushSync() {
     if (!syncQueue || !isOnline) return;
     const sent = await syncQueue.flush();
-    pendingSync = syncQueue.pendingCount();
+    refreshPendingQueue();
     if (sent > 0) {
       lastSyncAt = new Date().toISOString();
       localStorage.setItem(`ncct-sync-last:${data.orgName}`, lastSyncAt);
@@ -409,6 +422,13 @@
                 <span>{lastSyncAt ? `Last sync ${new Date(lastSyncAt).toLocaleString()}` : 'Never synchronized'}</span>
                 <span>{syncMessage}</span>
               </div>
+              {#if pendingEventSummaries.length > 0}
+                <div class="mt-3 flex flex-wrap gap-2">
+                  {#each pendingEventSummaries as item}
+                    <Badge variant="outline">{item.eventType}: {item.total}</Badge>
+                  {/each}
+                </div>
+              {/if}
               {#if overview?.syncDevices?.length}
                 <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {#each overview.syncDevices as device}

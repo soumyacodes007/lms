@@ -22,6 +22,7 @@ describe('createNcctOfflineQueue', () => {
     expect(queue.enqueue(event)).toBe(1);
     expect(queue.enqueue(event)).toBe(1);
     expect(queue.pendingCount()).toBe(1);
+    expect(queue.pendingEvents()).toEqual([event]);
   });
 
   it('keeps events when delivery fails and clears them after a successful retry', async () => {
