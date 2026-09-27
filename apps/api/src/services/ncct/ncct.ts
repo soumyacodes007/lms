@@ -478,13 +478,44 @@ export async function getAuditEvents(organizationId: string) {
   return listNcctAuditEvents(organizationId);
 }
 
-export async function scheduleAssessment(organizationId: string, data: TCreateNcctAssessment) {
-  const trainees = await listNcctTrainees(organizationId);
-  if (!trainees.some((trainee) => trainee.id === data.traineeId)) {
+export async function scheduleAssessment(
+  organizationId: string,
+  data: TCreateNcctAssessment,
+  actorProfileId?: string
+) {
+  const [trainees, batches, enrollments] = await Promise.all([
+    listNcctTrainees(organizationId),
+    listNcctBatches(organizationId),
+    listNcctEnrollments(organizationId)
+  ]);
+  const trainee = trainees.find((item) => item.id === data.traineeId);
+  if (!trainee) {
     throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
   }
+  const batch = batches.find((item) => item.id === data.batchId);
+  if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
+  if (!enrollments.some(({ enrollment }) => enrollment.batchId === batch.id && enrollment.traineeId === trainee.id)) {
+    throw new AppError('The trainee must be enrolled in this batch first', 'NCCT_ENROLLMENT_REQUIRED', 409);
+  }
+  const scheduledAt = new Date(data.scheduledAt);
+  if (
+    scheduledAt < new Date(`${batch.startsOn}T00:00:00.000Z`) ||
+    scheduledAt > new Date(`${batch.endsOn}T23:59:59.999Z`)
+  ) {
+    throw new AppError('Assessment must be scheduled within the batch dates', 'NCCT_ASSESSMENT_OUTSIDE_BATCH', 409);
+  }
 
-  return createNcctAssessment(data);
+  const assessment = await createNcctAssessment(data);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: trainee.institutionId,
+    action: 'ASSESSMENT_SCHEDULED',
+    entityType: 'assessment',
+    entityId: assessment.id,
+    metadata: { batchId: batch.id, traineeId: trainee.id, scheduledAt: data.scheduledAt }
+  });
+  return assessment;
 }
 
 export async function submitAssessment(
@@ -509,11 +540,12 @@ export async function submitAssessment(
 }
 
 export async function issueCredential(organizationId: string, data: TIssueNcctCredential, actorProfileId?: string) {
-  const [trainees, programmes, batches, assessments] = await Promise.all([
+  const [trainees, programmes, batches, assessments, enrollments] = await Promise.all([
     listNcctTrainees(organizationId),
     listNcctProgrammes(organizationId),
     listNcctBatches(organizationId),
-    listNcctAssessments(organizationId)
+    listNcctAssessments(organizationId),
+    listNcctEnrollments(organizationId)
   ]);
   if (!trainees.some((trainee) => trainee.id === data.traineeId)) {
     throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
@@ -524,6 +556,9 @@ export async function issueCredential(organizationId: string, data: TIssueNcctCr
   if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
   if (batch.programmeId !== data.programmeId) {
     throw new AppError('Batch does not belong to the selected programme', 'NCCT_BATCH_PROGRAMME_MISMATCH', 409);
+  }
+  if (!enrollments.some(({ enrollment }) => enrollment.batchId === batch.id && enrollment.traineeId === data.traineeId)) {
+    throw new AppError('The trainee must be enrolled in this batch first', 'NCCT_ENROLLMENT_REQUIRED', 409);
   }
   const passed = assessments.some(
     ({ assessment }) =>

@@ -407,7 +407,13 @@ export const ncctRouter = new Hono()
     zValidator('json', ZCreateNcctAssessment),
     async (c) => {
       try {
-        return c.json({ success: true, data: await scheduleAssessment(c.get('orgId')!, c.req.valid('json')) }, 201);
+        return c.json(
+          {
+            success: true,
+            data: await scheduleAssessment(c.get('orgId')!, c.req.valid('json'), c.get('user')!.id)
+          },
+          201
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to schedule assessment');
       }

@@ -40,7 +40,8 @@
     try {
       const response = await classroomio.ncct.credentials.$post({ json: { traineeId, programmeId, batchId } });
       if (!response.ok) {
-        message = 'A passed evaluator result is required before issuing this credential.';
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        message = body.error ?? 'A passed evaluator result is required before issuing this credential.';
         return;
       }
       const result = (await response.json()) as { data?: { verificationToken?: string } };

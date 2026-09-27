@@ -54,7 +54,8 @@
         json: { batchId, traineeId, title: title.trim(), scheduledAt: new Date(scheduledAt).toISOString() }
       });
       if (!response.ok) {
-        message = 'The assessment could not be scheduled.';
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        message = body.error ?? 'The assessment could not be scheduled.';
         return;
       }
       open = false;
