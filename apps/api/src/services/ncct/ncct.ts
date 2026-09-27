@@ -96,6 +96,7 @@ import { assertNcctAssessmentResultAllowed, assertNcctAssessmentSlotAvailable } 
 import { assertNcctSyncDeviceActive } from './sync';
 import { assertNcctCredentialIssuanceAllowed, assertNcctCredentialPrerequisites } from './credentials';
 import { assertNcctBatchInstructorRole, assertNcctBatchProgramme } from './batches';
+import { assertNcctTraineeNumberAvailable } from './trainees';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -666,10 +667,17 @@ export async function registerNcctTrainee(
   actorProfileId?: string,
   orgRole?: number
 ) {
-  const institutions = await listNcctInstitutions(organizationId);
+  const [institutions, trainees] = await Promise.all([
+    listNcctInstitutions(organizationId),
+    listNcctTrainees(organizationId)
+  ]);
   if (!institutions.some((institution) => institution.id === data.institutionId)) {
     throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
   }
+  assertNcctTraineeNumberAvailable(
+    trainees.map((trainee) => trainee.traineeNumber),
+    data.traineeNumber
+  );
   await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
   const trainee = await createNcctTrainee({ ...data, organizationId });
