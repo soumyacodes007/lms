@@ -781,12 +781,18 @@ export async function revokeCredential(
   return revoked;
 }
 
-export async function scheduleSession(organizationId: string, data: TCreateNcctSession) {
+export async function scheduleSession(
+  organizationId: string,
+  data: TCreateNcctSession,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const batches = await listNcctBatches(organizationId);
   const batch = batches.find((item) => item.id === data.batchId);
   if (!batch) {
     throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
   }
+  await assertNcctInstitutionAccess(organizationId, batch.institutionId, actorProfileId, orgRole);
 
   const startsOn = new Date(`${batch.startsOn}T00:00:00.000Z`);
   const endsOn = new Date(`${batch.endsOn}T23:59:59.999Z`);
@@ -813,16 +819,27 @@ export async function scheduleSession(organizationId: string, data: TCreateNcctS
   }
 }
 
-export async function registerResource(organizationId: string, data: TCreateNcctResource) {
+export async function registerResource(
+  organizationId: string,
+  data: TCreateNcctResource,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const institutions = await listNcctInstitutions(organizationId);
   if (!institutions.some((institution) => institution.id === data.institutionId)) {
     throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
   }
+  await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
   return createNcctResource(data);
 }
 
-export async function bookResource(organizationId: string, data: TBookNcctResource) {
+export async function bookResource(
+  organizationId: string,
+  data: TBookNcctResource,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const [sessions, resources] = await Promise.all([
     listNcctSessions(organizationId),
     listNcctResources(organizationId)
@@ -830,9 +847,11 @@ export async function bookResource(organizationId: string, data: TBookNcctResour
   if (!sessions.some(({ session }) => session.id === data.sessionId)) {
     throw new AppError('Session does not belong to this organization', 'NCCT_SESSION_NOT_FOUND', 404);
   }
-  if (!resources.some(({ resource }) => resource.id === data.resourceId)) {
+  const resource = resources.find(({ resource: item }) => item.id === data.resourceId)?.resource;
+  if (!resource) {
     throw new AppError('Resource does not belong to this organization', 'NCCT_RESOURCE_NOT_FOUND', 404);
   }
+  await assertNcctInstitutionAccess(organizationId, resource.institutionId, actorProfileId, orgRole);
 
   try {
     return await bookNcctResource(data);
@@ -857,23 +876,50 @@ export async function bookResource(organizationId: string, data: TBookNcctResour
   }
 }
 
-export async function saveTraineeLogistics(data: TSaveNcctTraineeLogistics) {
+export async function saveTraineeLogistics(
+  organizationId: string,
+  data: TSaveNcctTraineeLogistics,
+  actorProfileId?: string,
+  orgRole?: number
+) {
+  const [batches, trainees] = await Promise.all([listNcctBatches(organizationId), listNcctTrainees(organizationId)]);
+  const batch = batches.find((item) => item.id === data.batchId);
+  const trainee = trainees.find((item) => item.id === data.traineeId);
+  if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
+  if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+  if (batch.institutionId !== trainee.institutionId) {
+    throw new AppError('Trainee and batch must belong to the same institution', 'NCCT_INSTITUTION_MISMATCH', 409);
+  }
+  await assertNcctInstitutionAccess(organizationId, batch.institutionId, actorProfileId, orgRole);
   return saveNcctTraineeLogistics(data);
 }
 
-export async function registerSyncDevice(organizationId: string, data: TCreateNcctSyncDevice) {
+export async function registerSyncDevice(
+  organizationId: string,
+  data: TCreateNcctSyncDevice,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const institutions = await listNcctInstitutions(organizationId);
   if (!institutions.some((institution) => institution.id === data.institutionId)) {
     throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
   }
+  await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
   return createNcctSyncDevice({ ...data, organizationId });
 }
 
-export async function receiveSyncEvents(organizationId: string, deviceId: string, data: TRecordNcctSyncEvents) {
+export async function receiveSyncEvents(
+  organizationId: string,
+  deviceId: string,
+  data: TRecordNcctSyncEvents,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const device = await getNcctSyncDevice(organizationId, deviceId);
   if (!device)
     throw new AppError('Sync device does not belong to this organization', 'NCCT_SYNC_DEVICE_NOT_FOUND', 404);
+  await assertNcctInstitutionAccess(organizationId, device.institutionId, actorProfileId, orgRole);
 
   const received = await recordNcctSyncEvents(deviceId, data.events);
   const acceptedIds = new Set(received.map(({ eventId }) => eventId));

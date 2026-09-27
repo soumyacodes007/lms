@@ -642,7 +642,18 @@ export const ncctRouter = new Hono()
     zValidator('json', ZCreateNcctSession),
     async (c) => {
       try {
-        return c.json({ success: true, data: await scheduleSession(c.get('orgId')!, c.req.valid('json')) }, 201);
+        return c.json(
+          {
+            success: true,
+            data: await scheduleSession(
+              c.get('orgId')!,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          201
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to schedule session');
       }
@@ -664,7 +675,18 @@ export const ncctRouter = new Hono()
     zValidator('json', ZCreateNcctResource),
     async (c) => {
       try {
-        return c.json({ success: true, data: await registerResource(c.get('orgId')!, c.req.valid('json')) }, 201);
+        return c.json(
+          {
+            success: true,
+            data: await registerResource(
+              c.get('orgId')!,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          201
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to register resource');
       }
@@ -678,7 +700,18 @@ export const ncctRouter = new Hono()
     zValidator('json', ZBookNcctResource),
     async (c) => {
       try {
-        return c.json({ success: true, data: await bookResource(c.get('orgId')!, c.req.valid('json')) }, 201);
+        return c.json(
+          {
+            success: true,
+            data: await bookResource(
+              c.get('orgId')!,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          201
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to book resource');
       }
@@ -692,7 +725,18 @@ export const ncctRouter = new Hono()
     zValidator('json', ZSaveNcctTraineeLogistics),
     async (c) => {
       try {
-        return c.json({ success: true, data: await saveTraineeLogistics(c.req.valid('json')) }, 200);
+        return c.json(
+          {
+            success: true,
+            data: await saveTraineeLogistics(
+              c.get('orgId')!,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          200
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to save trainee logistics');
       }
@@ -706,7 +750,18 @@ export const ncctRouter = new Hono()
     zValidator('json', ZCreateNcctSyncDevice),
     async (c) => {
       try {
-        return c.json({ success: true, data: await registerSyncDevice(c.get('orgId')!, c.req.valid('json')) }, 201);
+        return c.json(
+          {
+            success: true,
+            data: await registerSyncDevice(
+              c.get('orgId')!,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          201
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to register sync device');
       }
@@ -723,7 +778,13 @@ export const ncctRouter = new Hono()
         return c.json(
           {
             success: true,
-            data: await receiveSyncEvents(c.get('orgId')!, c.req.valid('param').deviceId, c.req.valid('json'))
+            data: await receiveSyncEvents(
+              c.get('orgId')!,
+              c.req.valid('param').deviceId,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
           },
           200
         );
