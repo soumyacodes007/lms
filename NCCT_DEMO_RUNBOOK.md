@@ -11,13 +11,16 @@ corepack pnpm@10.19.0 install --frozen-lockfile
 corepack pnpm@10.19.0 --filter @cio/db exec drizzle-kit migrate
 ```
 
-Set `NCCT_ORGANIZATION_ID` to an existing organization ID in the local environment, then seed the demo records:
+Set `NCCT_ORGANIZATION_ID` to an existing organization ID in the local environment, then seed the demo records. To exercise centre-scoped roles, also set `NCCT_TUTOR_PROFILE_ID` and `NCCT_STUDENT_PROFILE_ID` to profiles that belong to that organization:
 
 ```powershell
+$env:NCCT_ORGANIZATION_ID = 'your-organization-id'
+$env:NCCT_TUTOR_PROFILE_ID = 'your-tutor-profile-id'
+$env:NCCT_STUDENT_PROFILE_ID = 'your-student-profile-id'
 corepack pnpm@10.19.0 --filter @cio/api seed:ncct
 ```
 
-The seed is safe to run more than once. It creates two centres, three trainees, one published programme, one batch, one vacancy, and one pending nomination. Existing records with the same demo keys are reused.
+The seed is safe to run more than once. It creates two centres, three trainees, one published programme, one batch, one vacancy, and one pending nomination. When profile IDs are supplied, the first trainee is linked to the student profile and the tutor receives coordinator access to the first centre. Existing records with the same demo keys are reused.
 
 ## 2. Walk the training flow
 

@@ -5,6 +5,8 @@ import { db } from '@cio/db/drizzle';
 import * as schema from '@cio/db/schema';
 
 const organizationId = process.env.NCCT_ORGANIZATION_ID?.trim();
+const tutorProfileId = process.env.NCCT_TUTOR_PROFILE_ID?.trim();
+const studentProfileId = process.env.NCCT_STUDENT_PROFILE_ID?.trim();
 
 if (!organizationId) {
   throw new Error('Set NCCT_ORGANIZATION_ID to the organization that should receive demo data.');
@@ -33,7 +35,17 @@ async function firstOrCreateTrainee(data: typeof schema.ncctTrainee.$inferInsert
       )
     )
     .limit(1);
-  if (existing) return existing;
+  if (existing) {
+    if (data.profileId && existing.profileId !== data.profileId) {
+      const [updated] = await db
+        .update(schema.ncctTrainee)
+        .set({ profileId: data.profileId, updatedAt: new Date().toISOString() })
+        .where(eq(schema.ncctTrainee.id, existing.id))
+        .returning();
+      return updated ?? existing;
+    }
+    return existing;
+  }
   const [created] = await db.insert(schema.ncctTrainee).values(data).returning();
   if (!created) throw new Error(`Could not create trainee ${data.traineeNumber}`);
   return created;
@@ -65,6 +77,7 @@ async function main() {
     firstOrCreateTrainee({
       organizationId,
       institutionId: institution.id,
+      profileId: studentProfileId || undefined,
       traineeNumber: 'NCCT-DEMO-001',
       cooperativeName: 'Sahyadri Farmers Cooperative',
       district: 'Pune',
@@ -96,6 +109,27 @@ async function main() {
       directoryVisible: true
     })
   ]);
+
+  if (tutorProfileId) {
+    const existingMembership = await db
+      .select()
+      .from(schema.ncctInstitutionMember)
+      .where(
+        and(
+          eq(schema.ncctInstitutionMember.institutionId, institution.id),
+          eq(schema.ncctInstitutionMember.profileId, tutorProfileId)
+        )
+      )
+      .limit(1);
+    if (!existingMembership[0]) {
+      await db.insert(schema.ncctInstitutionMember).values({
+        institutionId: institution.id,
+        profileId: tutorProfileId,
+        role: 'COORDINATOR',
+        active: true
+      });
+    }
+  }
 
   const [programme] = await db
     .select()
