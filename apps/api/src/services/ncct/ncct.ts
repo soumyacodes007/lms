@@ -874,7 +874,16 @@ export async function decideNomination(
 }
 
 export async function createEmploymentJob(organizationId: string, profileId: string, data: TCreateNcctJob) {
-  return createNcctJob({ ...data, organizationId, createdByProfileId: profileId, status: 'OPEN' });
+  const job = await createNcctJob({ ...data, organizationId, createdByProfileId: profileId, status: 'OPEN' });
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId: profileId,
+    action: 'JOB_CREATED',
+    entityType: 'job',
+    entityId: job.id,
+    metadata: { title: job.title, employerName: job.employerName, skills: job.skills }
+  });
+  return job;
 }
 
 export async function updateEmploymentJobStatus(
