@@ -79,6 +79,7 @@ import type {
 } from '@cio/utils/validation/ncct';
 import { ZCreateNcctNomination, ZUpdateNcctProgress } from '@cio/utils/validation/ncct';
 import { ROLE } from '@cio/utils/constants';
+import { getOrgCourses } from '@cio/db/queries/course';
 import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
 import { canAccessNcctInstitution } from './access';
@@ -333,6 +334,17 @@ export async function registerNcctInstitution(
 
 export async function getNcctInstitutionMembers(organizationId: string) {
   return listNcctInstitutionMembers(organizationId);
+}
+
+export async function listNcctCourses(organizationId: string) {
+  const result = await getOrgCourses({ orgId: organizationId, page: 1, limit: 100 });
+  return result.items.map((course) => ({
+    id: course.id,
+    title: course.title,
+    description: course.description,
+    lessonCount: course.lessonCount,
+    exerciseCount: course.exerciseCount
+  }));
 }
 
 export async function saveNcctInstitutionMember(

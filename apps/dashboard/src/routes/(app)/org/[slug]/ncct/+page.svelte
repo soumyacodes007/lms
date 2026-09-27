@@ -262,6 +262,7 @@
             institutions={overview.institutions}
             programmes={overview.programmes}
             programmeSteps={overview.programmeSteps}
+            courses={data.courses}
           />
           <NcctNominationPanel
             trainees={overview.trainees}

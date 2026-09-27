@@ -133,18 +133,20 @@ type NcctOverview = {
 export const load = async ({ params, parent, cookies }) => {
   const { orgId } = await parent();
   const siteName = params.slug;
-  if (!orgId) return { orgName: siteName, overview: null };
+  if (!orgId) return { orgName: siteName, overview: null, courses: [] };
 
   const headers = getApiHeaders(cookies, orgId);
-  const [result, candidatesResult] = await Promise.all([
+  const [result, candidatesResult, coursesResult] = await Promise.all([
     safeServerApi(() => classroomio.ncct.overview.$get({}, headers)),
-    safeServerApi(() => classroomio.ncct['institution-members'].candidates.$get({}, headers))
+    safeServerApi(() => classroomio.ncct['institution-members'].candidates.$get({}, headers)),
+    safeServerApi(() => classroomio.ncct.courses.$get({}, headers))
   ]);
 
   return {
     orgName: siteName,
     overview: result.ok
       ? { ...result.body.data, institutionMemberCandidates: candidatesResult.ok ? candidatesResult.body.data : [] }
-      : null
+      : null,
+    courses: coursesResult.ok ? coursesResult.body.data : []
   };
 };

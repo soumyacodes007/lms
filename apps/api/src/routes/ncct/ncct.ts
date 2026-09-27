@@ -49,6 +49,7 @@ import {
   issueCredential,
   revokeCredential,
   listNcctAssessments,
+  listNcctCourses,
   publishNcctProgramme,
   registerNcctInstitution,
   registerResource,
@@ -162,6 +163,13 @@ export const ncctRouter = new Hono()
       return c.json({ success: true, data: overview.institutions }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load institutions');
+    }
+  })
+  .get('/courses', authMiddleware, orgMemberMiddleware, async (c) => {
+    try {
+      return c.json({ success: true, data: await listNcctCourses(c.get('orgId')!) }, 200);
+    } catch (error) {
+      return handleError(c, error, 'Failed to load NCCT course catalogue');
     }
   })
   .post(

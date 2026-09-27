@@ -17,13 +17,21 @@
     prerequisiteStepId: string | null;
     required: boolean;
   };
+  type Course = {
+    id: string;
+    title: string;
+    description: string;
+    lessonCount: number;
+    exerciseCount: number;
+  };
   type Props = {
     institutions: Institution[];
     programmes: Programme[];
     programmeSteps: Array<{ programmeId: string; steps: ProgrammeStep[] }>;
+    courses: Course[];
   };
 
-  let { institutions, programmes, programmeSteps }: Props = $props();
+  let { institutions, programmes, programmeSteps, courses }: Props = $props();
   let programmeOpen = $state(false);
   let batchOpen = $state(false);
   let programmeBusy = $state(false);
@@ -66,10 +74,14 @@
     return programmeSteps.find((item) => item.programmeId === programmeId)?.steps ?? [];
   }
 
+  function courseTitle(courseId: string) {
+    return courses.find((course) => course.id === courseId)?.title ?? courseId;
+  }
+
   function resetStep() {
     stepProgrammeId = programmes[0]?.id ?? '';
     const steps = stepsFor(stepProgrammeId);
-    stepCourseId = '';
+    stepCourseId = courses[0]?.id ?? '';
     stepPosition = String(steps.length + 1);
     stepPrerequisiteId = '';
     stepRequired = true;
@@ -214,7 +226,7 @@
           {#each steps as step}
             <div class="ui:bg-muted/40 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs">
               <Badge variant="outline">{step.position}</Badge>
-              <span class="truncate">Course {step.courseId}</span>
+              <span class="truncate">{courseTitle(step.courseId)}</span>
               {#if step.required}<span class="ui:text-muted-foreground ml-auto">Required</span>{/if}
             </div>
           {:else}
@@ -267,7 +279,21 @@
           {#each programmes as programme}<option value={programme.id}>{programme.title}</option>{/each}
         </select>
       </label>
-      <InputField label="Course ID" bind:value={stepCourseId} />
+      {#if courses.length > 0}
+        <label class="grid gap-2 text-sm font-medium">
+          Course
+          <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={stepCourseId}>
+            {#each courses as course}
+              <option value={course.id}>
+                {course.title} · {course.lessonCount} lessons · {course.exerciseCount} exercises
+              </option>
+            {/each}
+          </select>
+          <span class="ui:text-muted-foreground text-xs">Choose a course from this organisation’s catalogue.</span>
+        </label>
+      {:else}
+        <InputField label="Course ID" bind:value={stepCourseId} />
+      {/if}
       <div class="grid gap-4 sm:grid-cols-2">
         <InputField label="Position" type="number" min="1" bind:value={stepPosition} />
         <label class="grid gap-2 text-sm font-medium">
