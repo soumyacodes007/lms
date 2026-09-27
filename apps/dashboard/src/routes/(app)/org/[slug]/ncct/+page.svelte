@@ -337,6 +337,7 @@
             batches={overview.batches}
             sessions={overview.sessions}
             resources={overview.resources}
+            logistics={overview.logistics}
             institutionMembers={overview.institutionMembers}
           />
           <NcctProgressPanel enrollments={overview.enrollments} offline={!isOnline} onQueueEvent={queueOfflineEvent} />

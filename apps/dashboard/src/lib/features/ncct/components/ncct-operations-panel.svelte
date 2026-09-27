@@ -19,6 +19,16 @@
     instructorProfileId: string | null;
   };
   type Resource = { id: string; name: string; type: string; capacity: number };
+  type Logistics = {
+    logistics: {
+      mealRequired: boolean;
+      transportRequired: boolean;
+      notes: string | null;
+    };
+    batch: { name: string };
+    trainee: { traineeNumber: string };
+    resource: { name: string } | null;
+  };
   type InstitutionMember = {
     member: { institutionId: string; profileId: string; role: string; active: boolean };
     profile: { fullname: string };
@@ -29,10 +39,11 @@
     batches: Batch[];
     sessions: Session[];
     resources: Resource[];
+    logistics: Logistics[];
     institutionMembers: InstitutionMember[];
   };
 
-  let { institutions, trainees, batches, sessions, resources, institutionMembers }: Props = $props();
+  let { institutions, trainees, batches, sessions, resources, logistics, institutionMembers }: Props = $props();
   let sessionOpen = $state(false);
   let bookingOpen = $state(false);
   let resourceOpen = $state(false);
@@ -319,6 +330,27 @@
         <p class="ui:text-muted-foreground text-sm">No centre resources have been registered yet.</p>
       {/each}
     </div>
+  </div>
+  <div class="mt-5 space-y-2">
+    <div class="flex items-center justify-between gap-3">
+      <h3 class="font-medium">Trainee logistics</h3>
+      <Badge variant="secondary">{logistics.length}</Badge>
+    </div>
+    {#each logistics.slice(0, 8) as item}
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+        <div>
+          <p class="font-medium">{item.trainee.traineeNumber} · {item.batch.name}</p>
+          {#if item.logistics.notes}<p class="ui:text-muted-foreground mt-1 text-xs">{item.logistics.notes}</p>{/if}
+        </div>
+        <div class="flex flex-wrap gap-1">
+          {#if item.resource}<Badge variant="outline">{item.resource.name}</Badge>{/if}
+          {#if item.logistics.mealRequired}<Badge variant="secondary">Meal</Badge>{/if}
+          {#if item.logistics.transportRequired}<Badge variant="secondary">Transport</Badge>{/if}
+        </div>
+      </div>
+    {:else}
+      <p class="ui:text-muted-foreground text-sm">No trainee logistics plans have been recorded yet.</p>
+    {/each}
   </div>
 </section>
 

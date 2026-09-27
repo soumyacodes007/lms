@@ -760,6 +760,23 @@ export async function saveNcctTraineeLogistics(
   return logistics;
 }
 
+export async function listNcctTraineeLogistics(organizationId: string) {
+  return db
+    .select({
+      logistics: schema.ncctTraineeLogistics,
+      batch: schema.ncctBatch,
+      trainee: schema.ncctTrainee,
+      resource: schema.ncctResource
+    })
+    .from(schema.ncctTraineeLogistics)
+    .innerJoin(schema.ncctBatch, eq(schema.ncctTraineeLogistics.batchId, schema.ncctBatch.id))
+    .innerJoin(schema.ncctInstitution, eq(schema.ncctBatch.institutionId, schema.ncctInstitution.id))
+    .innerJoin(schema.ncctTrainee, eq(schema.ncctTraineeLogistics.traineeId, schema.ncctTrainee.id))
+    .leftJoin(schema.ncctResource, eq(schema.ncctTraineeLogistics.hostelResourceId, schema.ncctResource.id))
+    .where(eq(schema.ncctInstitution.organizationId, organizationId))
+    .orderBy(desc(schema.ncctTraineeLogistics.updatedAt));
+}
+
 export async function createNcctSyncDevice(data: typeof schema.ncctSyncDevice.$inferInsert, client: DbOrTxClient = db) {
   const [device] = await client.insert(schema.ncctSyncDevice).values(data).returning();
   if (!device) throw new Error('Failed to register sync device');
