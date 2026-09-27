@@ -14,6 +14,7 @@ type StoredSnapshot = {
 const DATABASE_NAME = 'ncct-lms-offline';
 const STORE_NAME = 'snapshots';
 const DATABASE_VERSION = 1;
+const MEDIA_CACHE_NAME = 'ncct-lms-media-v1';
 
 function requestResult<T>(request: IDBRequest<T>) {
   return new Promise<T>((resolve, reject) => {
@@ -79,4 +80,29 @@ export async function clearNcctOfflineSnapshot(cacheKey: string) {
   } finally {
     database.close();
   }
+}
+
+export async function cacheNcctMedia(urls: string[]) {
+  const uniqueUrls = [...new Set(urls.filter((url) => /^https?:\/\//i.test(url)))];
+  if (typeof caches === 'undefined') return { attempted: uniqueUrls.length, cached: 0, failed: uniqueUrls.length };
+
+  const cache = await caches.open(MEDIA_CACHE_NAME);
+  let cached = 0;
+  for (const url of uniqueUrls) {
+    try {
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) continue;
+      await cache.put(url, response.clone());
+      cached += 1;
+    } catch {
+      continue;
+    }
+  }
+
+  return { attempted: uniqueUrls.length, cached, failed: uniqueUrls.length - cached };
+}
+
+export async function clearNcctMediaCache() {
+  if (typeof caches === 'undefined') return false;
+  return caches.delete(MEDIA_CACHE_NAME);
 }
