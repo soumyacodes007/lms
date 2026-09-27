@@ -25,12 +25,20 @@
   };
 
   let { enrollments, offline = false, onQueueEvent }: Props = $props();
-  let selectedId = $state(enrollments[0]?.enrollment.id ?? '');
+  let selectedId = $state('');
   let snapshot = $state<ProgressSnapshot | null>(null);
   let loading = $state(false);
   let savingId = $state<string | null>(null);
   let scoreByStep = $state<Record<string, string>>({});
   let message = $state('');
+
+  $effect(() => {
+    if (!enrollments.some((row) => row.enrollment.id === selectedId)) {
+      selectedId = enrollments[0]?.enrollment.id ?? '';
+      snapshot = null;
+      scoreByStep = {};
+    }
+  });
 
   function setSnapshot(next: ProgressSnapshot) {
     snapshot = next;
