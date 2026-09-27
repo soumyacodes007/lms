@@ -73,7 +73,8 @@
     try {
       const response = await action();
       if (!response.ok) {
-        message = 'The operations update could not be saved.';
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        message = body.error ?? 'The operations update could not be saved.';
         return false;
       }
       message = successMessage;

@@ -527,11 +527,30 @@ export async function revokeCredential(organizationId: string, credentialId: str
 
 export async function scheduleSession(organizationId: string, data: TCreateNcctSession) {
   const batches = await listNcctBatches(organizationId);
-  if (!batches.some((batch) => batch.id === data.batchId)) {
+  const batch = batches.find((item) => item.id === data.batchId);
+  if (!batch) {
     throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
   }
 
-  return createNcctSession(data);
+  const startsOn = new Date(`${batch.startsOn}T00:00:00.000Z`);
+  const endsOn = new Date(`${batch.endsOn}T23:59:59.999Z`);
+  const startsAt = new Date(data.startsAt);
+  const endsAt = new Date(data.endsAt);
+  if (startsAt < startsOn || endsAt > endsOn) {
+    throw new AppError('Session must be scheduled within the batch dates', 'NCCT_SESSION_OUTSIDE_BATCH', 409);
+  }
+
+  try {
+    return await createNcctSession(data);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'SESSION_BATCH_CONFLICT') {
+      throw new AppError('This batch already has a session during that time', 'NCCT_SESSION_BATCH_CONFLICT', 409);
+    }
+    if (error instanceof Error && error.message === 'SESSION_INSTRUCTOR_CONFLICT') {
+      throw new AppError('The instructor is already scheduled during that time', 'NCCT_SESSION_INSTRUCTOR_CONFLICT', 409);
+    }
+    throw error;
+  }
 }
 
 export async function registerResource(organizationId: string, data: TCreateNcctResource) {

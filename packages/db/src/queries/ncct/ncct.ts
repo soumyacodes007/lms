@@ -483,6 +483,35 @@ export async function listNcctSessions(organizationId: string) {
 
 export async function createNcctSession(data: typeof schema.ncctSession.$inferInsert, client: DbOrTxClient = db) {
   if (data.endsAt <= data.startsAt) throw new Error('Session end must be after its start');
+
+  const [batchConflict] = await client
+    .select({ id: schema.ncctSession.id })
+    .from(schema.ncctSession)
+    .where(
+      and(
+        eq(schema.ncctSession.batchId, data.batchId),
+        lt(schema.ncctSession.startsAt, data.endsAt),
+        gt(schema.ncctSession.endsAt, data.startsAt)
+      )
+    )
+    .limit(1);
+  if (batchConflict) throw new Error('SESSION_BATCH_CONFLICT');
+
+  if (data.instructorProfileId) {
+    const [instructorConflict] = await client
+      .select({ id: schema.ncctSession.id })
+      .from(schema.ncctSession)
+      .where(
+        and(
+          eq(schema.ncctSession.instructorProfileId, data.instructorProfileId),
+          lt(schema.ncctSession.startsAt, data.endsAt),
+          gt(schema.ncctSession.endsAt, data.startsAt)
+        )
+      )
+      .limit(1);
+    if (instructorConflict) throw new Error('SESSION_INSTRUCTOR_CONFLICT');
+  }
+
   const [session] = await client.insert(schema.ncctSession).values(data).returning();
   if (!session) throw new Error('Failed to create session');
   return session;
