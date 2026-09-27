@@ -32,7 +32,7 @@ The seed is safe to run more than once. It creates two centres, three trainees, 
 6. Schedule a practical assessment, record a pass or fail with an optional score and evaluator feedback, and issue a credential.
 7. Copy the verification link shown after issuance and open it in a new tab.
 8. Use **Employment exchange** to apply for the seeded vacancy, then move the application through shortlist and selection.
-9. Check **Operations report** and **NCCT workflow history** for the resulting counts and audit events.
+9. Review **Recruiter dashboard** for vacancy-level application counts, then check **Operations report** and **NCCT workflow history** for the resulting totals and audit events.
 
 ## 3. Centre operations and offline sync
 
