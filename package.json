@@ -11,6 +11,8 @@
     "format": "turbo run format",
     "format:changed": "node scripts/format-changed.mjs --write",
     "format:check": "node scripts/format-changed.mjs --staged --check",
+    "test:ncct": "pnpm --filter @cio/api exec vitest run src/services/ncct/access.test.ts && pnpm --filter @cio/dashboard exec vitest run src/lib/features/ncct/offline-queue.test.ts src/lib/features/ncct/offline-cache.test.ts",
+    "build:ncct": "pnpm --filter @cio/api^... build",
     "postinstall": "node scripts/postinstall.mjs",
     "release": "standard-version",
     "db:reset": "pnpm --filter @cio/db db:reset",
