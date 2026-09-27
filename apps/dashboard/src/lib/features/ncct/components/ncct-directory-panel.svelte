@@ -30,6 +30,7 @@
   let loading = $state(false);
   let loadingMore = $state(false);
   let hasMore = $state(false);
+  let totalMatches = $state(0);
   let message = $state('');
   const pageSize = 12;
 
@@ -56,10 +57,11 @@
       }
       const result = (await response.json()) as {
         data: DirectoryRow[];
-        meta?: { hasMore: boolean };
+        meta?: { hasMore: boolean; total: number };
       };
       rows = reset ? result.data : [...rows, ...result.data];
       hasMore = result.meta?.hasMore ?? false;
+      totalMatches = result.meta?.total ?? rows.length;
     } catch {
       message = 'The directory could not be loaded.';
     } finally {
@@ -81,7 +83,7 @@
         Find trainees who have chosen to be visible to authorised employment partners.
       </p>
     </div>
-    <Badge variant="secondary">{rows.length}{hasMore ? '+' : ''} matches</Badge>
+    <Badge variant="secondary">{rows.length} of {totalMatches} matches</Badge>
   </div>
 
   <div class="mt-4 flex flex-wrap gap-2">
