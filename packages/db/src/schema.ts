@@ -4242,6 +4242,7 @@ export const ncctApplicationStatus = pgEnum('NCCT_APPLICATION_STATUS', [
   'REJECTED',
   'WITHDRAWN'
 ]);
+export const ncctCareerMessageRole = pgEnum('NCCT_CAREER_MESSAGE_ROLE', ['USER', 'ASSISTANT']);
 
 export const ncctResourceType = pgEnum('NCCT_RESOURCE_TYPE', ['ROOM', 'HOSTEL', 'MEAL', 'TRANSPORT', 'EQUIPMENT']);
 
@@ -4612,6 +4613,28 @@ export const ncctJobApplication = pgTable(
     }).onDelete('cascade'),
     unique('ncct_job_application_job_trainee_key').on(table.jobId, table.traineeId),
     index('idx_ncct_job_application_status').on(table.status)
+  ]
+);
+
+export const ncctCareerMessage = pgTable(
+  'ncct_career_message',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    traineeId: uuid('trainee_id').notNull(),
+    role: ncctCareerMessageRole().notNull(),
+    message: text().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.traineeId],
+      foreignColumns: [ncctTrainee.id],
+      name: 'ncct_career_message_trainee_id_fkey'
+    }).onDelete('cascade'),
+    index('idx_ncct_career_message_trainee').on(table.traineeId, table.createdAt)
   ]
 );
 

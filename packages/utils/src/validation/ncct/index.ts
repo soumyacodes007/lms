@@ -73,6 +73,10 @@ export const ZApplyToNcctJob = z.object({
   coverNote: z.string().trim().max(2000).optional()
 });
 
+export const ZNcctCareerChat = z.object({
+  message: z.string().trim().min(1).max(2000)
+});
+
 export const ZCreateNcctAssessment = z.object({
   batchId: z.string().uuid(),
   traineeId: z.string().uuid(),
@@ -165,6 +169,7 @@ export type TCreateNcctNomination = z.infer<typeof ZCreateNcctNomination>;
 export type TDecideNcctNomination = z.infer<typeof ZDecideNcctNomination>;
 export type TCreateNcctJob = z.infer<typeof ZCreateNcctJob>;
 export type TApplyToNcctJob = z.infer<typeof ZApplyToNcctJob>;
+export type TNcctCareerChat = z.infer<typeof ZNcctCareerChat>;
 export type TCreateNcctAssessment = z.infer<typeof ZCreateNcctAssessment>;
 export type TSubmitNcctAssessment = z.infer<typeof ZSubmitNcctAssessment>;
 export type TIssueNcctCredential = z.infer<typeof ZIssueNcctCredential>;

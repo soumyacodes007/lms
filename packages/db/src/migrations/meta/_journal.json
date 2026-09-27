@@ -176,6 +176,13 @@
       "when": 1790467774510,
       "tag": "0024_ncct_operations",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790470883762,
+      "tag": "0025_ncct_career",
+      "breakpoints": true
     }
   ]
 }

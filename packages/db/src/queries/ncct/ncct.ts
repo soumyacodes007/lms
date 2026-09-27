@@ -260,6 +260,23 @@ export async function listNcctJobApplications(organizationId: string) {
     .orderBy(desc(schema.ncctJobApplication.createdAt));
 }
 
+export async function listNcctCareerMessages(traineeId: string) {
+  return db
+    .select()
+    .from(schema.ncctCareerMessage)
+    .where(eq(schema.ncctCareerMessage.traineeId, traineeId))
+    .orderBy(asc(schema.ncctCareerMessage.createdAt));
+}
+
+export async function createNcctCareerMessage(
+  data: typeof schema.ncctCareerMessage.$inferInsert,
+  client: DbOrTxClient = db
+) {
+  const [message] = await client.insert(schema.ncctCareerMessage).values(data).returning();
+  if (!message) throw new Error('Failed to create career message');
+  return message;
+}
+
 export async function listNcctCredentials(organizationId: string) {
   return db
     .select({ credential: schema.ncctCredential, trainee: schema.ncctTrainee, programme: schema.ncctProgramme })

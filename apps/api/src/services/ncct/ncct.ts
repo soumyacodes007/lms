@@ -3,6 +3,7 @@ import {
   applyToNcctJob,
   createNcctBatch,
   createNcctAssessment,
+  createNcctCareerMessage,
   createNcctInstitution,
   createNcctJob,
   createNcctNomination,
@@ -29,6 +30,7 @@ import {
   listNcctSessions,
   listNcctTrainees,
   listNcctCredentials,
+  listNcctCareerMessages,
   bookNcctResource,
   recordNcctSyncEvents,
   saveNcctTraineeLogistics,
@@ -39,6 +41,7 @@ import type {
   TApplyToNcctJob,
   TCreateNcctBatch,
   TCreateNcctAssessment,
+  TNcctCareerChat,
   TCreateNcctInstitution,
   TCreateNcctJob,
   TCreateNcctNomination,
@@ -188,6 +191,51 @@ export async function submitJobApplication(organizationId: string, jobId: string
   if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
 
   return applyToNcctJob({ ...data, jobId });
+}
+
+async function getNcctCareerTrainee(organizationId: string, traineeId: string) {
+  const trainee = (await listNcctTrainees(organizationId)).find((item) => item.id === traineeId);
+  if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+  return trainee;
+}
+
+export async function getCareerSnapshot(organizationId: string, traineeId: string) {
+  const trainee = await getNcctCareerTrainee(organizationId, traineeId);
+  const [jobs, credentials, messages] = await Promise.all([
+    listNcctJobs(organizationId),
+    listNcctCredentials(organizationId),
+    listNcctCareerMessages(traineeId)
+  ]);
+  const traineeSkills = new Set(trainee.skills.map((skill) => skill.trim().toLowerCase()));
+  const matchedJobs = jobs
+    .filter((job) => job.status === 'OPEN')
+    .map((job) => ({
+      job,
+      matchedSkills: job.skills.filter((skill) => traineeSkills.has(skill.trim().toLowerCase()))
+    }))
+    .filter(({ matchedSkills }) => matchedSkills.length > 0);
+
+  return {
+    trainee,
+    skills: trainee.skills,
+    credentialCount: credentials.filter(({ credential }) => credential.traineeId === traineeId).length,
+    matchedJobs,
+    messages
+  };
+}
+
+export async function chatCareer(organizationId: string, traineeId: string, data: TNcctCareerChat) {
+  const trainee = await getNcctCareerTrainee(organizationId, traineeId);
+  await createNcctCareerMessage({ traineeId, role: 'USER', message: data.message });
+  const snapshot = await getCareerSnapshot(organizationId, traineeId);
+  const assistantMessage =
+    snapshot.matchedJobs.length > 0
+      ? `You have ${snapshot.matchedJobs.length} matching open ${snapshot.matchedJobs.length === 1 ? 'role' : 'roles'}. Start with ${snapshot.matchedJobs[0]!.job.title}; your matching skills are ${snapshot.matchedJobs[0]!.matchedSkills.join(', ')}.`
+      : trainee.skills.length > 0
+        ? `Your current skills are ${trainee.skills.join(', ')}. No open role matches them yet. Add more verified skills through your training programme and check the exchange again.`
+        : 'Add your skills to your trainee profile to get personalised job matches.';
+  await createNcctCareerMessage({ traineeId, role: 'ASSISTANT', message: assistantMessage });
+  return getCareerSnapshot(organizationId, traineeId);
 }
 
 export async function scheduleAssessment(organizationId: string, data: TCreateNcctAssessment) {

@@ -18,6 +18,7 @@ import {
   ZCreateNcctTrainee,
   ZDecideNcctNomination,
   ZIssueNcctCredential,
+  ZNcctCareerChat,
   ZSubmitNcctAssessment,
   ZBookNcctResource,
   ZRecordNcctSyncEvents,
@@ -28,8 +29,10 @@ import * as z from 'zod';
 import {
   addProgrammeStep,
   createEmploymentJob,
+  chatCareer,
   decideNomination,
   getNcctOverview,
+  getCareerSnapshot,
   getProgrammeProgress,
   bookResource,
   issueCredential,
@@ -69,6 +72,7 @@ const nominationParam = z.object({ nominationId: z.string().uuid() });
 const jobParam = z.object({ jobId: z.string().uuid() });
 const assessmentParam = z.object({ assessmentId: z.string().uuid() });
 const syncDeviceParam = z.object({ deviceId: z.string().uuid() });
+const careerParam = z.object({ traineeId: z.string().uuid() });
 const verificationParam = z.object({ verificationToken: z.string().min(16).max(128) });
 
 export const ncctRouter = new Hono()
@@ -488,6 +492,36 @@ export const ncctRouter = new Hono()
         );
       } catch (error) {
         return handleError(c, error, 'Failed to submit application');
+      }
+    }
+  )
+  .get('/career/:traineeId', authMiddleware, orgMemberMiddleware, zValidator('param', careerParam), async (c) => {
+    try {
+      return c.json(
+        { success: true, data: await getCareerSnapshot(c.get('orgId')!, c.req.valid('param').traineeId) },
+        200
+      );
+    } catch (error) {
+      return handleError(c, error, 'Failed to load career assistant');
+    }
+  })
+  .post(
+    '/career/:traineeId/chat',
+    authMiddleware,
+    orgMemberMiddleware,
+    zValidator('param', careerParam),
+    zValidator('json', ZNcctCareerChat),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await chatCareer(c.get('orgId')!, c.req.valid('param').traineeId, c.req.valid('json'))
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to send career assistant message');
       }
     }
   );

@@ -18,6 +18,7 @@ import {
   groupmember,
   ncctAssessment,
   ncctBatch,
+  ncctCareerMessage,
   ncctCredential,
   ncctInstitution,
   ncctJob,
@@ -93,7 +94,8 @@ export const ncctTraineeRelations = relations(ncctTrainee, ({ one, many }) => ({
   nominations: many(ncctNomination),
   assessments: many(ncctAssessment),
   credentials: many(ncctCredential),
-  applications: many(ncctJobApplication)
+  applications: many(ncctJobApplication),
+  careerMessages: many(ncctCareerMessage)
 }));
 
 export const ncctProgrammeRelations = relations(ncctProgramme, ({ one, many }) => ({
@@ -210,6 +212,13 @@ export const ncctJobApplicationRelations = relations(ncctJobApplication, ({ one 
   }),
   trainee: one(ncctTrainee, {
     fields: [ncctJobApplication.traineeId],
+    references: [ncctTrainee.id]
+  })
+}));
+
+export const ncctCareerMessageRelations = relations(ncctCareerMessage, ({ one }) => ({
+  trainee: one(ncctTrainee, {
+    fields: [ncctCareerMessage.traineeId],
     references: [ncctTrainee.id]
   })
 }));
