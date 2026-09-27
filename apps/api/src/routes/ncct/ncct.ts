@@ -172,6 +172,7 @@ export const ncctRouter = new Hono()
           total,
           ''
         ]),
+        ['assessments', 'pass_rate', overview.reports.assessmentPassRate, 'percent'],
         ['training', 'completion_rate', overview.reports.completionRate, 'percent'],
         ['placements', 'applications', overview.reports.placements.applications, ''],
         ['placements', 'shortlisted', overview.reports.placements.shortlisted, ''],
