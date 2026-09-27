@@ -16,6 +16,7 @@
     saveNcctOfflineSnapshot
   } from '$lib/features/ncct/offline-cache';
   import { createNcctOfflineQueue, type NcctQueuedEvent } from '$lib/features/ncct/offline-queue';
+  import { summarizeNcctNominations } from '$lib/features/ncct/nomination-summary';
   import NcctSetupPanel from '$lib/features/ncct/components/ncct-setup-panel.svelte';
   import NcctProgrammePanel from '$lib/features/ncct/components/ncct-programme-panel.svelte';
   import NcctOfflinePackPanel from '$lib/features/ncct/components/ncct-offline-pack-panel.svelte';
@@ -42,6 +43,7 @@
   const overview = $derived(serverOverview ?? cachedOverview);
   const summary = $derived(overview?.summary);
   const firstInstitution = $derived(overview?.institutions[0]);
+  const nominationSummaries = $derived(summarizeNcctNominations(overview?.nominations ?? []));
 
   let syncDeviceId = $state<string | null>(null);
   let pendingSync = $state(0);
@@ -502,6 +504,15 @@
                 </div>
                 <Badge variant="secondary">{overview.nominations.length}</Badge>
               </div>
+              {#if nominationSummaries.length > 0}
+                <div class="mb-4 flex flex-wrap gap-2">
+                  {#each nominationSummaries as item}
+                    <Badge variant={item.status === 'APPROVED' ? 'default' : 'outline'}>
+                      {item.status}: {item.total}
+                    </Badge>
+                  {/each}
+                </div>
+              {/if}
               <div class="space-y-3">
                 {#each overview.nominations.slice(0, 8) as row}
                   <div class="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-3">
