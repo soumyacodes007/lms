@@ -51,6 +51,7 @@
   let offlinePackVersion = $state(0);
   let syncQueue: ReturnType<typeof createNcctOfflineQueue> | null = null;
   let decisionId = $state<string | null>(null);
+  let decisionNotes = $state<Record<string, string>>({});
   let actionMessage = $state('');
 
   async function decideNomination(nominationId: string, status: 'APPROVED' | 'REJECTED') {
@@ -59,7 +60,7 @@
     try {
       const response = await classroomio.ncct.nominations[':nominationId'].decision.$post({
         param: { nominationId },
-        json: { status }
+        json: { status, decisionNote: decisionNotes[nominationId]?.trim() || undefined }
       });
       if (!response.ok) {
         actionMessage = 'The nomination decision could not be saved.';
@@ -451,12 +452,24 @@
                       <p class="ui:text-muted-foreground text-sm">
                         {row.institution.name} · {row.batch.name} · {row.trainee.district}, {row.trainee.state}
                       </p>
+                      {#if row.nomination.decisionNote}
+                        <p class="ui:text-muted-foreground mt-2 text-xs">
+                          Decision note: {row.nomination.decisionNote}
+                        </p>
+                      {/if}
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="grid min-w-64 gap-2 sm:flex sm:items-center">
                       <Badge variant={row.nomination.status === 'APPROVED' ? 'default' : 'outline'}>
                         {row.nomination.status}
                       </Badge>
                       {#if row.nomination.status === 'PENDING'}
+                        <textarea
+                          class="ui:bg-background min-h-9 rounded-md border px-3 py-2 text-sm sm:w-56"
+                          rows="1"
+                          maxlength="1000"
+                          placeholder="Decision note (optional)"
+                          bind:value={decisionNotes[row.nomination.id]}
+                        ></textarea>
                         <Button
                           size="sm"
                           disabled={decisionId === row.nomination.id}
