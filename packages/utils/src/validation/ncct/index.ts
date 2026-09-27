@@ -98,6 +98,10 @@ export const ZCreateNcctJob = z.object({
   skills: z.array(z.string().trim().min(1).max(80)).max(30).default([])
 });
 
+export const ZUpdateNcctJobStatus = z.object({
+  status: z.enum(['OPEN', 'CLOSED'])
+});
+
 export const ZApplyToNcctJob = z.object({
   traineeId: z.string().uuid(),
   coverNote: z.string().trim().max(2000).optional()
@@ -218,6 +222,7 @@ export type TUpdateNcctBatchStatus = z.infer<typeof ZUpdateNcctBatchStatus>;
 export type TCreateNcctNomination = z.infer<typeof ZCreateNcctNomination>;
 export type TDecideNcctNomination = z.infer<typeof ZDecideNcctNomination>;
 export type TCreateNcctJob = z.infer<typeof ZCreateNcctJob>;
+export type TUpdateNcctJobStatus = z.infer<typeof ZUpdateNcctJobStatus>;
 export type TApplyToNcctJob = z.infer<typeof ZApplyToNcctJob>;
 export type TUpdateNcctJobApplication = z.infer<typeof ZUpdateNcctJobApplication>;
 export type TNcctCareerChat = z.infer<typeof ZNcctCareerChat>;

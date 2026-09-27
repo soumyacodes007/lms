@@ -469,6 +469,20 @@ export async function listNcctJobs(organizationId: string): Promise<TNcctJob[]> 
     .orderBy(desc(schema.ncctJob.createdAt));
 }
 
+export async function updateNcctJobStatus(
+  jobId: string,
+  status: (typeof schema.ncctJobStatus.enumValues)[number],
+  client: DbOrTxClient = db
+) {
+  const [job] = await client
+    .update(schema.ncctJob)
+    .set({ status, updatedAt: new Date().toISOString() })
+    .where(eq(schema.ncctJob.id, jobId))
+    .returning();
+  if (!job) throw new Error('Job not found');
+  return job;
+}
+
 export async function createNcctJob(
   data: typeof schema.ncctJob.$inferInsert,
   client: DbOrTxClient = db

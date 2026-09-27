@@ -51,6 +51,7 @@ import {
   submitNcctAssessment as submitNcctAssessmentQuery,
   updateNcctSyncEventStatus,
   updateNcctJobApplication,
+  updateNcctJobStatus,
   updateNcctBatchStatus
 } from '@cio/db/queries/ncct';
 import type {
@@ -65,6 +66,7 @@ import type {
   TUpsertNcctInstitutionMember,
   TUpdateNcctInstitutionMember,
   TCreateNcctJob,
+  TUpdateNcctJobStatus,
   TCreateNcctNomination,
   TCreateNcctProgramme,
   TCreateNcctTrainee,
@@ -844,6 +846,28 @@ export async function decideNomination(
 
 export async function createEmploymentJob(organizationId: string, profileId: string, data: TCreateNcctJob) {
   return createNcctJob({ ...data, organizationId, createdByProfileId: profileId, status: 'OPEN' });
+}
+
+export async function updateEmploymentJobStatus(
+  organizationId: string,
+  jobId: string,
+  data: TUpdateNcctJobStatus,
+  actorProfileId?: string
+) {
+  const job = (await listNcctJobs(organizationId)).find((item) => item.id === jobId);
+  if (!job) throw new AppError('Job does not belong to this organization', 'NCCT_JOB_NOT_FOUND', 404);
+  if (job.status === data.status) return job;
+
+  const updated = await updateNcctJobStatus(job.id, data.status);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    action: 'JOB_STATUS_CHANGED',
+    entityType: 'job',
+    entityId: job.id,
+    metadata: { from: job.status, to: updated.status, employerName: job.employerName }
+  });
+  return updated;
 }
 
 export async function submitJobApplication(

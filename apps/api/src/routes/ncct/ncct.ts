@@ -13,6 +13,7 @@ import {
   ZCreateNcctAssessment,
   ZCreateNcctInstitution,
   ZCreateNcctJob,
+  ZUpdateNcctJobStatus,
   ZCreateNcctNomination,
   ZCreateNcctProgramme,
   ZReorderNcctProgrammeStep,
@@ -73,6 +74,7 @@ import {
   submitNcctNomination,
   updateNcctTrainee,
   updateJobApplication,
+  updateEmploymentJobStatus,
   updateEnrollmentProgress,
   updateNcctBatchLifecycle
 } from '@api/services/ncct/ncct';
@@ -1035,6 +1037,32 @@ export const ncctRouter = new Hono()
         );
       } catch (error) {
         return handleError(c, error, 'Failed to create job');
+      }
+    }
+  )
+  .patch(
+    '/jobs/:jobId/status',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', jobParam),
+    zValidator('json', ZUpdateNcctJobStatus),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await updateEmploymentJobStatus(
+              c.get('orgId')!,
+              c.req.valid('param').jobId,
+              c.req.valid('json'),
+              c.get('user')!.id
+            )
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to update job status');
       }
     }
   )
