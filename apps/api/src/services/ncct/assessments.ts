@@ -21,3 +21,25 @@ export function assertNcctAssessmentResultAllowed(
     throw new AppError('This assessment result is already final', 'NCCT_ASSESSMENT_RESULT_LOCKED', 409);
   }
 }
+
+export function assertNcctAssessmentSlotAvailable(
+  assessments: Array<{
+    evaluatorProfileId: string | null;
+    traineeId: string;
+    batchId: string;
+    scheduledAt: string;
+    status: string;
+  }>,
+  candidate: { evaluatorProfileId?: string | null; traineeId: string; batchId: string; scheduledAt: string }
+) {
+  const conflict = assessments.some(
+    (assessment) =>
+      !['FAILED', 'CANCELLED'].includes(assessment.status) &&
+      assessment.scheduledAt === candidate.scheduledAt &&
+      (assessment.traineeId === candidate.traineeId ||
+        (candidate.evaluatorProfileId && assessment.evaluatorProfileId === candidate.evaluatorProfileId))
+  );
+  if (conflict) {
+    throw new AppError('The evaluator or trainee is already scheduled at this time', 'NCCT_ASSESSMENT_CONFLICT', 409);
+  }
+}

@@ -92,7 +92,7 @@ import type {
 import { ZCreateNcctNomination, ZUpdateNcctProgress } from '@cio/utils/validation/ncct';
 import { ROLE } from '@cio/utils/constants';
 import { assertNcctApplicationTransition, assertNcctJobApplicationAllowed } from './employment';
-import { assertNcctAssessmentResultAllowed } from './assessments';
+import { assertNcctAssessmentResultAllowed, assertNcctAssessmentSlotAvailable } from './assessments';
 import { assertNcctSyncDeviceActive } from './sync';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
@@ -1243,10 +1243,11 @@ export async function scheduleAssessment(
   actorProfileId?: string,
   orgRole?: number
 ) {
-  const [trainees, batches, enrollments] = await Promise.all([
+  const [trainees, batches, enrollments, assessments] = await Promise.all([
     listNcctTrainees(organizationId),
     listNcctBatches(organizationId),
-    listNcctEnrollments(organizationId)
+    listNcctEnrollments(organizationId),
+    listNcctAssessments(organizationId)
   ]);
   const trainee = trainees.find((item) => item.id === data.traineeId);
   if (!trainee) {
@@ -1261,6 +1262,10 @@ export async function scheduleAssessment(
   if (!enrollments.some(({ enrollment }) => enrollment.batchId === batch.id && enrollment.traineeId === trainee.id)) {
     throw new AppError('The trainee must be enrolled in this batch first', 'NCCT_ENROLLMENT_REQUIRED', 409);
   }
+  assertNcctAssessmentSlotAvailable(
+    assessments.map(({ assessment }) => assessment),
+    data
+  );
   if (data.evaluatorProfileId) {
     const members = await listNcctInstitutionMembers(organizationId);
     const evaluator = members.find(
