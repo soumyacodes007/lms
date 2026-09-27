@@ -45,6 +45,12 @@
   let evaluatorProfileId = $state('');
   let title = $state('Practical certification interview');
   let scheduledAt = $state('');
+  let assessmentFilter = $state('ALL');
+  let visibleAssessments = $derived(
+    assessmentFilter === 'ALL'
+      ? assessments
+      : assessments.filter((assessment) => assessment.status === assessmentFilter)
+  );
 
   function evaluatorsFor(traineeId: string) {
     const institutionId = trainees.find((trainee) => trainee.id === traineeId)?.institutionId;
@@ -165,8 +171,19 @@
     >
   </div>
   {#if message}<p class="ui:text-destructive mt-3 text-sm">{message}</p>{/if}
+  <div class="mt-4 flex flex-wrap items-center gap-2">
+    <span class="ui:text-muted-foreground text-sm">Show assessments</span>
+    <select class="ui:bg-background h-9 rounded-md border px-3 text-sm" bind:value={assessmentFilter}>
+      <option value="ALL">All</option>
+      <option value="SCHEDULED">Scheduled</option>
+      <option value="SUBMITTED">Submitted</option>
+      <option value="PASSED">Passed</option>
+      <option value="FAILED">Failed</option>
+    </select>
+    <Badge variant="secondary">{visibleAssessments.length} shown</Badge>
+  </div>
   <div class="mt-4 space-y-3">
-    {#each assessments.slice(0, 8) as assessment}
+    {#each visibleAssessments.slice(0, 8) as assessment}
       <div class="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-3">
         <div>
           <p class="font-medium">{assessment.title}</p>
