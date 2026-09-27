@@ -1233,7 +1233,12 @@ export async function submitAssessment(
     action: `ASSESSMENT_${data.status}`,
     entityType: 'assessment',
     entityId: assessmentId,
-    metadata: { batchId: existing.assessment.batchId, traineeId: existing.assessment.traineeId }
+    metadata: {
+      batchId: existing.assessment.batchId,
+      traineeId: existing.assessment.traineeId,
+      score: data.score ?? null,
+      feedback: data.feedback ?? null
+    }
   });
   return assessment;
 }
