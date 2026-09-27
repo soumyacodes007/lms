@@ -833,9 +833,10 @@ export const ncctRouter = new Hono()
   .get('/directory', authMiddleware, orgMemberMiddleware, zValidator('query', directoryQuery), async (c) => {
     try {
       const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
-      const { q, state, skill, institutionId, limit, offset } = c.req.valid('query');
+      const { q, state, district, skill, institutionId, limit, offset } = c.req.valid('query');
       const normalized = q?.trim().toLowerCase();
       const normalizedState = state?.trim().toLowerCase();
+      const normalizedDistrict = district?.trim().toLowerCase();
       const normalizedSkill = skill?.trim().toLowerCase();
       const institutions = new Map(overview.institutions.map((institution) => [institution.id, institution]));
       const allMatches = overview.credentials
@@ -843,6 +844,7 @@ export const ncctRouter = new Hono()
           if (trainee.directoryVisible === false || credential.revokedAt) return false;
           if (institutionId && trainee.institutionId !== institutionId) return false;
           if (normalizedState && trainee.state.toLowerCase() !== normalizedState) return false;
+          if (normalizedDistrict && trainee.district.toLowerCase() !== normalizedDistrict) return false;
           if (normalizedSkill && !trainee.skills.some((value) => value.toLowerCase().includes(normalizedSkill)))
             return false;
           if (!normalized) return true;
