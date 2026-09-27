@@ -103,7 +103,7 @@ import { assertNcctCredentialIssuanceAllowed, assertNcctCredentialPrerequisites 
 import { assertNcctBatchInstructorRole, assertNcctBatchProgramme } from './batches';
 import { assertNcctTraineeNumberAvailable } from './trainees';
 import { assertNcctProgressUpdateAllowed } from './progress';
-import { matchNcctJobs } from './career';
+import { buildNcctCareerResponse, matchNcctJobs } from './career';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -1174,12 +1174,12 @@ export async function chatCareer(
   const trainee = await getNcctCareerTrainee(organizationId, traineeId, actorProfileId, orgRole);
   await createNcctCareerMessage({ traineeId, role: 'USER', message: data.message });
   const snapshot = await getCareerSnapshot(organizationId, traineeId, actorProfileId, orgRole);
-  const assistantMessage =
-    snapshot.matchedJobs.length > 0
-      ? `You have ${snapshot.matchedJobs.length} matching open ${snapshot.matchedJobs.length === 1 ? 'role' : 'roles'}. Start with ${snapshot.matchedJobs[0]!.job.title}; your matching skills are ${snapshot.matchedJobs[0]!.matchedSkills.join(', ')}.`
-      : trainee.skills.length > 0
-        ? `Your current skills are ${trainee.skills.join(', ')}. No open role matches them yet. Add more verified skills through your training programme and check the exchange again.`
-        : 'Add your skills to your trainee profile to get personalised job matches.';
+  const assistantMessage = buildNcctCareerResponse(
+    data.message,
+    trainee.skills,
+    snapshot.credentialCount,
+    snapshot.matchedJobs
+  );
   await createNcctCareerMessage({ traineeId, role: 'ASSISTANT', message: assistantMessage });
   return getCareerSnapshot(organizationId, traineeId, actorProfileId, orgRole);
 }
