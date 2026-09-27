@@ -102,6 +102,17 @@ export async function cacheNcctMedia(urls: string[]) {
   return { attempted: uniqueUrls.length, cached, failed: uniqueUrls.length - cached };
 }
 
+export async function getNcctMediaCacheStatus(urls: string[]) {
+  const uniqueUrls = [...new Set(urls.filter((url) => /^https?:\/\//i.test(url)))];
+  if (typeof caches === 'undefined') return { total: uniqueUrls.length, cached: 0 };
+
+  const cache = await caches.open(MEDIA_CACHE_NAME);
+  const cached = (await Promise.all(uniqueUrls.map(async (url) => Boolean(await cache.match(url))))).filter(
+    Boolean
+  ).length;
+  return { total: uniqueUrls.length, cached };
+}
+
 export async function clearNcctMediaCache() {
   if (typeof caches === 'undefined') return false;
   return caches.delete(MEDIA_CACHE_NAME);
