@@ -13,6 +13,7 @@
   import { createNcctOfflineQueue, type NcctQueuedEvent } from '$lib/features/ncct/offline-queue';
   import NcctSetupPanel from '$lib/features/ncct/components/ncct-setup-panel.svelte';
   import NcctProgrammePanel from '$lib/features/ncct/components/ncct-programme-panel.svelte';
+  import NcctNominationPanel from '$lib/features/ncct/components/ncct-nomination-panel.svelte';
   import GraduationCapIcon from '@lucide/svelte/icons/graduation-cap';
   import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
   import UsersIcon from '@lucide/svelte/icons/users';
@@ -184,6 +185,7 @@
 
           <NcctSetupPanel institutions={overview.institutions} trainees={overview.trainees} />
           <NcctProgrammePanel institutions={overview.institutions} programmes={overview.programmes} />
+          <NcctNominationPanel trainees={overview.trainees} batches={overview.batches} />
 
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <section class="ui:bg-card rounded-xl border p-5 xl:col-span-2">
