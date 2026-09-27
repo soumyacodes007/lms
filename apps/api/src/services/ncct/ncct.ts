@@ -93,6 +93,7 @@ import { ZCreateNcctNomination, ZUpdateNcctProgress } from '@cio/utils/validatio
 import { ROLE } from '@cio/utils/constants';
 import { assertNcctApplicationTransition, assertNcctJobApplicationAllowed } from './employment';
 import { assertNcctAssessmentResultAllowed } from './assessments';
+import { assertNcctSyncDeviceActive } from './sync';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -1672,6 +1673,7 @@ export async function receiveSyncEvents(
   const device = await getNcctSyncDevice(organizationId, deviceId);
   if (!device)
     throw new AppError('Sync device does not belong to this organization', 'NCCT_SYNC_DEVICE_NOT_FOUND', 404);
+  assertNcctSyncDeviceActive(device.active);
   await assertNcctInstitutionAccess(organizationId, device.institutionId, actorProfileId, orgRole);
 
   const received = await recordNcctSyncEvents(deviceId, data.events);
@@ -1700,7 +1702,19 @@ export async function receiveSyncEvents(
         if (typeof enrollmentId !== 'string') throw new Error('Invalid progress payload');
         const parsed = ZUpdateNcctProgress.safeParse(event.payload);
         if (!parsed.success) throw new Error('Invalid progress payload');
+        const enrollment = (await listNcctEnrollments(organizationId)).find(
+          ({ enrollment: item }) => item.id === enrollmentId
+        );
+        if (
+          !enrollment ||
+          enrollment.batch.institutionId !== device.institutionId ||
+          enrollment.trainee.institutionId !== device.institutionId
+        ) {
+          throw new Error('The queued enrolment is not assigned to this centre');
+        }
         await updateEnrollmentProgress(organizationId, enrollmentId, parsed.data);
+      } else {
+        throw new Error('Unsupported offline event type');
       }
       await updateNcctSyncEventStatus(event.eventId, 'ACKNOWLEDGED');
       acknowledged += 1;
