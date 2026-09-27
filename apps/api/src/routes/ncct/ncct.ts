@@ -66,7 +66,6 @@ import {
   scheduleAssessment,
   scheduleNcctBatch,
   scheduleSession,
-  searchCertifiedTrainees,
   getNcctInstitutionMembers,
   saveNcctInstitutionMember,
   updateNcctInstitutionMemberRole,

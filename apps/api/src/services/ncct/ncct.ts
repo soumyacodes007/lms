@@ -45,7 +45,6 @@ import {
   listNcctAuditEvents,
   listNcctEnrollmentProgress,
   markNcctEnrollmentCompleted,
-  searchNcctCertifiedTrainees,
   upsertNcctEnrollmentProgress,
   bookNcctResource,
   recordNcctSyncEvents,
@@ -1198,10 +1197,6 @@ export async function updateEnrollmentProgress(
   });
 
   return { progress, ...(await getEnrollmentProgress(organizationId, enrollmentId, actorProfileId, orgRole)) };
-}
-
-export async function searchCertifiedTrainees(organizationId: string, search?: string) {
-  return searchNcctCertifiedTrainees(organizationId, search);
 }
 
 export async function getAuditEvents(organizationId: string) {
