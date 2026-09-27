@@ -9,7 +9,13 @@
   type Programme = { id: string; title: string };
   type Batch = { id: string; name: string; programmeId: string; institutionId: string };
   type Credential = {
-    credential: { id: string; certificateNumber: string; issuedAt: string; revokedAt: string | null };
+    credential: {
+      id: string;
+      certificateNumber: string;
+      issuedAt: string;
+      verificationToken: string;
+      revokedAt: string | null;
+    };
     trainee: { traineeNumber: string };
     programme: { title: string };
   };
@@ -171,6 +177,14 @@
             <Badge variant={row.credential.revokedAt ? 'destructive' : 'default'}>
               {row.credential.revokedAt ? 'REVOKED' : 'VALID'}
             </Badge>
+            {#if !row.credential.revokedAt}
+              <a
+                class="ui:text-primary text-xs underline"
+                href={`/verify/${row.credential.verificationToken}`}
+                target="_blank"
+                rel="noreferrer">Verify</a
+              >
+            {/if}
             {#if !row.credential.revokedAt}
               <Button
                 size="sm"

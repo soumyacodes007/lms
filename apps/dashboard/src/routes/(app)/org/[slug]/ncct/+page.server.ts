@@ -111,7 +111,13 @@ type NcctOverview = {
       programme: { title: string };
     }>;
     credentials: Array<{
-      credential: { id: string; certificateNumber: string; issuedAt: string; revokedAt: string | null };
+      credential: {
+        id: string;
+        certificateNumber: string;
+        issuedAt: string;
+        verificationToken: string;
+        revokedAt: string | null;
+      };
       trainee: { id: string; institutionId: string; traineeNumber: string; district: string; state: string };
       programme: { title: string };
     }>;
