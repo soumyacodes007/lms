@@ -11,7 +11,7 @@
     "format": "turbo run format",
     "format:changed": "node scripts/format-changed.mjs --write",
     "format:check": "node scripts/format-changed.mjs --staged --check",
-    "test:ncct": "pnpm --filter @cio/api exec vitest run src/services/ncct/access.test.ts src/services/ncct/assessments.test.ts src/services/ncct/batches.test.ts src/services/ncct/career.test.ts src/services/ncct/credentials.test.ts src/services/ncct/directory-query.test.ts src/services/ncct/employment.test.ts src/services/ncct/progress.test.ts src/services/ncct/sync.test.ts src/services/ncct/trainees.test.ts && pnpm --filter @cio/dashboard exec vitest run src/lib/features/ncct/offline-queue.test.ts src/lib/features/ncct/offline-cache.test.ts src/lib/features/ncct/recruiter.test.ts",
+    "test:ncct": "pnpm --filter @cio/api exec vitest run src/services/ncct/access.test.ts src/services/ncct/assessments.test.ts src/services/ncct/batches.test.ts src/services/ncct/career.test.ts src/services/ncct/credentials.test.ts src/services/ncct/directory-query.test.ts src/services/ncct/employment.test.ts src/services/ncct/institutions.test.ts src/services/ncct/progress.test.ts src/services/ncct/sync.test.ts src/services/ncct/trainees.test.ts && pnpm --filter @cio/dashboard exec vitest run src/lib/features/ncct/offline-queue.test.ts src/lib/features/ncct/offline-cache.test.ts src/lib/features/ncct/recruiter.test.ts",
     "build:ncct": "pnpm --filter @cio/api^... build",
     "postinstall": "node scripts/postinstall.mjs",
     "release": "standard-version",

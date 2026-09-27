@@ -94,6 +94,7 @@ import { ROLE } from '@cio/utils/constants';
 import { assertNcctApplicationTransition, assertNcctJobApplicationAllowed } from './employment';
 import { assertNcctAssessmentResultAllowed, assertNcctAssessmentSlotAvailable } from './assessments';
 import { assertNcctSyncDeviceActive } from './sync';
+import { hasNcctInstitutionCodeConflict, normalizeNcctInstitutionCode } from './institutions';
 import { assertNcctCredentialIssuanceAllowed, assertNcctCredentialPrerequisites } from './credentials';
 import { assertNcctBatchInstructorRole, assertNcctBatchProgramme } from './batches';
 import { assertNcctTraineeNumberAvailable } from './trainees';
@@ -396,7 +397,15 @@ export async function registerNcctInstitution(
   data: TCreateNcctInstitution,
   actorProfileId?: string
 ) {
-  const institution = await createNcctInstitution({ ...data, organizationId });
+  const institutions = await listNcctInstitutions(organizationId);
+  if (hasNcctInstitutionCodeConflict(data.code, institutions)) {
+    throw new AppError('An institution with this code already exists', 'NCCT_INSTITUTION_CODE_EXISTS', 409);
+  }
+  const institution = await createNcctInstitution({
+    ...data,
+    code: normalizeNcctInstitutionCode(data.code),
+    organizationId
+  });
   await recordNcctAudit({
     organizationId,
     actorProfileId,
@@ -420,7 +429,14 @@ export async function updateNcctInstitutionProfile(
   if (!institution)
     throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
   await assertNcctInstitutionAccess(organizationId, institutionId, actorProfileId, orgRole);
-  const updated = await updateNcctInstitution(institutionId, data);
+  const institutions = await listNcctInstitutions(organizationId);
+  if (data.code && hasNcctInstitutionCodeConflict(data.code, institutions, institutionId)) {
+    throw new AppError('An institution with this code already exists', 'NCCT_INSTITUTION_CODE_EXISTS', 409);
+  }
+  const updated = await updateNcctInstitution(institutionId, {
+    ...data,
+    ...(data.code ? { code: normalizeNcctInstitutionCode(data.code) } : {})
+  });
   await recordNcctAudit({
     organizationId,
     actorProfileId,
