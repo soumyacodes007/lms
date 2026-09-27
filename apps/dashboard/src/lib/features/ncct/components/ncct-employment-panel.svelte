@@ -54,6 +54,8 @@
   let applicationTraineeId = $state('');
   let coverNote = $state('');
   let updatingApplicationId = $state<string | null>(null);
+  let updatingJobId = $state<string | null>(null);
+  let openJobs = $derived(jobs.filter((job) => job.status === 'OPEN'));
 
   function resetPost() {
     employerName = '';
@@ -65,10 +67,30 @@
   }
 
   function resetApplication() {
-    applicationJobId = jobs[0]?.id ?? '';
+    applicationJobId = openJobs[0]?.id ?? '';
     applicationTraineeId = trainees[0]?.id ?? '';
     coverNote = '';
     message = '';
+  }
+
+  async function updateJobStatus(jobId: string, status: 'OPEN' | 'CLOSED') {
+    updatingJobId = jobId;
+    message = '';
+    try {
+      const response = await classroomio.ncct.jobs[':jobId'].status.$patch({
+        param: { jobId },
+        json: { status }
+      });
+      if (!response.ok) {
+        message = 'The vacancy status could not be updated.';
+        return;
+      }
+      await invalidateAll();
+    } catch {
+      message = 'The vacancy status could not be updated.';
+    } finally {
+      updatingJobId = null;
+    }
   }
 
   async function postJob() {
@@ -163,7 +185,7 @@
       >
       <Button
         size="sm"
-        disabled={jobs.length === 0 || trainees.length === 0}
+        disabled={openJobs.length === 0 || trainees.length === 0}
         onclick={() => {
           resetApplication();
           applyOpen = true;
@@ -171,8 +193,41 @@
       >
     </div>
   </div>
+  <div class="mt-4 grid gap-3 md:grid-cols-2">
+    {#each jobs.slice(0, 6) as job}
+      <div class="rounded-lg border p-3">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="font-medium">{job.title}</p>
+            <p class="ui:text-muted-foreground text-sm">{job.employerName} · {job.location}</p>
+          </div>
+          <Badge variant={job.status === 'OPEN' ? 'default' : 'outline'}>{job.status}</Badge>
+        </div>
+        <div class="mt-3 flex items-center justify-between gap-2">
+          <span class="ui:text-muted-foreground text-xs">{job.skills.length} requested skills</span>
+          {#if job.status === 'OPEN'}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={updatingJobId === job.id}
+              onclick={() => void updateJobStatus(job.id, 'CLOSED')}>Close vacancy</Button
+            >
+          {:else if job.status === 'CLOSED'}
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={updatingJobId === job.id}
+              onclick={() => void updateJobStatus(job.id, 'OPEN')}>Reopen vacancy</Button
+            >
+          {/if}
+        </div>
+      </div>
+    {:else}
+      <p class="ui:text-muted-foreground text-sm">No vacancies have been posted yet.</p>
+    {/each}
+  </div>
   <div class="ui:text-muted-foreground mt-4 flex flex-wrap gap-2 text-sm">
-    <Badge variant="secondary">{jobs.length} vacancies</Badge>
+    <Badge variant="secondary">{openJobs.length} open vacancies</Badge>
     <Badge variant="secondary">{applications.length} applications</Badge>
     <span>Applications remain visible to centre coordinators.</span>
   </div>
@@ -218,7 +273,11 @@
         {#if history.length > 0}
           <div class="ui:text-muted-foreground ml-3 border-l pl-3 text-xs">
             {#each history.slice(0, 3) as item}
-              <p>{item.event.fromStatus ? `${item.event.fromStatus} → ` : ''}{item.event.toStatus} · {new Date(item.event.createdAt).toLocaleString()}</p>
+              <p>
+                {item.event.fromStatus ? `${item.event.fromStatus} → ` : ''}{item.event.toStatus} · {new Date(
+                  item.event.createdAt
+                ).toLocaleString()}
+              </p>
             {/each}
           </div>
         {/if}
@@ -269,7 +328,7 @@
       <label class="grid gap-2 text-sm font-medium">
         Vacancy
         <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={applicationJobId}>
-          {#each jobs as job}
+          {#each openJobs as job}
             <option value={job.id}>{job.title} · {job.employerName} · {job.location}</option>
           {/each}
         </select>
