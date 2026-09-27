@@ -511,7 +511,12 @@ export const ncctRouter = new Hono()
         return c.json(
           {
             success: true,
-            data: await scheduleAssessment(c.get('orgId')!, c.req.valid('json'), c.get('user')!.id)
+            data: await scheduleAssessment(
+              c.get('orgId')!,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
           },
           201
         );
@@ -536,7 +541,8 @@ export const ncctRouter = new Hono()
               c.get('orgId')!,
               c.req.valid('param').assessmentId,
               c.req.valid('json'),
-              c.get('user')!.id
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
             )
           },
           200
@@ -557,7 +563,12 @@ export const ncctRouter = new Hono()
         return c.json(
           {
             success: true,
-            data: await issueCredential(c.get('orgId')!, c.req.valid('json'), c.get('user')!.id)
+            data: await issueCredential(
+              c.get('orgId')!,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
           },
           201
         );
@@ -584,7 +595,12 @@ export const ncctRouter = new Hono()
         return c.json(
           {
             success: true,
-            data: await revokeCredential(c.get('orgId')!, c.req.valid('param').credentialId, c.get('user')!.id)
+            data: await revokeCredential(
+              c.get('orgId')!,
+              c.req.valid('param').credentialId,
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
           },
           200
         );

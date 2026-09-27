@@ -632,7 +632,12 @@ export async function getAuditEvents(organizationId: string) {
   return listNcctAuditEvents(organizationId);
 }
 
-export async function scheduleAssessment(organizationId: string, data: TCreateNcctAssessment, actorProfileId?: string) {
+export async function scheduleAssessment(
+  organizationId: string,
+  data: TCreateNcctAssessment,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const [trainees, batches, enrollments] = await Promise.all([
     listNcctTrainees(organizationId),
     listNcctBatches(organizationId),
@@ -642,6 +647,7 @@ export async function scheduleAssessment(organizationId: string, data: TCreateNc
   if (!trainee) {
     throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
   }
+  await assertNcctInstitutionAccess(organizationId, trainee.institutionId, actorProfileId, orgRole);
   const batch = batches.find((item) => item.id === data.batchId);
   if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
   if (!enrollments.some(({ enrollment }) => enrollment.batchId === batch.id && enrollment.traineeId === trainee.id)) {
@@ -672,11 +678,15 @@ export async function submitAssessment(
   organizationId: string,
   assessmentId: string,
   data: TSubmitNcctAssessment,
-  actorProfileId?: string
+  actorProfileId?: string,
+  orgRole?: number
 ) {
   const existing = (await listNcctAssessments(organizationId)).find(({ assessment }) => assessment.id === assessmentId);
   if (!existing)
     throw new AppError('Assessment does not belong to this organization', 'NCCT_ASSESSMENT_NOT_FOUND', 404);
+  const trainee = (await listNcctTrainees(organizationId)).find((item) => item.id === existing.assessment.traineeId);
+  if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+  await assertNcctInstitutionAccess(organizationId, trainee.institutionId, actorProfileId, orgRole);
   const assessment = await submitNcctAssessmentQuery(assessmentId, data);
   await recordNcctAudit({
     organizationId,
@@ -689,7 +699,12 @@ export async function submitAssessment(
   return assessment;
 }
 
-export async function issueCredential(organizationId: string, data: TIssueNcctCredential, actorProfileId?: string) {
+export async function issueCredential(
+  organizationId: string,
+  data: TIssueNcctCredential,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const [trainees, programmes, batches, assessments, enrollments] = await Promise.all([
     listNcctTrainees(organizationId),
     listNcctProgrammes(organizationId),
@@ -700,6 +715,8 @@ export async function issueCredential(organizationId: string, data: TIssueNcctCr
   if (!trainees.some((trainee) => trainee.id === data.traineeId)) {
     throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
   }
+  const trainee = trainees.find((item) => item.id === data.traineeId)!;
+  await assertNcctInstitutionAccess(organizationId, trainee.institutionId, actorProfileId, orgRole);
   const programme = programmes.find((item) => item.id === data.programmeId);
   if (!programme) throw new AppError('Programme does not belong to this organization', 'NCCT_PROGRAMME_NOT_FOUND', 404);
   const batch = batches.find((item) => item.id === data.batchId);
@@ -724,7 +741,6 @@ export async function issueCredential(organizationId: string, data: TIssueNcctCr
     data.certificateNumber ?? `NCCT-${new Date().getUTCFullYear()}-${verificationToken.slice(0, 10).toUpperCase()}`;
 
   const credential = await issueNcctCredential({ ...data, certificateNumber, verificationToken });
-  const trainee = trainees.find((item) => item.id === data.traineeId);
   await recordNcctAudit({
     organizationId,
     actorProfileId,
@@ -737,7 +753,12 @@ export async function issueCredential(organizationId: string, data: TIssueNcctCr
   return credential;
 }
 
-export async function revokeCredential(organizationId: string, credentialId: string, actorProfileId?: string) {
+export async function revokeCredential(
+  organizationId: string,
+  credentialId: string,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const credential = (await listNcctCredentials(organizationId)).find(
     ({ credential: item }) => item.id === credentialId
   );
@@ -746,6 +767,7 @@ export async function revokeCredential(organizationId: string, credentialId: str
   if (credential.credential.revokedAt) {
     throw new AppError('Credential is already revoked', 'NCCT_CREDENTIAL_ALREADY_REVOKED', 409);
   }
+  await assertNcctInstitutionAccess(organizationId, credential.trainee.institutionId, actorProfileId, orgRole);
   const revoked = await revokeNcctCredential(credentialId);
   await recordNcctAudit({
     organizationId,
