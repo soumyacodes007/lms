@@ -521,12 +521,43 @@ async function main() {
       and(eq(schema.ncctJobApplication.jobId, savedJob.id), eq(schema.ncctJobApplication.traineeId, trainees[0]!.id))
     )
     .limit(1);
-  if (!existingApplication) {
-    await db.insert(schema.ncctJobApplication).values({
-      jobId: savedJob.id,
-      traineeId: trainees[0]!.id,
-      status: 'SHORTLISTED',
-      coverNote: 'I completed the cooperative digital operations programme.'
+  const savedApplication =
+    existingApplication ??
+    (
+      await db
+        .insert(schema.ncctJobApplication)
+        .values({
+          jobId: savedJob.id,
+          traineeId: trainees[0]!.id,
+          status: 'SHORTLISTED',
+          coverNote: 'I completed the cooperative digital operations programme.'
+        })
+        .returning()
+    )[0];
+  if (!savedApplication) throw new Error('Could not create demo job application');
+  if (savedApplication.status === 'APPLIED') {
+    await db
+      .update(schema.ncctJobApplication)
+      .set({ status: 'SHORTLISTED', updatedAt: new Date().toISOString() })
+      .where(eq(schema.ncctJobApplication.id, savedApplication.id));
+  }
+  const [existingApplicationEvent] = await db
+    .select()
+    .from(schema.ncctJobApplicationEvent)
+    .where(
+      and(
+        eq(schema.ncctJobApplicationEvent.applicationId, savedApplication.id),
+        eq(schema.ncctJobApplicationEvent.toStatus, 'SHORTLISTED')
+      )
+    )
+    .limit(1);
+  if (!existingApplicationEvent) {
+    await db.insert(schema.ncctJobApplicationEvent).values({
+      applicationId: savedApplication.id,
+      fromStatus: 'APPLIED',
+      toStatus: 'SHORTLISTED',
+      note: 'Shortlisted for the SIH demonstration vacancy.',
+      changedByProfileId: tutorProfileId || undefined
     });
   }
 
