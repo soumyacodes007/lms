@@ -25,7 +25,15 @@ type NcctOverview = {
       status: string;
       capacity: number;
     }>;
-    jobs: Array<{ id: string; employerName: string; title: string; location: string; status: string }>;
+    jobs: Array<{
+      id: string;
+      employerName: string;
+      title: string;
+      description: string;
+      location: string;
+      status: string;
+      skills: string[];
+    }>;
     sessions: Array<{ id: string; title: string; startsAt: string; endsAt: string; room: string | null }>;
     resources: Array<{ id: string; type: string; name: string; capacity: number; active: boolean }>;
     nominations: Array<{
