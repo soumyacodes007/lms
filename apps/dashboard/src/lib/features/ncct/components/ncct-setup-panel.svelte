@@ -13,6 +13,7 @@
     district: string;
     state: string;
     type: string;
+    contactEmail: string | null;
   };
 
   type Trainee = {
@@ -86,7 +87,7 @@
     institutionType = 'ICM';
     institutionDistrict = '';
     institutionState = '';
-    institutionEmail = '';
+    institutionEmail = institution.contactEmail ?? '';
     formMessage = '';
   }
 

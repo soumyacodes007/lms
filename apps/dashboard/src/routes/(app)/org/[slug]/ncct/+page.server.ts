@@ -13,7 +13,15 @@ type NcctOverview = {
       credentials: number;
       jobs: number;
     };
-    institutions: Array<{ id: string; code: string; name: string; district: string; state: string; type: string }>;
+    institutions: Array<{
+      id: string;
+      code: string;
+      name: string;
+      district: string;
+      state: string;
+      type: string;
+      contactEmail: string | null;
+    }>;
     institutionMembers: Array<{
       member: { id: string; institutionId: string; profileId: string; role: string; active: boolean };
       institution: { id: string; name: string; code: string };
