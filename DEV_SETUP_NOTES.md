@@ -1,6 +1,6 @@
-# ClassroomIO — Local Dev Setup Guide
+# NCCT LMS — Local Dev Setup Guide
 
-A practical guide to running classroomio locally for development, plus a
+A practical guide to running NCCT LMS locally for development, plus a
 troubleshooting reference for the errors you're likely to hit. Use it to set up a
 fresh machine or to onboard a new contributor.
 
@@ -38,7 +38,7 @@ into both files.
 
 **`apps/api/.env`**
 ```bash
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/classroomio"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/ncct_lms"
 REDIS_URL="redis://localhost:6379"
 PUBLIC_SERVER_URL="http://localhost:3002"
 TRUSTED_ORIGINS="http://localhost:5173"        # the dashboard dev origin
@@ -170,7 +170,7 @@ Seeded accounts use password **`123456`** (verified against the seed's bcrypt ha
 |---------|-------|-----|
 | `no such service: db-init` | `db-init` was removed; the `api` container now runs DB setup | Don't reference `db-init`. For host dev use `db:setup:seed` (Step 4). |
 | `DATABASE_URL or PRIVATE_DATABASE_URL ... required` | `packages/db/.env` missing (db scripts read their own dir) | `cp packages/db/.env.example packages/db/.env` |
-| `password authentication failed for user "postgres"` | `localhost:5432` is another project's Postgres, not classroomio's | Stop the other container / free port 5432, then recreate: `docker compose -f docker-compose.yaml up -d postgres` |
+| `password authentication failed for user "postgres"` | `localhost:5432` is another project's Postgres, not `ncct_lms` | Stop the other container / free port 5432, then recreate: `docker compose -f docker-compose.yaml up -d postgres` |
 | `Failed to resolve entry for package "@cio/*"` | shared packages not built (`dist/` missing) | `pnpm build`, then re-run the dev commands |
 | `'rm'/'cp' is not recognized` or `spawn EINVAL` (Windows) | Unix command / `.cmd` spawn in a script | Already fixed in-repo (rimraf, Node copy, `shell:true`). Run `pnpm i` to get latest. |
 | `invalid task configuration … N persistent tasks … concurrency` | `pnpm dev` starts the whole monorepo past turbo's cap | Use scoped `pnpm api:dev` + `pnpm dashboard:dev` instead |
@@ -203,4 +203,3 @@ Seeded accounts use password **`123456`** (verified against the seed's bcrypt ha
 - The repo's package scripts were made cross-platform (`rimraf` instead of `rm -rf`,
   a Node postinstall, a Node file-copy, and `shell:true` when scripts spawn pnpm), so
   `pnpm i` / `pnpm build` work in `cmd.exe`/PowerShell too.
-

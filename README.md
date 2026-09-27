@@ -42,7 +42,7 @@ The API runs on port 3002 and the dashboard on port 5173 in local development. T
 
 ## Feature status
 
-The implementation plan is in [NCCT_IMPLEMENTATION_PLAN.md](NCCT_IMPLEMENTATION_PLAN.md). The English SIH demonstration path is implemented. Centre membership permissions and encrypted offline text learning packs are included. Downloadable media, multilingual content, and QR/NFC or face attendance remain explicitly tracked follow-up work; attendance was deferred for the first version.
+The implementation plan is in [NCCT_IMPLEMENTATION_PLAN.md](NCCT_IMPLEMENTATION_PLAN.md). The English SIH demonstration path is implemented. Centre membership permissions, encrypted offline learning packs, and browser media caching are included. Multilingual content and QR/NFC or face attendance remain explicitly tracked follow-up work; attendance was deferred for the first version.
 
 ## Repository
 
