@@ -19,7 +19,7 @@
     room: string | null;
     instructorProfileId: string | null;
   };
-  type Resource = { id: string; institutionId: string; name: string; type: string; capacity: number };
+  type Resource = { id: string; institutionId: string; name: string; type: string; capacity: number; active: boolean };
   type Logistics = {
     logistics: {
       mealRequired: boolean;
@@ -79,7 +79,7 @@
     resources.filter((resource) => {
       const session = sessions.find((item) => item.id === bookingSessionId);
       const institutionId = batches.find((batch) => batch.id === session?.batchId)?.institutionId;
-      return !institutionId || resource.institutionId === institutionId;
+      return resource.active && (!institutionId || resource.institutionId === institutionId);
     })
   );
 
@@ -184,7 +184,8 @@
   function hostelsForBatch(batchId: string) {
     const institutionId = batches.find((batch) => batch.id === batchId)?.institutionId;
     return resources.filter(
-      (resource) => resource.type === 'HOSTEL' && (!institutionId || resource.institutionId === institutionId)
+      (resource) =>
+        resource.active && resource.type === 'HOSTEL' && (!institutionId || resource.institutionId === institutionId)
     );
   }
 
