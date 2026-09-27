@@ -37,4 +37,18 @@ describe('createNcctOfflineQueue', () => {
     expect(await queue.flush()).toBe(1);
     expect(queue.pendingCount()).toBe(0);
   });
+
+  it('removes acknowledged events and keeps conflicts queued', async () => {
+    const storage = createStorage();
+    const queue = createNcctOfflineQueue(
+      'device-001',
+      async () => ({ ok: true, acknowledgedEventIds: ['event-001'] }),
+      storage
+    );
+    queue.enqueue(event);
+    queue.enqueue({ ...event, eventId: 'event-002' });
+
+    expect(await queue.flush()).toBe(1);
+    expect(queue.pendingCount()).toBe(1);
+  });
 });

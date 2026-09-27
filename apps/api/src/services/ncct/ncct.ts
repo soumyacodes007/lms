@@ -569,6 +569,7 @@ export async function receiveSyncEvents(organizationId: string, deviceId: string
   const acceptedIds = new Set(received.map(({ eventId }) => eventId));
   let acknowledged = 0;
   let conflicts = 0;
+  const acknowledgedEventIds: string[] = [];
 
   for (const event of data.events) {
     if (!acceptedIds.has(event.eventId)) continue;
@@ -588,6 +589,7 @@ export async function receiveSyncEvents(organizationId: string, deviceId: string
       }
       await updateNcctSyncEventStatus(event.eventId, 'ACKNOWLEDGED');
       acknowledged += 1;
+      acknowledgedEventIds.push(event.eventId);
     } catch (error) {
       await updateNcctSyncEventStatus(
         event.eventId,
@@ -598,7 +600,7 @@ export async function receiveSyncEvents(organizationId: string, deviceId: string
     }
   }
 
-  return { received: received.length, acknowledged, conflicts };
+  return { received: received.length, acknowledged, conflicts, acknowledgedEventIds };
 }
 
 export { listNcctAssessments, listNcctProgrammeSteps };

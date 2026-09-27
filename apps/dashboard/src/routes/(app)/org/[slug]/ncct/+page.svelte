@@ -69,7 +69,15 @@
           param: { deviceId },
           json: { events }
         });
-        return response.ok;
+        const body = (await response.json().catch(() => ({}))) as {
+          data?: { acknowledgedEventIds?: string[]; conflicts?: number };
+        };
+        const acknowledgedEventIds = body.data?.acknowledgedEventIds ?? [];
+        const conflicts = body.data?.conflicts ?? 0;
+        if (conflicts > 0) {
+          syncMessage = `${conflicts} queued event${conflicts === 1 ? '' : 's'} conflicted and remain queued for review.`;
+        }
+        return { ok: response.ok, acknowledgedEventIds };
       } catch {
         return false;
       }
