@@ -4,7 +4,7 @@
   type Job = { id: string; title: string; employerName: string; location: string; status: string };
   type Application = {
     application: { status: string; createdAt: string };
-    job: { title: string; employerName: string; location: string };
+    job: { id: string; title: string; employerName: string; location: string };
     trainee: { traineeNumber: string };
   };
   type Props = { jobs: Job[]; applications: Application[] };
@@ -14,7 +14,7 @@
   let openJobs = $derived(jobs.filter((job) => job.status === 'OPEN'));
   let selectedJob = $derived(jobs.find((job) => job.id === selectedJobId) ?? openJobs[0] ?? null);
   let selectedApplications = $derived(
-    selectedJob ? applications.filter((row) => row.job.title === selectedJob.title) : applications
+    selectedJob ? applications.filter((row) => row.job.id === selectedJob.id) : applications
   );
   let shortlisted = $derived(applications.filter((row) => row.application.status === 'SHORTLISTED').length);
   let selected = $derived(applications.filter((row) => row.application.status === 'SELECTED').length);

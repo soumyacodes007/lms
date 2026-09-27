@@ -117,7 +117,7 @@ type NcctOverview = {
     }>;
     applications: Array<{
       application: { id: string; status: string; createdAt: string; coverNote: string | null };
-      job: { title: string; employerName: string; location: string };
+      job: { id: string; title: string; employerName: string; location: string };
       trainee: { traineeNumber: string; district: string; state: string };
     }>;
     applicationEvents: Array<{
