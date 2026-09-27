@@ -98,6 +98,7 @@ import { assertNcctCredentialIssuanceAllowed, assertNcctCredentialPrerequisites 
 import { assertNcctBatchInstructorRole, assertNcctBatchProgramme } from './batches';
 import { assertNcctTraineeNumberAvailable } from './trainees';
 import { assertNcctProgressUpdateAllowed } from './progress';
+import { matchNcctJobs } from './career';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -1123,14 +1124,7 @@ export async function getCareerSnapshot(
     listNcctCredentials(organizationId),
     listNcctCareerMessages(traineeId)
   ]);
-  const traineeSkills = new Set(trainee.skills.map((skill) => skill.trim().toLowerCase()));
-  const matchedJobs = jobs
-    .filter((job) => job.status === 'OPEN')
-    .map((job) => ({
-      job,
-      matchedSkills: job.skills.filter((skill) => traineeSkills.has(skill.trim().toLowerCase()))
-    }))
-    .filter(({ matchedSkills }) => matchedSkills.length > 0);
+  const matchedJobs = matchNcctJobs(trainee.skills, jobs);
 
   return {
     trainee,
