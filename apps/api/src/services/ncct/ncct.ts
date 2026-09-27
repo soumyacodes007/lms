@@ -31,6 +31,7 @@ import {
   moveNcctProgrammeStep,
   listNcctNominations,
   listNcctResources,
+  listNcctResourceBookings,
   listNcctTraineeLogistics,
   listNcctSessions,
   listNcctTrainees,
@@ -141,6 +142,7 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     jobs,
     sessions,
     resources,
+    resourceBookings,
     logistics,
     nominations,
     credentials,
@@ -159,6 +161,7 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     listNcctJobs(organizationId),
     listNcctSessions(organizationId),
     listNcctResources(organizationId),
+    listNcctResourceBookings(organizationId),
     listNcctTraineeLogistics(organizationId),
     listNcctNominations(organizationId),
     listNcctCredentials(organizationId),
@@ -236,6 +239,11 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     : hasStudentScope
       ? logistics.filter(({ trainee }) => studentTraineeIds.has(trainee.id))
       : logistics;
+  const visibleResourceBookings = hasTutorScope
+    ? resourceBookings.filter(({ batch }) => tutorCentreIds.has(batch.institutionId))
+    : hasStudentScope
+      ? resourceBookings.filter(({ batch }) => studentBatchIds.has(batch.id))
+      : resourceBookings;
   const visibleAssessments = hasTutorScope
     ? assessments.filter(({ assessment }) => visibleTrainees.some((trainee) => trainee.id === assessment.traineeId))
     : hasStudentScope
@@ -292,6 +300,7 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     jobs,
     sessions: visibleSessions.map(({ session }) => session),
     resources: visibleResources.map(({ resource }) => resource),
+    resourceBookings: visibleResourceBookings,
     logistics: visibleLogistics,
     nominations: visibleNominations,
     credentials: visibleCredentials,

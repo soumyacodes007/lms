@@ -29,6 +29,12 @@
     trainee: { traineeNumber: string };
     resource: { name: string } | null;
   };
+  type ResourceBooking = {
+    booking: { startsAt: string; endsAt: string; quantity: number; notes: string | null };
+    resource: { name: string; type: string };
+    session: { title: string };
+    batch: { name: string };
+  };
   type InstitutionMember = {
     member: { institutionId: string; profileId: string; role: string; active: boolean };
     profile: { fullname: string };
@@ -39,11 +45,13 @@
     batches: Batch[];
     sessions: Session[];
     resources: Resource[];
+    resourceBookings: ResourceBooking[];
     logistics: Logistics[];
     institutionMembers: InstitutionMember[];
   };
 
-  let { institutions, trainees, batches, sessions, resources, logistics, institutionMembers }: Props = $props();
+  let { institutions, trainees, batches, sessions, resources, resourceBookings, logistics, institutionMembers }: Props =
+    $props();
   let sessionOpen = $state(false);
   let bookingOpen = $state(false);
   let resourceOpen = $state(false);
@@ -350,6 +358,27 @@
       </div>
     {:else}
       <p class="ui:text-muted-foreground text-sm">No trainee logistics plans have been recorded yet.</p>
+    {/each}
+  </div>
+  <div class="mt-5 space-y-2">
+    <div class="flex items-center justify-between gap-3">
+      <h3 class="font-medium">Resource bookings</h3>
+      <Badge variant="secondary">{resourceBookings.length}</Badge>
+    </div>
+    {#each resourceBookings.slice(0, 8) as item}
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+        <div>
+          <p class="font-medium">{item.resource.name} · {item.session.title}</p>
+          <p class="ui:text-muted-foreground mt-1 text-xs">
+            {item.batch.name} · {new Date(item.booking.startsAt).toLocaleString()} to {new Date(
+              item.booking.endsAt
+            ).toLocaleTimeString()}
+          </p>
+        </div>
+        <Badge variant="outline">Qty {item.booking.quantity}</Badge>
+      </div>
+    {:else}
+      <p class="ui:text-muted-foreground text-sm">No resource bookings have been recorded yet.</p>
     {/each}
   </div>
 </section>

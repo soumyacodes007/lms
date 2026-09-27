@@ -337,6 +337,7 @@
             batches={overview.batches}
             sessions={overview.sessions}
             resources={overview.resources}
+            resourceBookings={overview.resourceBookings}
             logistics={overview.logistics}
             institutionMembers={overview.institutionMembers}
           />

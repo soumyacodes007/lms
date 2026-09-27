@@ -77,6 +77,12 @@ type NcctOverview = {
       instructorProfileId: string | null;
     }>;
     resources: Array<{ id: string; type: string; name: string; capacity: number; active: boolean }>;
+    resourceBookings: Array<{
+      booking: { startsAt: string; endsAt: string; quantity: number; notes: string | null };
+      resource: { id: string; name: string; type: string };
+      session: { title: string };
+      batch: { name: string; institutionId: string };
+    }>;
     logistics: Array<{
       logistics: { mealRequired: boolean; transportRequired: boolean; notes: string | null };
       batch: { name: string; institutionId: string };

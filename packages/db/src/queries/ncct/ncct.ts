@@ -680,6 +680,23 @@ export async function listNcctResources(organizationId: string) {
     .orderBy(asc(schema.ncctResource.name));
 }
 
+export async function listNcctResourceBookings(organizationId: string) {
+  return db
+    .select({
+      booking: schema.ncctResourceBooking,
+      resource: schema.ncctResource,
+      session: schema.ncctSession,
+      batch: schema.ncctBatch
+    })
+    .from(schema.ncctResourceBooking)
+    .innerJoin(schema.ncctResource, eq(schema.ncctResourceBooking.resourceId, schema.ncctResource.id))
+    .innerJoin(schema.ncctSession, eq(schema.ncctResourceBooking.sessionId, schema.ncctSession.id))
+    .innerJoin(schema.ncctBatch, eq(schema.ncctSession.batchId, schema.ncctBatch.id))
+    .innerJoin(schema.ncctInstitution, eq(schema.ncctBatch.institutionId, schema.ncctInstitution.id))
+    .where(eq(schema.ncctInstitution.organizationId, organizationId))
+    .orderBy(asc(schema.ncctResourceBooking.startsAt));
+}
+
 export async function createNcctResource(data: typeof schema.ncctResource.$inferInsert, client: DbOrTxClient = db) {
   if (data.capacity !== undefined && data.capacity < 1) throw new Error('Resource capacity must be positive');
   const [resource] = await client.insert(schema.ncctResource).values(data).returning();
