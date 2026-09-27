@@ -6,9 +6,19 @@
   import { Badge } from '@cio/ui/base/badge';
 
   const { data } = $props();
+  let copied = $state(false);
 
   function printCredential() {
     window.print();
+  }
+
+  async function copyVerificationUrl() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      copied = true;
+    } catch {
+      copied = false;
+    }
   }
 </script>
 
@@ -22,7 +32,10 @@
       <Page.Title>Credential verification</Page.Title>
       <p class="ui:text-muted-foreground text-sm">NCCT certified trainee registry</p>
     </Page.HeaderContent>
-    <Page.Action><Button variant="outline" onclick={printCredential}>Print</Button></Page.Action>
+    <Page.Action>
+      <Button variant="outline" onclick={() => void copyVerificationUrl()}>{copied ? 'Copied' : 'Copy link'}</Button>
+      <Button variant="outline" onclick={printCredential}>Print</Button>
+    </Page.Action>
   </Page.Header>
 
   <Page.Body>
