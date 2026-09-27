@@ -282,6 +282,25 @@
     <Badge variant="secondary">{resources.length} registered resources</Badge>
     <span>Centre operations remain linked to the batch and trainee records.</span>
   </div>
+  <div class="mt-5 space-y-2">
+    <div class="flex items-center justify-between gap-3">
+      <h3 class="font-medium">Upcoming timetable</h3>
+      <Badge variant="secondary">{sessions.length}</Badge>
+    </div>
+    {#each sessions.slice(0, 8) as session}
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+        <div>
+          <p class="font-medium">{session.title}</p>
+          <p class="ui:text-muted-foreground mt-1 text-xs">
+            {new Date(session.startsAt).toLocaleString()} · {instructorLabel(session.instructorProfileId)}
+          </p>
+        </div>
+        <Badge variant="outline">{session.room ?? 'Room to be assigned'}</Badge>
+      </div>
+    {:else}
+      <p class="ui:text-muted-foreground text-sm">No sessions have been scheduled yet.</p>
+    {/each}
+  </div>
 </section>
 
 <Dialog.Root bind:open={bookingOpen}>
