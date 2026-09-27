@@ -1529,13 +1529,29 @@ export async function saveTraineeLogistics(
   actorProfileId?: string,
   orgRole?: number
 ) {
-  const [batches, trainees] = await Promise.all([listNcctBatches(organizationId), listNcctTrainees(organizationId)]);
+  const [batches, trainees, resources] = await Promise.all([
+    listNcctBatches(organizationId),
+    listNcctTrainees(organizationId),
+    data.hostelResourceId ? listNcctResources(organizationId) : Promise.resolve([])
+  ]);
   const batch = batches.find((item) => item.id === data.batchId);
   const trainee = trainees.find((item) => item.id === data.traineeId);
   if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
   if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
   if (batch.institutionId !== trainee.institutionId) {
     throw new AppError('Trainee and batch must belong to the same institution', 'NCCT_INSTITUTION_MISMATCH', 409);
+  }
+  if (data.hostelResourceId) {
+    const hostel = resources.find(({ resource }) => resource.id === data.hostelResourceId)?.resource;
+    if (!hostel)
+      throw new AppError('Hostel resource does not belong to this organization', 'NCCT_RESOURCE_NOT_FOUND', 404);
+    if (hostel.type !== 'HOSTEL') {
+      throw new AppError('The selected logistics resource must be a hostel', 'NCCT_HOSTEL_REQUIRED', 422);
+    }
+    if (hostel.institutionId !== batch.institutionId) {
+      throw new AppError('Hostel resource must belong to the batch institution', 'NCCT_INSTITUTION_MISMATCH', 409);
+    }
+    if (!hostel.active) throw new AppError('The hostel resource is inactive', 'NCCT_RESOURCE_INACTIVE', 409);
   }
   await assertNcctInstitutionAccess(organizationId, batch.institutionId, actorProfileId, orgRole);
   const logistics = await saveNcctTraineeLogistics(data);
