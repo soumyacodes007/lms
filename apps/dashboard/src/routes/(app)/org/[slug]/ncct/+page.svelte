@@ -15,6 +15,7 @@
   import NcctProgrammePanel from '$lib/features/ncct/components/ncct-programme-panel.svelte';
   import NcctNominationPanel from '$lib/features/ncct/components/ncct-nomination-panel.svelte';
   import NcctAssessmentPanel from '$lib/features/ncct/components/ncct-assessment-panel.svelte';
+  import NcctCredentialPanel from '$lib/features/ncct/components/ncct-credential-panel.svelte';
   import GraduationCapIcon from '@lucide/svelte/icons/graduation-cap';
   import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
   import UsersIcon from '@lucide/svelte/icons/users';
@@ -191,6 +192,11 @@
             trainees={overview.trainees}
             batches={overview.batches}
             assessments={overview.assessments}
+          />
+          <NcctCredentialPanel
+            trainees={overview.trainees}
+            programmes={overview.programmes}
+            batches={overview.batches}
           />
 
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">

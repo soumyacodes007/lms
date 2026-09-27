@@ -203,7 +203,30 @@ export async function submitAssessment(assessmentId: string, data: TSubmitNcctAs
   return submitNcctAssessmentQuery(assessmentId, data);
 }
 
-export async function issueCredential(data: TIssueNcctCredential) {
+export async function issueCredential(organizationId: string, data: TIssueNcctCredential) {
+  const [trainees, programmes, batches, assessments] = await Promise.all([
+    listNcctTrainees(organizationId),
+    listNcctProgrammes(organizationId),
+    listNcctBatches(organizationId),
+    listNcctAssessments(organizationId)
+  ]);
+  if (!trainees.some((trainee) => trainee.id === data.traineeId)) {
+    throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+  }
+  const programme = programmes.find((item) => item.id === data.programmeId);
+  if (!programme) throw new AppError('Programme does not belong to this organization', 'NCCT_PROGRAMME_NOT_FOUND', 404);
+  const batch = batches.find((item) => item.id === data.batchId);
+  if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
+  if (batch.programmeId !== data.programmeId) {
+    throw new AppError('Batch does not belong to the selected programme', 'NCCT_BATCH_PROGRAMME_MISMATCH', 409);
+  }
+  const passed = assessments.some(
+    ({ assessment }) =>
+      assessment.traineeId === data.traineeId && assessment.batchId === data.batchId && assessment.status === 'PASSED'
+  );
+  if (!passed)
+    throw new AppError('A passed assessment is required before issuing a credential', 'NCCT_ASSESSMENT_REQUIRED', 409);
+
   const verificationToken = randomUUID().replaceAll('-', '');
   const certificateNumber =
     data.certificateNumber ?? `NCCT-${new Date().getUTCFullYear()}-${verificationToken.slice(0, 10).toUpperCase()}`;

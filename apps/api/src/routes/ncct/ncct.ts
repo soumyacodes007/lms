@@ -324,7 +324,7 @@ export const ncctRouter = new Hono()
     zValidator('json', ZIssueNcctCredential),
     async (c) => {
       try {
-        return c.json({ success: true, data: await issueCredential(c.req.valid('json')) }, 201);
+        return c.json({ success: true, data: await issueCredential(c.get('orgId')!, c.req.valid('json')) }, 201);
       } catch (error) {
         return handleError(c, error, 'Failed to issue credential');
       }
