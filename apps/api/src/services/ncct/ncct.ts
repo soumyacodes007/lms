@@ -634,6 +634,17 @@ export async function publishNcctProgramme(organizationId: string, data: TCreate
 export async function addProgrammeStep(organizationId: string, data: TAddNcctProgrammeStep, actorProfileId?: string) {
   const programme = (await listNcctProgrammes(organizationId)).find((item) => item.id === data.programmeId);
   if (!programme) throw new AppError('Programme does not belong to this organization', 'NCCT_PROGRAMME_NOT_FOUND', 404);
+  const courseResult = await getOrgCourses({ orgId: organizationId, courseIds: [data.courseId], page: 1, limit: 1 });
+  if (courseResult.items.length === 0) {
+    throw new AppError('Course does not belong to this organization', 'NCCT_COURSE_NOT_FOUND', 404);
+  }
+  if (data.prerequisiteStepId) {
+    const programmeSteps = await listNcctProgrammeSteps(programme.id);
+    const prerequisite = programmeSteps.find((step) => step.id === data.prerequisiteStepId);
+    if (!prerequisite) {
+      throw new AppError('Prerequisite must be another step in this programme', 'NCCT_PREREQUISITE_NOT_FOUND', 422);
+    }
+  }
   const step = await addNcctProgrammeStep(data);
   await recordNcctAudit({
     organizationId,
