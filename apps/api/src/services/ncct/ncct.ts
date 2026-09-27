@@ -13,6 +13,7 @@ import {
   createNcctTrainee,
   decideNcctNomination,
   getNcctDashboardSummary,
+  getNcctProgrammeProgress,
   issueNcctCredential,
   listNcctAssessments,
   listNcctBatches,
@@ -94,6 +95,18 @@ export async function publishNcctProgramme(organizationId: string, data: TCreate
 
 export async function addProgrammeStep(data: TAddNcctProgrammeStep) {
   return addNcctProgrammeStep(data);
+}
+
+export async function getProgrammeProgress(organizationId: string, programmeId: string, traineeId: string) {
+  const [programme, trainee] = await Promise.all([
+    listNcctProgrammes(organizationId).then((programmes) => programmes.find((item) => item.id === programmeId)),
+    listNcctTrainees(organizationId).then((trainees) => trainees.find((item) => item.id === traineeId))
+  ]);
+
+  if (!programme) throw new AppError('Programme does not belong to this organization', 'NCCT_PROGRAMME_NOT_FOUND', 404);
+  if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+
+  return getNcctProgrammeProgress(programmeId, trainee.profileId);
 }
 
 export async function scheduleNcctBatch(organizationId: string, data: TCreateNcctBatch) {

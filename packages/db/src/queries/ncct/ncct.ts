@@ -1,5 +1,5 @@
 import * as schema from '@db/schema';
-import { and, asc, count, desc, eq, gt, lt } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lt } from 'drizzle-orm';
 import { db, type DbOrTxClient } from '@db/drizzle';
 
 export type TNcctInstitution = typeof schema.ncctInstitution.$inferSelect;
@@ -78,6 +78,57 @@ export async function listNcctProgrammeSteps(programmeId: string) {
     .from(schema.ncctProgrammeStep)
     .where(eq(schema.ncctProgrammeStep.programmeId, programmeId))
     .orderBy(asc(schema.ncctProgrammeStep.position));
+}
+
+export async function getNcctProgrammeProgress(programmeId: string, profileId: string | null) {
+  const steps = await listNcctProgrammeSteps(programmeId);
+  const courseIds = steps.map((step) => step.courseId);
+  const records =
+    profileId && courseIds.length > 0
+      ? await db
+          .select({
+            courseId: schema.courseCompletionRecord.courseId,
+            status: schema.courseCompletionRecord.status,
+            completedAt: schema.courseCompletionRecord.completedAt,
+            cycleNumber: schema.courseCompletionRecord.cycleNumber
+          })
+          .from(schema.courseCompletionRecord)
+          .where(
+            and(
+              eq(schema.courseCompletionRecord.profileId, profileId),
+              inArray(schema.courseCompletionRecord.courseId, courseIds)
+            )
+          )
+          .orderBy(desc(schema.courseCompletionRecord.cycleNumber))
+      : [];
+
+  const latestRecords = new Map<string, (typeof records)[number]>();
+  for (const record of records) {
+    if (!latestRecords.has(record.courseId)) latestRecords.set(record.courseId, record);
+  }
+
+  const completedCourses = new Set(
+    steps
+      .filter((step) => {
+        const record = latestRecords.get(step.courseId);
+        return Boolean(record?.completedAt);
+      })
+      .map((step) => step.id)
+  );
+
+  return steps.map((step) => {
+    const record = latestRecords.get(step.courseId);
+    const completed = Boolean(record?.completedAt);
+    const prerequisiteComplete = !step.prerequisiteStepId || completedCourses.has(step.prerequisiteStepId);
+    const status = completed ? 'COMPLETED' : prerequisiteComplete ? 'AVAILABLE' : 'LOCKED';
+
+    return {
+      step,
+      status,
+      completionStatus: record?.status ?? 'not_started',
+      completedAt: record?.completedAt ?? null
+    };
+  });
 }
 
 export async function listNcctBatches(organizationId: string): Promise<TNcctBatch[]> {

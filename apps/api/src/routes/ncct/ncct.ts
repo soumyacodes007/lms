@@ -30,6 +30,7 @@ import {
   createEmploymentJob,
   decideNomination,
   getNcctOverview,
+  getProgrammeProgress,
   bookResource,
   issueCredential,
   listNcctAssessments,
@@ -60,6 +61,7 @@ import {
 } from '@cio/db/queries/ncct';
 
 const programmeParam = z.object({ programmeId: z.string().uuid() });
+const programmeProgressParam = z.object({ programmeId: z.string().uuid(), traineeId: z.string().uuid() });
 const nominationParam = z.object({ nominationId: z.string().uuid() });
 const jobParam = z.object({ jobId: z.string().uuid() });
 const assessmentParam = z.object({ assessmentId: z.string().uuid() });
@@ -176,6 +178,23 @@ export const ncctRouter = new Hono()
         return c.json({ success: true, data: await addProgrammeStep(c.req.valid('json')) }, 201);
       } catch (error) {
         return handleError(c, error, 'Failed to add programme step');
+      }
+    }
+  )
+  .get(
+    '/programmes/:programmeId/progress/:traineeId',
+    authMiddleware,
+    orgMemberMiddleware,
+    zValidator('param', programmeProgressParam),
+    async (c) => {
+      try {
+        const { programmeId, traineeId } = c.req.valid('param');
+        return c.json(
+          { success: true, data: await getProgrammeProgress(c.get('orgId')!, programmeId, traineeId) },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to load programme progress');
       }
     }
   )
