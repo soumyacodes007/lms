@@ -17,6 +17,7 @@ import {
   getNcctDashboardSummary,
   getNcctNomination,
   getNcctProgrammeProgress,
+  getNcctSyncDevice,
   issueNcctCredential,
   listNcctAssessments,
   listNcctBatches,
@@ -42,6 +43,7 @@ import {
   revokeNcctCredential,
   saveNcctTraineeLogistics,
   submitNcctAssessment as submitNcctAssessmentQuery,
+  updateNcctSyncEventStatus,
   updateNcctJobApplication
 } from '@cio/db/queries/ncct';
 import type {
@@ -67,6 +69,7 @@ import type {
   TUpdateNcctProgress,
   TUpdateNcctJobApplication
 } from '@cio/utils/validation/ncct';
+import { ZCreateNcctNomination } from '@cio/utils/validation/ncct';
 import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
 
@@ -207,20 +210,30 @@ export async function scheduleNcctBatch(organizationId: string, data: TCreateNcc
   return createNcctBatch({ ...data, status: 'OPEN' });
 }
 
-export async function submitNcctNomination(organizationId: string, profileId: string, data: TCreateNcctNomination) {
-  const trainees = await listNcctTrainees(organizationId);
-  if (!trainees.some((trainee) => trainee.id === data.traineeId)) {
+export async function submitNcctNomination(
+  organizationId: string,
+  profileId: string | null | undefined,
+  data: TCreateNcctNomination
+) {
+  const [trainees, batches] = await Promise.all([listNcctTrainees(organizationId), listNcctBatches(organizationId)]);
+  const trainee = trainees.find((item) => item.id === data.traineeId);
+  const batch = batches.find((item) => item.id === data.batchId);
+  if (!trainee) {
     throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
   }
+  if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
+  if (trainee.institutionId !== batch.institutionId) {
+    throw new AppError('Trainee and batch must belong to the same institution', 'NCCT_INSTITUTION_MISMATCH', 409);
+  }
 
-  const nomination = await createNcctNomination({ ...data, nominatedByProfileId: profileId });
+  const nomination = await createNcctNomination({ ...data, nominatedByProfileId: profileId ?? null });
   await recordNcctAudit({
     organizationId,
     actorProfileId: profileId,
     action: 'NOMINATION_SUBMITTED',
     entityType: 'nomination',
     entityId: nomination.id,
-    metadata: { batchId: nomination.batchId, traineeId: nomination.traineeId }
+    metadata: { batchId: nomination.batchId, traineeId: nomination.traineeId, offline: !profileId }
   });
   return nomination;
 }
@@ -547,8 +560,45 @@ export async function registerSyncDevice(organizationId: string, data: TCreateNc
   return createNcctSyncDevice({ ...data, organizationId });
 }
 
-export async function receiveSyncEvents(deviceId: string, data: TRecordNcctSyncEvents) {
-  return recordNcctSyncEvents(deviceId, data.events);
+export async function receiveSyncEvents(organizationId: string, deviceId: string, data: TRecordNcctSyncEvents) {
+  const device = await getNcctSyncDevice(organizationId, deviceId);
+  if (!device)
+    throw new AppError('Sync device does not belong to this organization', 'NCCT_SYNC_DEVICE_NOT_FOUND', 404);
+
+  const received = await recordNcctSyncEvents(deviceId, data.events);
+  const acceptedIds = new Set(received.map(({ eventId }) => eventId));
+  let acknowledged = 0;
+  let conflicts = 0;
+
+  for (const event of data.events) {
+    if (!acceptedIds.has(event.eventId)) continue;
+    try {
+      if (event.eventType === 'nomination.submit') {
+        const parsed = ZCreateNcctNomination.safeParse(event.payload);
+        if (!parsed.success) throw new Error('Invalid nomination payload');
+        const trainee = (await listNcctTrainees(organizationId)).find((item) => item.id === parsed.data.traineeId);
+        if (!trainee || trainee.institutionId !== device.institutionId) {
+          throw new Error('The queued trainee is not assigned to this centre');
+        }
+        const batch = (await listNcctBatches(organizationId)).find((item) => item.id === parsed.data.batchId);
+        if (!batch || batch.institutionId !== device.institutionId) {
+          throw new Error('The queued batch is not assigned to this centre');
+        }
+        await submitNcctNomination(organizationId, null, parsed.data);
+      }
+      await updateNcctSyncEventStatus(event.eventId, 'ACKNOWLEDGED');
+      acknowledged += 1;
+    } catch (error) {
+      await updateNcctSyncEventStatus(
+        event.eventId,
+        'CONFLICT',
+        error instanceof Error ? error.message : 'Sync event could not be applied'
+      );
+      conflicts += 1;
+    }
+  }
+
+  return { received: received.length, acknowledged, conflicts };
 }
 
 export { listNcctAssessments, listNcctProgrammeSteps };

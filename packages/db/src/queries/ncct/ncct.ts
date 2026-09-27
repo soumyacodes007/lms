@@ -554,6 +554,15 @@ export async function createNcctSyncDevice(data: typeof schema.ncctSyncDevice.$i
   return device;
 }
 
+export async function getNcctSyncDevice(organizationId: string, deviceId: string) {
+  const [device] = await db
+    .select()
+    .from(schema.ncctSyncDevice)
+    .where(and(eq(schema.ncctSyncDevice.organizationId, organizationId), eq(schema.ncctSyncDevice.id, deviceId)))
+    .limit(1);
+  return device ?? null;
+}
+
 export async function recordNcctSyncEvents(
   deviceId: string,
   events: Array<Pick<typeof schema.ncctSyncEvent.$inferInsert, 'eventId' | 'eventType' | 'payload'>>,
@@ -570,6 +579,20 @@ export async function recordNcctSyncEvents(
     .set({ lastSeenAt: new Date().toISOString() })
     .where(eq(schema.ncctSyncDevice.id, deviceId));
   return received;
+}
+
+export async function updateNcctSyncEventStatus(
+  eventId: string,
+  status: 'ACKNOWLEDGED' | 'CONFLICT' | 'REJECTED',
+  error?: string,
+  client: DbOrTxClient = db
+) {
+  const [event] = await client
+    .update(schema.ncctSyncEvent)
+    .set({ status, error: error ?? null, processedAt: new Date().toISOString() })
+    .where(eq(schema.ncctSyncEvent.eventId, eventId))
+    .returning();
+  return event ?? null;
 }
 
 export async function listNcctAssessments(organizationId: string) {

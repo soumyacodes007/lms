@@ -541,7 +541,10 @@ export const ncctRouter = new Hono()
     async (c) => {
       try {
         return c.json(
-          { success: true, data: await receiveSyncEvents(c.req.valid('param').deviceId, c.req.valid('json')) },
+          {
+            success: true,
+            data: await receiveSyncEvents(c.get('orgId')!, c.req.valid('param').deviceId, c.req.valid('json'))
+          },
           200
         );
       } catch (error) {
