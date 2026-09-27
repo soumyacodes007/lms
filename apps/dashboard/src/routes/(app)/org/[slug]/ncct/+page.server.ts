@@ -64,6 +64,12 @@ type NcctOverview = {
       status: string;
       feedback: string | null;
     }>;
+    reports: {
+      traineesByState: Array<{ state: string; total: number }>;
+      nominationsByStatus: Array<{ status: string; total: number }>;
+      batchesByStatus: Array<{ status: string; total: number }>;
+      placements: { applications: number; shortlisted: number; selected: number; openJobs: number };
+    };
   };
 };
 

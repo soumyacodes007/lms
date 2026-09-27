@@ -101,7 +101,35 @@ export async function getNcctOverview(organizationId: string) {
     nominations,
     credentials,
     applications,
-    assessments: assessments.map(({ assessment }) => assessment)
+    assessments: assessments.map(({ assessment }) => assessment),
+    reports: {
+      traineesByState: Object.entries(
+        trainees.reduce<Record<string, number>>((counts, trainee) => {
+          counts[trainee.state] = (counts[trainee.state] ?? 0) + 1;
+          return counts;
+        }, {})
+      )
+        .map(([state, total]) => ({ state, total }))
+        .sort((a, b) => b.total - a.total || a.state.localeCompare(b.state)),
+      nominationsByStatus: Object.entries(
+        nominations.reduce<Record<string, number>>((counts, row) => {
+          counts[row.nomination.status] = (counts[row.nomination.status] ?? 0) + 1;
+          return counts;
+        }, {})
+      ).map(([status, total]) => ({ status, total })),
+      batchesByStatus: Object.entries(
+        batches.reduce<Record<string, number>>((counts, batch) => {
+          counts[batch.status] = (counts[batch.status] ?? 0) + 1;
+          return counts;
+        }, {})
+      ).map(([status, total]) => ({ status, total })),
+      placements: {
+        applications: applications.length,
+        shortlisted: applications.filter(({ application }) => application.status === 'SHORTLISTED').length,
+        selected: applications.filter(({ application }) => application.status === 'SELECTED').length,
+        openJobs: jobs.filter((job) => job.status === 'OPEN').length
+      }
+    }
   };
 }
 
