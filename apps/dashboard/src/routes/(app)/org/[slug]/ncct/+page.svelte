@@ -54,7 +54,7 @@
   let decisionNotes = $state<Record<string, string>>({});
   let actionMessage = $state('');
 
-  async function decideNomination(nominationId: string, status: 'APPROVED' | 'REJECTED') {
+  async function decideNomination(nominationId: string, status: 'APPROVED' | 'REJECTED' | 'WAITLISTED') {
     decisionId = nominationId;
     actionMessage = '';
     try {
@@ -481,6 +481,12 @@
                           variant="outline"
                           disabled={decisionId === row.nomination.id}
                           onclick={() => void decideNomination(row.nomination.id, 'REJECTED')}>Reject</Button
+                        >
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={decisionId === row.nomination.id}
+                          onclick={() => void decideNomination(row.nomination.id, 'WAITLISTED')}>Waitlist</Button
                         >
                       {/if}
                     </div>
