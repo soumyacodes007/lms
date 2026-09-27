@@ -24,6 +24,7 @@
   let rows = $state<DirectoryRow[]>([]);
   let query = $state('');
   let state = $state('');
+  let district = $state('');
   let skill = $state('');
   let institutionId = $state('');
   let loading = $state(false);
@@ -42,6 +43,7 @@
         query: {
           q: query.trim() || undefined,
           state: state.trim() || undefined,
+          district: district.trim() || undefined,
           skill: skill.trim() || undefined,
           institutionId: institutionId || undefined,
           limit: String(pageSize),
@@ -89,6 +91,7 @@
       bind:value={query}
     />
     <Input class="min-w-40" placeholder="State" bind:value={state} />
+    <Input class="min-w-40" placeholder="District" bind:value={district} />
     <Input class="min-w-40" placeholder="Skill" bind:value={skill} />
     <select class="ui:bg-background h-9 min-w-52 rounded-md border px-3 text-sm" bind:value={institutionId}>
       <option value="">All institutions</option>
@@ -101,10 +104,11 @@
     >
     <Button
       variant="ghost"
-      disabled={loading || loadingMore || (!query && !state && !skill && !institutionId)}
+      disabled={loading || loadingMore || (!query && !state && !district && !skill && !institutionId)}
       onclick={() => {
         query = '';
         state = '';
+        district = '';
         skill = '';
         institutionId = '';
         void search();
