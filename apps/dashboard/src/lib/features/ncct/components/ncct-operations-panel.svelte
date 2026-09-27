@@ -8,7 +8,7 @@
   import { classroomio } from '$lib/utils/services/api';
 
   type Institution = { id: string; name: string; code: string };
-  type Trainee = { id: string; traineeNumber: string; district: string; state: string };
+  type Trainee = { id: string; institutionId: string; traineeNumber: string; district: string; state: string };
   type Batch = { id: string; institutionId: string; name: string; startsOn: string; endsOn: string; capacity: number };
   type Session = {
     id: string;
@@ -164,12 +164,34 @@
 
   function resetLogistics() {
     logisticsBatchId = batches[0]?.id ?? '';
-    logisticsTraineeId = trainees[0]?.id ?? '';
-    logisticsHostelId = '';
+    logisticsTraineeId = traineesForBatch(logisticsBatchId)[0]?.id ?? '';
+    logisticsHostelId = hostelsForBatch(logisticsBatchId)[0]?.id ?? '';
     mealRequired = false;
     transportRequired = false;
     logisticsNotes = '';
     message = '';
+  }
+
+  function traineesForBatch(batchId: string) {
+    const institutionId = batches.find((batch) => batch.id === batchId)?.institutionId;
+    return trainees.filter((trainee) => !institutionId || traineeInstitutionId(trainee.id) === institutionId);
+  }
+
+  function traineeInstitutionId(traineeId: string) {
+    return trainees.find((trainee) => trainee.id === traineeId)?.institutionId;
+  }
+
+  function hostelsForBatch(batchId: string) {
+    const institutionId = batches.find((batch) => batch.id === batchId)?.institutionId;
+    return resources.filter(
+      (resource) => resource.type === 'HOSTEL' && (!institutionId || resource.institutionId === institutionId)
+    );
+  }
+
+  function updateLogisticsBatch(batchId: string) {
+    logisticsBatchId = batchId;
+    logisticsTraineeId = traineesForBatch(batchId)[0]?.id ?? '';
+    logisticsHostelId = hostelsForBatch(batchId)[0]?.id ?? '';
   }
 
   async function save(action: () => Promise<Response>, successMessage: string) {
@@ -545,14 +567,18 @@
     <div class="grid gap-4">
       <label class="grid gap-2 text-sm font-medium">
         Batch
-        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={logisticsBatchId}>
+        <select
+          class="ui:bg-background h-9 rounded-md border px-3"
+          value={logisticsBatchId}
+          onchange={(event) => updateLogisticsBatch(event.currentTarget.value)}
+        >
           {#each batches as batch}<option value={batch.id}>{batch.name}</option>{/each}
         </select>
       </label>
       <label class="grid gap-2 text-sm font-medium">
         Trainee
         <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={logisticsTraineeId}>
-          {#each trainees as trainee}<option value={trainee.id}
+          {#each traineesForBatch(logisticsBatchId) as trainee}<option value={trainee.id}
               >{trainee.traineeNumber} · {trainee.district}, {trainee.state}</option
             >{/each}
         </select>
@@ -561,7 +587,7 @@
         Hostel resource (optional)
         <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={logisticsHostelId}>
           <option value="">No hostel assigned</option>
-          {#each resources.filter((resource) => resource.type === 'HOSTEL') as resource}<option value={resource.id}
+          {#each hostelsForBatch(logisticsBatchId) as resource}<option value={resource.id}
               >{resource.name} · capacity {resource.capacity}</option
             >{/each}
         </select>
