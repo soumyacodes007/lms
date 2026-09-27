@@ -3,6 +3,7 @@
   import { Button } from '@cio/ui/base/button';
   import { classroomio } from '$lib/utils/services/api';
   import type { NcctQueuedEvent } from '../offline-queue';
+  import { summarizeNcctBatchProgress } from '../progress-summary';
 
   type Enrollment = {
     enrollment: { id: string; status: string };
@@ -26,6 +27,7 @@
   };
 
   let { enrollments, courses, offline = false, onQueueEvent }: Props = $props();
+  let batchSummaries = $derived(summarizeNcctBatchProgress(enrollments));
   let selectedId = $state('');
   let snapshot = $state<ProgressSnapshot | null>(null);
   let loading = $state(false);
@@ -145,6 +147,20 @@
     </div>
     <Badge variant="secondary">{enrollments.length} enrolments</Badge>
   </div>
+
+  {#if batchSummaries.length > 0}
+    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {#each batchSummaries as summary}
+        <div class="rounded-lg border p-3">
+          <p class="truncate text-sm font-medium">{summary.batchName}</p>
+          <div class="mt-2 flex flex-wrap gap-2 text-xs">
+            <Badge variant="secondary">{summary.completed}/{summary.total} complete</Badge>
+            <Badge variant="outline">{summary.active} active</Badge>
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/if}
 
   {#if enrollments.length === 0}
     <p class="ui:text-muted-foreground mt-4 text-sm">
