@@ -341,7 +341,12 @@
             logistics={overview.logistics}
             institutionMembers={overview.institutionMembers}
           />
-          <NcctProgressPanel enrollments={overview.enrollments} offline={!isOnline} onQueueEvent={queueOfflineEvent} />
+          <NcctProgressPanel
+            enrollments={overview.enrollments}
+            courses={data.courses}
+            offline={!isOnline}
+            onQueueEvent={queueOfflineEvent}
+          />
           <NcctDirectoryPanel institutions={overview.institutions} />
           <NcctAuditPanel events={overview.auditEvents} />
 

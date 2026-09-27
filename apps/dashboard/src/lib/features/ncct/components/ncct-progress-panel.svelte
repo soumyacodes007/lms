@@ -20,11 +20,12 @@
   };
   type Props = {
     enrollments: Enrollment[];
+    courses: Array<{ id: string; title: string }>;
     offline?: boolean;
     onQueueEvent?: (event: NcctQueuedEvent) => boolean;
   };
 
-  let { enrollments, offline = false, onQueueEvent }: Props = $props();
+  let { enrollments, courses, offline = false, onQueueEvent }: Props = $props();
   let selectedId = $state('');
   let snapshot = $state<ProgressSnapshot | null>(null);
   let loading = $state(false);
@@ -39,6 +40,10 @@
       scoreByStep = {};
     }
   });
+
+  function courseTitle(courseId: string) {
+    return courses.find((course) => course.id === courseId)?.title ?? `Course ${courseId.slice(0, 8)}`;
+  }
 
   function setSnapshot(next: ProgressSnapshot) {
     snapshot = next;
@@ -154,7 +159,7 @@
           {#each snapshot.steps as item}
             <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
               <div>
-                <p class="font-medium">Step {item.step.position} · course {item.step.courseId.slice(0, 8)}</p>
+                <p class="font-medium">Step {item.step.position} · {courseTitle(item.step.courseId)}</p>
                 <p class="ui:text-muted-foreground mt-1 text-xs">
                   {item.step.required ? 'Required' : 'Optional'} · {item.available
                     ? 'Available'
