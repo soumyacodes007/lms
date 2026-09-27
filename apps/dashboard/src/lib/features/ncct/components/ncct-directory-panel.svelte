@@ -27,29 +27,42 @@
   let skill = $state('');
   let institutionId = $state('');
   let loading = $state(false);
+  let loadingMore = $state(false);
+  let hasMore = $state(false);
   let message = $state('');
+  const pageSize = 12;
 
-  async function search() {
-    loading = true;
+  async function search(reset = true) {
+    if (reset) loading = true;
+    else loadingMore = true;
     message = '';
     try {
+      const offset = reset ? 0 : rows.length;
       const response = await classroomio.ncct.directory.$get({
         query: {
           q: query.trim() || undefined,
           state: state.trim() || undefined,
           skill: skill.trim() || undefined,
-          institutionId: institutionId || undefined
+          institutionId: institutionId || undefined,
+          limit: String(pageSize),
+          offset: String(offset)
         }
       });
       if (!response.ok) {
         message = 'The directory could not be loaded.';
         return;
       }
-      rows = (await response.json()).data as DirectoryRow[];
+      const result = (await response.json()) as {
+        data: DirectoryRow[];
+        meta?: { hasMore: boolean };
+      };
+      rows = reset ? result.data : [...rows, ...result.data];
+      hasMore = result.meta?.hasMore ?? false;
     } catch {
       message = 'The directory could not be loaded.';
     } finally {
       loading = false;
+      loadingMore = false;
     }
   }
 
@@ -66,7 +79,7 @@
         Find trainees who have chosen to be visible to authorised employment partners.
       </p>
     </div>
-    <Badge variant="secondary">{rows.length} matches</Badge>
+    <Badge variant="secondary">{rows.length}{hasMore ? '+' : ''} matches</Badge>
   </div>
 
   <div class="mt-4 flex flex-wrap gap-2">
@@ -83,12 +96,12 @@
         <option value={institution.id}>{institution.name} · {institution.code}</option>
       {/each}
     </select>
-    <Button variant="outline" disabled={loading} onclick={() => void search()}
+    <Button variant="outline" disabled={loading || loadingMore} onclick={() => void search()}
       >{loading ? 'Searching…' : 'Search'}</Button
     >
     <Button
       variant="ghost"
-      disabled={loading || (!query && !state && !skill && !institutionId)}
+      disabled={loading || loadingMore || (!query && !state && !skill && !institutionId)}
       onclick={() => {
         query = '';
         state = '';
@@ -105,7 +118,7 @@
     <p class="ui:text-muted-foreground mt-4 text-sm">No visible certified trainees match this search.</p>
   {:else}
     <div class="mt-4 grid gap-3 md:grid-cols-2">
-      {#each rows.slice(0, 12) as row}
+      {#each rows as row}
         <div class="rounded-lg border p-4">
           <div class="flex items-start justify-between gap-3">
             <div>
@@ -130,5 +143,10 @@
         </div>
       {/each}
     </div>
+    {#if hasMore}
+      <Button class="mt-4" variant="outline" disabled={loadingMore} onclick={() => void search(false)}>
+        {loadingMore ? 'Loading…' : 'Load more'}
+      </Button>
+    {/if}
   {/if}
 </section>
