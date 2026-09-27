@@ -50,6 +50,7 @@
   let { institutions, trainees, institutionMembers, institutionMemberCandidates }: Props = $props();
   const canManageMembers = $derived(institutionMemberCandidates.length > 0);
   let institutionOpen = $state(false);
+  let editingInstitutionId = $state<string | null>(null);
   let traineeOpen = $state(false);
   let traineeEditOpen = $state(false);
   let memberOpen = $state(false);
@@ -79,6 +80,7 @@
   let memberRole = $state('COORDINATOR');
 
   function resetInstitution() {
+    editingInstitutionId = null;
     institutionCode = '';
     institutionName = '';
     institutionType = 'ICM';
@@ -86,6 +88,18 @@
     institutionState = '';
     institutionEmail = '';
     formMessage = '';
+  }
+
+  function editInstitution(institution: Institution) {
+    editingInstitutionId = institution.id;
+    institutionCode = institution.code;
+    institutionName = institution.name;
+    institutionType = institution.type;
+    institutionDistrict = institution.district;
+    institutionState = institution.state;
+    institutionEmail = '';
+    formMessage = '';
+    institutionOpen = true;
   }
 
   function resetTrainee() {
@@ -121,29 +135,45 @@
     traineeEditOpen = true;
   }
 
-  async function createInstitution() {
+  async function saveInstitution() {
     institutionBusy = true;
     formMessage = '';
     try {
-      const response = await classroomio.ncct.institutions.$post({
-        json: {
-          code: institutionCode.trim(),
-          name: institutionName.trim(),
-          type: institutionType as 'VAMNICOM' | 'RICM' | 'ICM' | 'PACS' | 'SHG' | 'DAIRY' | 'OTHER',
-          district: institutionDistrict.trim(),
-          state: institutionState.trim(),
-          contactEmail: institutionEmail.trim() || undefined
-        }
-      });
+      const response = editingInstitutionId
+        ? await classroomio.ncct.institutions[':institutionId'].$patch({
+            param: { institutionId: editingInstitutionId },
+            json: {
+              code: institutionCode.trim(),
+              name: institutionName.trim(),
+              type: institutionType as 'VAMNICOM' | 'RICM' | 'ICM' | 'PACS' | 'SHG' | 'DAIRY' | 'OTHER',
+              district: institutionDistrict.trim(),
+              state: institutionState.trim(),
+              contactEmail: institutionEmail.trim() || null
+            }
+          })
+        : await classroomio.ncct.institutions.$post({
+            json: {
+              code: institutionCode.trim(),
+              name: institutionName.trim(),
+              type: institutionType as 'VAMNICOM' | 'RICM' | 'ICM' | 'PACS' | 'SHG' | 'DAIRY' | 'OTHER',
+              district: institutionDistrict.trim(),
+              state: institutionState.trim(),
+              contactEmail: institutionEmail.trim() || undefined
+            }
+          });
       if (!response.ok) {
-        formMessage = 'The institution could not be registered.';
+        formMessage = editingInstitutionId
+          ? 'The institution could not be updated.'
+          : 'The institution could not be registered.';
         return;
       }
       institutionOpen = false;
       resetInstitution();
       await invalidateAll();
     } catch {
-      formMessage = 'The institution could not be registered.';
+      formMessage = editingInstitutionId
+        ? 'The institution could not be updated.'
+        : 'The institution could not be registered.';
     } finally {
       institutionBusy = false;
     }
@@ -319,6 +349,30 @@
       {/each}
     </div>
   {/if}
+  {#if institutions.length > 0}
+    <div class="mt-5 border-t pt-4">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <p class="font-medium">Training institutions</p>
+          <p class="ui:text-muted-foreground text-xs">Keep centre location and contact details current.</p>
+        </div>
+        <Badge variant="secondary">{institutions.length}</Badge>
+      </div>
+      <div class="mt-3 grid gap-2 sm:grid-cols-2">
+        {#each institutions.slice(0, 8) as institution}
+          <div class="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+            <div>
+              <p class="font-medium">{institution.name}</p>
+              <p class="ui:text-muted-foreground mt-1 text-xs">
+                {institution.code} · {institution.type} · {institution.district}, {institution.state}
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onclick={() => editInstitution(institution)}>Edit</Button>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
   <div class="mt-5 border-t pt-4">
     <div class="flex items-center justify-between gap-3">
       <div>
@@ -354,8 +408,12 @@
 <Dialog.Root bind:open={institutionOpen}>
   <Dialog.Content>
     <Dialog.Header>
-      <Dialog.Title>Register institution</Dialog.Title>
-      <Dialog.Description>Add a VAMNICOM, RICM, ICM, or cooperative training centre.</Dialog.Description>
+      <Dialog.Title>{editingInstitutionId ? 'Edit institution' : 'Register institution'}</Dialog.Title>
+      <Dialog.Description
+        >{editingInstitutionId
+          ? 'Update the centre profile and location.'
+          : 'Add a VAMNICOM, RICM, ICM, or cooperative training centre.'}</Dialog.Description
+      >
     </Dialog.Header>
     <div class="grid gap-4 sm:grid-cols-2">
       <InputField label="Centre code" bind:value={institutionCode} />
@@ -385,7 +443,7 @@
           !institutionName.trim() ||
           !institutionDistrict.trim() ||
           !institutionState.trim()}
-        onclick={() => void createInstitution()}>Save institution</Button
+        onclick={() => void saveInstitution()}>{editingInstitutionId ? 'Save changes' : 'Save institution'}</Button
       >
     </Dialog.Footer>
   </Dialog.Content>
