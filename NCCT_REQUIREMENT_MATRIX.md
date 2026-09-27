@@ -12,7 +12,7 @@ This matrix ties the SIH requirements to the current demonstration surface.
 | Evaluator workflow | Evaluator workflow | Assessment scheduling, scores, feedback, audit events | Implemented |
 | Certificates and verification | Credential issuance; public verification page | Credential registry, revocation, verification token | Implemented |
 | Certified trainee directory | Directory filters | Institution, state, skill, and text filters | Implemented |
-| Employment exchange | Vacancies and applications | Jobs, applications, status history | Implemented |
+| Employment exchange | Recruiter dashboard; vacancies and applications | Jobs, applications, status history | Implemented |
 | Career counselling | Career counselling assistant | Profile-aware matching and conversation records | Implemented |
 | Offline centre PCs | Offline learning packs and sync card | Encrypted packs, media cache, idempotent sync events | Implemented for learning content |
 | Analytics and reporting | Operations report and CSV export | Cross-centre aggregates and audit history | Implemented |
