@@ -21,11 +21,14 @@ import {
   listNcctBatches,
   listNcctInstitutions,
   listNcctJobs,
+  listNcctJobApplications,
   listNcctProgrammeSteps,
   listNcctProgrammes,
+  listNcctNominations,
   listNcctResources,
   listNcctSessions,
   listNcctTrainees,
+  listNcctCredentials,
   bookNcctResource,
   recordNcctSyncEvents,
   saveNcctTraineeLogistics,
@@ -55,7 +58,19 @@ import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
 
 export async function getNcctOverview(organizationId: string) {
-  const [summary, institutions, trainees, programmes, batches, jobs, sessions, resources] = await Promise.all([
+  const [
+    summary,
+    institutions,
+    trainees,
+    programmes,
+    batches,
+    jobs,
+    sessions,
+    resources,
+    nominations,
+    credentials,
+    applications
+  ] = await Promise.all([
     getNcctDashboardSummary(organizationId),
     listNcctInstitutions(organizationId),
     listNcctTrainees(organizationId),
@@ -63,7 +78,10 @@ export async function getNcctOverview(organizationId: string) {
     listNcctBatches(organizationId),
     listNcctJobs(organizationId),
     listNcctSessions(organizationId),
-    listNcctResources(organizationId)
+    listNcctResources(organizationId),
+    listNcctNominations(organizationId),
+    listNcctCredentials(organizationId),
+    listNcctJobApplications(organizationId)
   ]);
 
   return {
@@ -74,7 +92,10 @@ export async function getNcctOverview(organizationId: string) {
     batches,
     jobs,
     sessions: sessions.map(({ session }) => session),
-    resources: resources.map(({ resource }) => resource)
+    resources: resources.map(({ resource }) => resource),
+    nominations,
+    credentials,
+    applications
   };
 }
 

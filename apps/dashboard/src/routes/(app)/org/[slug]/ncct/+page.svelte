@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { invalidateAll } from '$app/navigation';
   import { onMount } from 'svelte';
   import Building2Icon from '@lucide/svelte/icons/building-2';
   import BriefcaseBusinessIcon from '@lucide/svelte/icons/briefcase-business';
@@ -26,6 +27,28 @@
   let isOnline = $state(true);
   let syncMessage = $state('Offline centre sync is ready to configure.');
   let syncQueue: ReturnType<typeof createNcctOfflineQueue> | null = null;
+  let decisionId = $state<string | null>(null);
+  let actionMessage = $state('');
+
+  async function decideNomination(nominationId: string, status: 'APPROVED' | 'REJECTED') {
+    decisionId = nominationId;
+    actionMessage = '';
+    try {
+      const response = await classroomio.ncct.nominations[':nominationId'].decision.$post({
+        param: { nominationId },
+        json: { status }
+      });
+      if (!response.ok) {
+        actionMessage = 'The nomination decision could not be saved.';
+        return;
+      }
+      await invalidateAll();
+    } catch {
+      actionMessage = 'The nomination decision could not be saved.';
+    } finally {
+      decisionId = null;
+    }
+  }
 
   function createQueue(deviceId: string) {
     syncQueue = createNcctOfflineQueue(deviceId, async (events: NcctQueuedEvent[]) => {
@@ -140,6 +163,10 @@
         </div>
       {:else}
         <div class="space-y-8">
+          {#if actionMessage}
+            <div class="ui:bg-destructive/10 ui:text-destructive rounded-lg border p-3 text-sm">{actionMessage}</div>
+          {/if}
+
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {#each cards as card}
               {@const Icon = card.icon}
@@ -203,6 +230,96 @@
                   </div>
                 {:else}
                   <p class="ui:text-muted-foreground text-sm">No programmes have been published.</p>
+                {/each}
+              </div>
+            </section>
+
+            <section class="ui:bg-card rounded-xl border p-5 xl:col-span-2">
+              <div class="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 class="font-semibold">Nomination approvals</h2>
+                  <p class="ui:text-muted-foreground mt-1 text-sm">
+                    Review trainee nominations against each batch capacity.
+                  </p>
+                </div>
+                <Badge variant="secondary">{overview.nominations.length}</Badge>
+              </div>
+              <div class="space-y-3">
+                {#each overview.nominations.slice(0, 8) as row}
+                  <div class="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-3">
+                    <div>
+                      <p class="font-medium">{row.trainee.traineeNumber} · {row.programme.title}</p>
+                      <p class="ui:text-muted-foreground text-sm">
+                        {row.institution.name} · {row.batch.name} · {row.trainee.district}, {row.trainee.state}
+                      </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <Badge variant={row.nomination.status === 'APPROVED' ? 'default' : 'outline'}>
+                        {row.nomination.status}
+                      </Badge>
+                      {#if row.nomination.status === 'PENDING'}
+                        <Button
+                          size="sm"
+                          disabled={decisionId === row.nomination.id}
+                          onclick={() => void decideNomination(row.nomination.id, 'APPROVED')}>Approve</Button
+                        >
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={decisionId === row.nomination.id}
+                          onclick={() => void decideNomination(row.nomination.id, 'REJECTED')}>Reject</Button
+                        >
+                      {/if}
+                    </div>
+                  </div>
+                {:else}
+                  <p class="ui:text-muted-foreground text-sm">No nominations have been submitted.</p>
+                {/each}
+              </div>
+            </section>
+
+            <section class="ui:bg-card rounded-xl border p-5">
+              <div class="mb-4 flex items-center justify-between">
+                <h2 class="font-semibold">Credential registry</h2>
+                <Badge variant="secondary">{overview.credentials.length}</Badge>
+              </div>
+              <div class="space-y-3">
+                {#each overview.credentials.slice(0, 6) as row}
+                  <div class="rounded-lg border p-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <p class="font-medium">{row.credential.certificateNumber}</p>
+                      <Badge variant={row.credential.revokedAt ? 'destructive' : 'default'}>
+                        {row.credential.revokedAt ? 'REVOKED' : 'VALID'}
+                      </Badge>
+                    </div>
+                    <p class="ui:text-muted-foreground mt-1 text-sm">
+                      {row.trainee.traineeNumber} · {row.programme.title}
+                    </p>
+                  </div>
+                {:else}
+                  <p class="ui:text-muted-foreground text-sm">No credentials have been issued.</p>
+                {/each}
+              </div>
+            </section>
+
+            <section class="ui:bg-card rounded-xl border p-5">
+              <div class="mb-4 flex items-center justify-between">
+                <h2 class="font-semibold">Job applications</h2>
+                <Badge variant="secondary">{overview.applications.length}</Badge>
+              </div>
+              <div class="space-y-3">
+                {#each overview.applications.slice(0, 6) as row}
+                  <div class="flex items-center justify-between gap-4 rounded-lg border p-3">
+                    <div>
+                      <p class="font-medium">{row.job.title}</p>
+                      <p class="ui:text-muted-foreground text-sm">
+                        {row.trainee.traineeNumber} · {row.job.employerName} · {row.job.location}
+                      </p>
+                    </div>
+                    <Badge variant="outline">{row.application.status}</Badge>
+                  </div>
+                {:else}
+                  <p class="ui:text-muted-foreground text-sm">No job applications have been submitted.</p>
                 {/each}
               </div>
             </section>

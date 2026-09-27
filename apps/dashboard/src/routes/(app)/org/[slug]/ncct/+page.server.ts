@@ -20,6 +20,23 @@ type NcctOverview = {
     jobs: Array<{ id: string; employerName: string; title: string; location: string; status: string }>;
     sessions: Array<{ id: string; title: string; startsAt: string; endsAt: string; room: string | null }>;
     resources: Array<{ id: string; type: string; name: string; capacity: number; active: boolean }>;
+    nominations: Array<{
+      nomination: { id: string; status: string; decisionNote: string | null; createdAt: string };
+      batch: { name: string; capacity: number };
+      trainee: { traineeNumber: string; district: string; state: string };
+      programme: { title: string };
+      institution: { name: string; code: string };
+    }>;
+    credentials: Array<{
+      credential: { id: string; certificateNumber: string; issuedAt: string; revokedAt: string | null };
+      trainee: { traineeNumber: string; district: string; state: string };
+      programme: { title: string };
+    }>;
+    applications: Array<{
+      application: { id: string; status: string; createdAt: string; coverNote: string | null };
+      job: { title: string; employerName: string; location: string };
+      trainee: { traineeNumber: string; district: string; state: string };
+    }>;
   };
 };
 
