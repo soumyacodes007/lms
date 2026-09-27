@@ -81,6 +81,7 @@ import { ZCreateNcctNomination, ZUpdateNcctProgress } from '@cio/utils/validatio
 import { ROLE } from '@cio/utils/constants';
 import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
+import { canAccessNcctInstitution } from './access';
 
 async function recordNcctAudit(data: {
   organizationId: string;
@@ -107,10 +108,14 @@ async function assertNcctInstitutionAccess(
   if (orgRole !== ROLE.TUTOR || !actorProfileId) return;
 
   const institutionMembers = await listNcctInstitutionMembers(organizationId);
-  const hasAccess = institutionMembers.some(
-    ({ member }) => member.institutionId === institutionId && member.profileId === actorProfileId && member.active
-  );
-  if (!hasAccess) {
+  if (
+    !canAccessNcctInstitution(
+      institutionMembers.map(({ member }) => member),
+      institutionId,
+      actorProfileId,
+      orgRole
+    )
+  ) {
     throw new AppError('You do not have access to this training centre', 'NCCT_CENTRE_ACCESS_REQUIRED', 403);
   }
 }
