@@ -43,9 +43,9 @@
             payload: { traineeId, batchId }
           })
         ) {
-          message = 'Nomination queued for sync when this centre reconnects.';
           open = false;
           reset();
+          message = 'Nomination queued for sync when this centre reconnects.';
           return;
         }
         message = 'The nomination could not be submitted.';
@@ -63,9 +63,9 @@
           payload: { traineeId, batchId }
         })
       ) {
-        message = 'Nomination queued for sync when this centre reconnects.';
         open = false;
         reset();
+        message = 'Nomination queued for sync when this centre reconnects.';
         return;
       }
       message = 'The nomination could not be submitted.';
