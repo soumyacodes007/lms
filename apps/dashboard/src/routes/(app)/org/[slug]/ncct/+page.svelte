@@ -18,6 +18,7 @@
   import { createNcctOfflineQueue, type NcctQueuedEvent } from '$lib/features/ncct/offline-queue';
   import NcctSetupPanel from '$lib/features/ncct/components/ncct-setup-panel.svelte';
   import NcctProgrammePanel from '$lib/features/ncct/components/ncct-programme-panel.svelte';
+  import NcctOfflinePackPanel from '$lib/features/ncct/components/ncct-offline-pack-panel.svelte';
   import NcctNominationPanel from '$lib/features/ncct/components/ncct-nomination-panel.svelte';
   import NcctAssessmentPanel from '$lib/features/ncct/components/ncct-assessment-panel.svelte';
   import NcctCredentialPanel from '$lib/features/ncct/components/ncct-credential-panel.svelte';
@@ -293,6 +294,7 @@
             courses={data.courses}
             onDownloadPack={downloadOfflinePack}
           />
+          <NcctOfflinePackPanel orgName={data.orgName} programmes={overview.programmes} />
           <NcctNominationPanel
             trainees={overview.trainees}
             batches={overview.batches}
