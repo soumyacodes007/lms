@@ -38,18 +38,28 @@
     status: string;
     capacity: number;
   };
+  type Enrollment = { batchId: string; status: string };
   type Props = {
     institutions: Institution[];
     institutionMembers: InstitutionMember[];
     programmes: Programme[];
     batches: Batch[];
+    enrollments: Enrollment[];
     programmeSteps: Array<{ programmeId: string; steps: ProgrammeStep[] }>;
     courses: Course[];
     onDownloadPack: (programmeId: string) => void;
   };
 
-  let { institutions, institutionMembers, programmes, batches, programmeSteps, courses, onDownloadPack }: Props =
-    $props();
+  let {
+    institutions,
+    institutionMembers,
+    programmes,
+    batches,
+    enrollments,
+    programmeSteps,
+    courses,
+    onDownloadPack
+  }: Props = $props();
   let programmeOpen = $state(false);
   let batchOpen = $state(false);
   let programmeBusy = $state(false);
@@ -116,6 +126,11 @@
 
   function institutionName(institutionId: string) {
     return institutions.find((institution) => institution.id === institutionId)?.name ?? institutionId;
+  }
+
+  function enrolledCount(batchId: string) {
+    return enrollments.filter((enrollment) => enrollment.batchId === batchId && enrollment.status === 'ENROLLED')
+      .length;
   }
 
   function nextBatchStatuses(status: string) {
@@ -367,7 +382,13 @@
             <Badge variant={batch.status === 'RUNNING' ? 'default' : 'outline'}>{batch.status}</Badge>
           </div>
           <div class="mt-3 flex flex-wrap items-center gap-2">
-            <span class="ui:text-muted-foreground text-xs">Capacity {batch.capacity}</span>
+            <span class="ui:text-muted-foreground text-xs">Seats {enrolledCount(batch.id)} / {batch.capacity}</span>
+            <div class="ui:bg-muted h-1.5 min-w-24 flex-1 overflow-hidden rounded-full">
+              <div
+                class="bg-primary h-full rounded-full"
+                style={`width: ${Math.min(100, (enrolledCount(batch.id) / batch.capacity) * 100)}%`}
+              ></div>
+            </div>
             {#each nextBatchStatuses(batch.status) as nextStatus}
               <Button
                 variant="ghost"

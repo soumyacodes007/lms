@@ -295,6 +295,7 @@
             institutionMembers={overview.institutionMembers}
             programmes={overview.programmes}
             batches={overview.batches}
+            enrollments={overview.enrollments}
             programmeSteps={overview.programmeSteps}
             courses={data.courses}
             onDownloadPack={downloadOfflinePack}
