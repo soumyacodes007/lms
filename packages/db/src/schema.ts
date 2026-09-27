@@ -4257,6 +4257,39 @@ export const ncctSyncEventStatus = pgEnum('NCCT_SYNC_EVENT_STATUS', [
   'REJECTED'
 ]);
 
+export const ncctAuditEvent = pgTable(
+  'ncct_audit_event',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    institutionId: uuid('institution_id'),
+    actorProfileId: uuid('actor_profile_id'),
+    action: varchar().notNull(),
+    entityType: varchar('entity_type').notNull(),
+    entityId: uuid('entity_id'),
+    metadata: jsonb().default({}).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.organizationId],
+      foreignColumns: [organization.id],
+      name: 'ncct_audit_event_organization_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.actorProfileId],
+      foreignColumns: [profile.id],
+      name: 'ncct_audit_event_actor_profile_id_fkey'
+    }).onDelete('set null'),
+    index('idx_ncct_audit_event_org_created').on(table.organizationId, table.createdAt),
+    index('idx_ncct_audit_event_entity').on(table.entityType, table.entityId),
+    index('idx_ncct_audit_event_action').on(table.action)
+  ]
+);
+
 export const ncctInstitution = pgTable(
   'ncct_institution',
   {

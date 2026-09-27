@@ -36,6 +36,7 @@ import {
   decideNomination,
   getNcctOverview,
   getCareerSnapshot,
+  getAuditEvents,
   getEnrollmentProgress,
   getProgrammeProgress,
   bookResource,
@@ -363,7 +364,15 @@ export const ncctRouter = new Hono()
     async (c) => {
       try {
         return c.json(
-          { success: true, data: await submitAssessment(c.req.valid('param').assessmentId, c.req.valid('json')) },
+          {
+            success: true,
+            data: await submitAssessment(
+              c.get('orgId')!,
+              c.req.valid('param').assessmentId,
+              c.req.valid('json'),
+              c.get('user')!.id
+            )
+          },
           200
         );
       } catch (error) {
@@ -379,7 +388,13 @@ export const ncctRouter = new Hono()
     zValidator('json', ZIssueNcctCredential),
     async (c) => {
       try {
-        return c.json({ success: true, data: await issueCredential(c.get('orgId')!, c.req.valid('json')) }, 201);
+        return c.json(
+          {
+            success: true,
+            data: await issueCredential(c.get('orgId')!, c.req.valid('json'), c.get('user')!.id)
+          },
+          201
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to issue credential');
       }
@@ -400,6 +415,13 @@ export const ncctRouter = new Hono()
       );
     } catch (error) {
       return handleError(c, error, 'Failed to search certified trainee directory');
+    }
+  })
+  .get('/audit', authMiddleware, orgMemberMiddleware, async (c) => {
+    try {
+      return c.json({ success: true, data: await getAuditEvents(c.get('orgId')!) }, 200);
+    } catch (error) {
+      return handleError(c, error, 'Failed to load NCCT audit events');
     }
   })
   .get('/sessions', authMiddleware, orgMemberMiddleware, async (c) => {

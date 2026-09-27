@@ -17,6 +17,7 @@ import {
   groupAttendance,
   groupmember,
   ncctAssessment,
+  ncctAuditEvent,
   ncctBatch,
   ncctCareerMessage,
   ncctCredential,
@@ -78,6 +79,21 @@ export const ncctInstitutionRelations = relations(ncctInstitution, ({ one, many 
   }),
   trainees: many(ncctTrainee),
   batches: many(ncctBatch)
+}));
+
+export const ncctAuditEventRelations = relations(ncctAuditEvent, ({ one }) => ({
+  organization: one(organization, {
+    fields: [ncctAuditEvent.organizationId],
+    references: [organization.id]
+  }),
+  actor: one(profile, {
+    fields: [ncctAuditEvent.actorProfileId],
+    references: [profile.id]
+  }),
+  institution: one(ncctInstitution, {
+    fields: [ncctAuditEvent.institutionId],
+    references: [ncctInstitution.id]
+  })
 }));
 
 export const ncctTraineeRelations = relations(ncctTrainee, ({ one, many }) => ({

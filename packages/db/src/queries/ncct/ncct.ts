@@ -9,6 +9,21 @@ export type TNcctBatch = typeof schema.ncctBatch.$inferSelect;
 export type TNcctNomination = typeof schema.ncctNomination.$inferSelect;
 export type TNcctJob = typeof schema.ncctJob.$inferSelect;
 
+export async function createNcctAuditEvent(data: typeof schema.ncctAuditEvent.$inferInsert, client: DbOrTxClient = db) {
+  const [event] = await client.insert(schema.ncctAuditEvent).values(data).returning();
+  if (!event) throw new Error('Failed to create audit event');
+  return event;
+}
+
+export async function listNcctAuditEvents(organizationId: string, limit = 80) {
+  return db
+    .select()
+    .from(schema.ncctAuditEvent)
+    .where(eq(schema.ncctAuditEvent.organizationId, organizationId))
+    .orderBy(desc(schema.ncctAuditEvent.createdAt))
+    .limit(Math.min(Math.max(limit, 1), 200));
+}
+
 export async function listNcctNominations(organizationId: string) {
   return db
     .select({

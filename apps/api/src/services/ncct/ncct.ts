@@ -3,6 +3,7 @@ import {
   applyToNcctJob,
   createNcctBatch,
   createNcctAssessment,
+  createNcctAuditEvent,
   createNcctCareerMessage,
   createNcctInstitution,
   createNcctJob,
@@ -31,6 +32,7 @@ import {
   listNcctCredentials,
   listNcctEnrollments,
   listNcctCareerMessages,
+  listNcctAuditEvents,
   listNcctEnrollmentProgress,
   markNcctEnrollmentCompleted,
   searchNcctCertifiedTrainees,
@@ -67,6 +69,22 @@ import type {
 import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
 
+async function recordNcctAudit(data: {
+  organizationId: string;
+  institutionId?: string | null;
+  actorProfileId?: string | null;
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    await createNcctAuditEvent({ ...data, metadata: data.metadata ?? {} });
+  } catch (error) {
+    console.error('NCCT audit event failed', error);
+  }
+}
+
 export async function getNcctOverview(organizationId: string) {
   const [
     summary,
@@ -81,7 +99,8 @@ export async function getNcctOverview(organizationId: string) {
     credentials,
     applications,
     assessments,
-    enrollments
+    enrollments,
+    auditEvents
   ] = await Promise.all([
     getNcctDashboardSummary(organizationId),
     listNcctInstitutions(organizationId),
@@ -95,7 +114,8 @@ export async function getNcctOverview(organizationId: string) {
     listNcctCredentials(organizationId),
     listNcctJobApplications(organizationId),
     listNcctAssessments(organizationId),
-    listNcctEnrollments(organizationId)
+    listNcctEnrollments(organizationId),
+    listNcctAuditEvents(organizationId)
   ]);
 
   return {
@@ -112,6 +132,7 @@ export async function getNcctOverview(organizationId: string) {
     applications,
     assessments: assessments.map(({ assessment }) => assessment),
     enrollments,
+    auditEvents,
     reports: {
       traineesByState: Object.entries(
         trainees.reduce<Record<string, number>>((counts, trainee) => {
@@ -191,7 +212,16 @@ export async function submitNcctNomination(organizationId: string, profileId: st
     throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
   }
 
-  return createNcctNomination({ ...data, nominatedByProfileId: profileId });
+  const nomination = await createNcctNomination({ ...data, nominatedByProfileId: profileId });
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId: profileId,
+    action: 'NOMINATION_SUBMITTED',
+    entityType: 'nomination',
+    entityId: nomination.id,
+    metadata: { batchId: nomination.batchId, traineeId: nomination.traineeId }
+  });
+  return nomination;
 }
 
 export async function decideNomination(
@@ -207,7 +237,17 @@ export async function decideNomination(
   }
 
   try {
-    return await decideNcctNominationAndEnroll(nominationId, data.status, profileId, data.decisionNote);
+    const result = await decideNcctNominationAndEnroll(nominationId, data.status, profileId, data.decisionNote);
+    await recordNcctAudit({
+      organizationId,
+      actorProfileId: profileId,
+      institutionId: row.institution.id,
+      action: `NOMINATION_${data.status}`,
+      entityType: 'nomination',
+      entityId: nominationId,
+      metadata: { batchId: row.batch.id, traineeId: row.trainee.id, enrolled: Boolean(result.enrollment) }
+    });
+    return result;
   } catch (error) {
     if (error instanceof Error && error.message === 'BATCH_CAPACITY_REACHED') {
       throw new AppError('This batch has no available seats', 'NCCT_BATCH_CAPACITY_REACHED', 409);
@@ -245,7 +285,15 @@ export async function updateJobApplication(
   if (!application) {
     throw new AppError('Job application does not belong to this organization', 'NCCT_APPLICATION_NOT_FOUND', 404);
   }
-  return updateNcctJobApplication(applicationId, data.status);
+  const updated = await updateNcctJobApplication(applicationId, data.status);
+  await recordNcctAudit({
+    organizationId,
+    action: `APPLICATION_${data.status}`,
+    entityType: 'job_application',
+    entityId: applicationId,
+    metadata: { jobId: application.job.id, traineeId: application.trainee.id }
+  });
+  return updated;
 }
 
 async function getNcctCareerTrainee(organizationId: string, traineeId: string) {
@@ -365,6 +413,10 @@ export async function searchCertifiedTrainees(organizationId: string, search?: s
   return searchNcctCertifiedTrainees(organizationId, search);
 }
 
+export async function getAuditEvents(organizationId: string) {
+  return listNcctAuditEvents(organizationId);
+}
+
 export async function scheduleAssessment(organizationId: string, data: TCreateNcctAssessment) {
   const trainees = await listNcctTrainees(organizationId);
   if (!trainees.some((trainee) => trainee.id === data.traineeId)) {
@@ -374,11 +426,28 @@ export async function scheduleAssessment(organizationId: string, data: TCreateNc
   return createNcctAssessment(data);
 }
 
-export async function submitAssessment(assessmentId: string, data: TSubmitNcctAssessment) {
-  return submitNcctAssessmentQuery(assessmentId, data);
+export async function submitAssessment(
+  organizationId: string,
+  assessmentId: string,
+  data: TSubmitNcctAssessment,
+  actorProfileId?: string
+) {
+  const existing = (await listNcctAssessments(organizationId)).find(({ assessment }) => assessment.id === assessmentId);
+  if (!existing)
+    throw new AppError('Assessment does not belong to this organization', 'NCCT_ASSESSMENT_NOT_FOUND', 404);
+  const assessment = await submitNcctAssessmentQuery(assessmentId, data);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    action: `ASSESSMENT_${data.status}`,
+    entityType: 'assessment',
+    entityId: assessmentId,
+    metadata: { batchId: existing.assessment.batchId, traineeId: existing.assessment.traineeId }
+  });
+  return assessment;
 }
 
-export async function issueCredential(organizationId: string, data: TIssueNcctCredential) {
+export async function issueCredential(organizationId: string, data: TIssueNcctCredential, actorProfileId?: string) {
   const [trainees, programmes, batches, assessments] = await Promise.all([
     listNcctTrainees(organizationId),
     listNcctProgrammes(organizationId),
@@ -406,7 +475,18 @@ export async function issueCredential(organizationId: string, data: TIssueNcctCr
   const certificateNumber =
     data.certificateNumber ?? `NCCT-${new Date().getUTCFullYear()}-${verificationToken.slice(0, 10).toUpperCase()}`;
 
-  return issueNcctCredential({ ...data, certificateNumber, verificationToken });
+  const credential = await issueNcctCredential({ ...data, certificateNumber, verificationToken });
+  const trainee = trainees.find((item) => item.id === data.traineeId);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: trainee?.institutionId,
+    action: 'CREDENTIAL_ISSUED',
+    entityType: 'credential',
+    entityId: credential.id,
+    metadata: { traineeId: data.traineeId, programmeId: data.programmeId, batchId: data.batchId }
+  });
+  return credential;
 }
 
 export async function scheduleSession(organizationId: string, data: TCreateNcctSession) {
