@@ -204,7 +204,7 @@
             programmes={overview.programmes}
             batches={overview.batches}
           />
-          <NcctEmploymentPanel jobs={overview.jobs} trainees={overview.trainees} />
+          <NcctEmploymentPanel jobs={overview.jobs} trainees={overview.trainees} applications={overview.applications} />
           <NcctCareerPanel trainees={overview.trainees} />
           <NcctReportPanel report={overview.reports} />
           <NcctOperationsPanel

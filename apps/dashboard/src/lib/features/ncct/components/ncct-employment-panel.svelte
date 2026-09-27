@@ -17,9 +17,14 @@
     skills: string[];
   };
   type Trainee = { id: string; traineeNumber: string; district: string; state: string };
-  type Props = { jobs: Job[]; trainees: Trainee[] };
+  type Application = {
+    application: { id: string; status: string };
+    job: { title: string; employerName: string; location: string };
+    trainee: { traineeNumber: string };
+  };
+  type Props = { jobs: Job[]; trainees: Trainee[]; applications: Application[] };
 
-  let { jobs, trainees }: Props = $props();
+  let { jobs, trainees, applications }: Props = $props();
   let postOpen = $state(false);
   let applyOpen = $state(false);
   let busy = $state(false);
@@ -33,6 +38,7 @@
   let applicationJobId = $state('');
   let applicationTraineeId = $state('');
   let coverNote = $state('');
+  let updatingApplicationId = $state<string | null>(null);
 
   function resetPost() {
     employerName = '';
@@ -101,6 +107,26 @@
       busy = false;
     }
   }
+
+  async function updateApplication(applicationId: string, status: 'SHORTLISTED' | 'SELECTED' | 'REJECTED') {
+    updatingApplicationId = applicationId;
+    message = '';
+    try {
+      const response = await classroomio.ncct.applications[':applicationId'].status.$post({
+        param: { applicationId },
+        json: { status }
+      });
+      if (!response.ok) {
+        message = 'The application status could not be updated.';
+        return;
+      }
+      await invalidateAll();
+    } catch {
+      message = 'The application status could not be updated.';
+    } finally {
+      updatingApplicationId = null;
+    }
+  }
 </script>
 
 <section class="ui:bg-card rounded-xl border p-5 xl:col-span-2">
@@ -132,8 +158,51 @@
   </div>
   <div class="ui:text-muted-foreground mt-4 flex flex-wrap gap-2 text-sm">
     <Badge variant="secondary">{jobs.length} vacancies</Badge>
+    <Badge variant="secondary">{applications.length} applications</Badge>
     <span>Applications remain visible to centre coordinators.</span>
   </div>
+  {#if applications.length > 0}
+    <div class="mt-4 space-y-2">
+      {#each applications.slice(0, 5) as row}
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+          <div>
+            <p class="font-medium">{row.job.title} · {row.trainee.traineeNumber}</p>
+            <p class="ui:text-muted-foreground">{row.job.employerName} · {row.job.location}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <Badge variant="outline">{row.application.status}</Badge>
+            {#if row.application.status === 'APPLIED'}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={updatingApplicationId === row.application.id}
+                onclick={() => void updateApplication(row.application.id, 'SHORTLISTED')}>Shortlist</Button
+              >
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={updatingApplicationId === row.application.id}
+                onclick={() => void updateApplication(row.application.id, 'REJECTED')}>Reject</Button
+              >
+            {:else if row.application.status === 'SHORTLISTED'}
+              <Button
+                size="sm"
+                disabled={updatingApplicationId === row.application.id}
+                onclick={() => void updateApplication(row.application.id, 'SELECTED')}>Select</Button
+              >
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={updatingApplicationId === row.application.id}
+                onclick={() => void updateApplication(row.application.id, 'REJECTED')}>Reject</Button
+              >
+            {/if}
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/if}
+  {#if message}<p class="ui:text-destructive mt-3 text-sm">{message}</p>{/if}
 </section>
 
 <Dialog.Root bind:open={postOpen}>
