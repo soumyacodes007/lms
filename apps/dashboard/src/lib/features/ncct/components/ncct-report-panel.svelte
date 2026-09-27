@@ -1,5 +1,7 @@
 <script lang="ts">
   import { Badge } from '@cio/ui/base/badge';
+  import { Button } from '@cio/ui/base/button';
+  import { classroomio } from '$lib/utils/services/api';
 
   type Report = {
     traineesByState: Array<{ state: string; total: number }>;
@@ -10,6 +12,31 @@
   type Props = { report: Report };
 
   let { report }: Props = $props();
+  let exporting = $state(false);
+  let message = $state('');
+
+  async function exportReport() {
+    exporting = true;
+    message = '';
+    try {
+      const response = await classroomio.ncct.reports.export.$get();
+      if (!response.ok) {
+        message = 'The report could not be exported.';
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'ncct-operations-report.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      message = 'The report could not be exported.';
+    } finally {
+      exporting = false;
+    }
+  }
 </script>
 
 <section class="ui:bg-card rounded-xl border p-5 xl:col-span-2">
@@ -20,8 +47,14 @@
         A central view of outreach, programme delivery, and employment outcomes.
       </p>
     </div>
-    <Badge variant="secondary">Live summary</Badge>
+    <div class="flex items-center gap-2">
+      <Badge variant="secondary">Live summary</Badge>
+      <Button size="sm" variant="outline" disabled={exporting} onclick={() => void exportReport()}>
+        {exporting ? 'Preparing…' : 'Download CSV'}
+      </Button>
+    </div>
   </div>
+  {#if message}<p class="ui:text-destructive mt-3 text-sm">{message}</p>{/if}
 
   <div class="mt-5 grid gap-4 md:grid-cols-3">
     <div class="rounded-lg border p-4">

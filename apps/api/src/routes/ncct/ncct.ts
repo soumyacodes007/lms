@@ -107,6 +107,33 @@ export const ncctRouter = new Hono()
       return handleError(c, error, 'Failed to load NCCT overview');
     }
   })
+  .get('/reports/export', authMiddleware, orgMemberMiddleware, async (c) => {
+    try {
+      const overview = await getNcctOverview(c.get('orgId')!);
+      const escape = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+      const rows = [
+        ['section', 'key', 'value', 'detail'],
+        ...Object.entries(overview.summary).map(([key, value]) => ['summary', key, value, '']),
+        ...overview.reports.traineesByState.map(({ state, total }) => ['trainees_by_state', state, total, '']),
+        ...overview.reports.nominationsByStatus.map(({ status, total }) => ['nominations_by_status', status, total, '']),
+        ...overview.reports.batchesByStatus.map(({ status, total }) => ['batches_by_status', status, total, '']),
+        ['placements', 'applications', overview.reports.placements.applications, ''],
+        ['placements', 'shortlisted', overview.reports.placements.shortlisted, ''],
+        ['placements', 'selected', overview.reports.placements.selected, ''],
+        ['placements', 'open_jobs', overview.reports.placements.openJobs, '']
+      ];
+      const csv = rows.map((row) => row.map(escape).join(',')).join('\r\n');
+      return new Response(`${csv}\r\n`, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="ncct-operations-report.csv"'
+        }
+      });
+    } catch (error) {
+      return handleError(c, error, 'Failed to export NCCT report');
+    }
+  })
   .get('/institutions', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
       return c.json({ success: true, data: await listNcctInstitutions(c.get('orgId')!) }, 200);
