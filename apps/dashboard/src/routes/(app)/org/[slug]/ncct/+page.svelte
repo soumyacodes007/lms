@@ -10,6 +10,7 @@
   import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
   import { Button } from '@cio/ui/base/button';
   import { classroomio } from '$lib/utils/services/api';
+  import { clearNcctOfflineSnapshot, saveNcctOfflineSnapshot } from '$lib/features/ncct/offline-cache';
   import { createNcctOfflineQueue, type NcctQueuedEvent } from '$lib/features/ncct/offline-queue';
   import NcctSetupPanel from '$lib/features/ncct/components/ncct-setup-panel.svelte';
   import NcctProgrammePanel from '$lib/features/ncct/components/ncct-programme-panel.svelte';
@@ -38,6 +39,7 @@
   let pendingSync = $state(0);
   let isOnline = $state(true);
   let syncMessage = $state('Offline centre sync is ready to configure.');
+  let cacheMessage = $state('No encrypted workspace snapshot saved yet.');
   let syncQueue: ReturnType<typeof createNcctOfflineQueue> | null = null;
   let decisionId = $state<string | null>(null);
   let actionMessage = $state('');
@@ -137,6 +139,25 @@
     }
   }
 
+  async function saveOfflineSnapshot() {
+    if (!overview) return;
+    try {
+      const result = await saveNcctOfflineSnapshot(`overview:${data.orgName}`, overview);
+      cacheMessage = `Encrypted workspace snapshot saved ${new Date(result.savedAt).toLocaleTimeString()}.`;
+    } catch {
+      cacheMessage = 'The encrypted workspace snapshot could not be saved on this device.';
+    }
+  }
+
+  async function clearOfflineSnapshot() {
+    try {
+      await clearNcctOfflineSnapshot(`overview:${data.orgName}`);
+      cacheMessage = 'The local workspace snapshot was cleared.';
+    } catch {
+      cacheMessage = 'The local workspace snapshot could not be cleared.';
+    }
+  }
+
   onMount(() => {
     isOnline = navigator.onLine;
     const storedDeviceId = localStorage.getItem(`ncct-sync-device:${data.orgName}`);
@@ -145,6 +166,7 @@
       createQueue(storedDeviceId);
       void flushSync();
     }
+    void saveOfflineSnapshot();
 
     const handleOnline = () => {
       isOnline = true;
@@ -282,6 +304,15 @@
                 <span>{isOnline ? 'Online' : 'Offline'}</span>
                 <span>{pendingSync} pending event{pendingSync === 1 ? '' : 's'}</span>
                 <span>{syncMessage}</span>
+              </div>
+              <div class="mt-4 flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onclick={() => void saveOfflineSnapshot()}
+                  >Save encrypted snapshot</Button
+                >
+                <Button variant="ghost" size="sm" onclick={() => void clearOfflineSnapshot()}
+                  >Clear local snapshot</Button
+                >
+                <span class="ui:text-muted-foreground text-xs">{cacheMessage}</span>
               </div>
             </section>
 
