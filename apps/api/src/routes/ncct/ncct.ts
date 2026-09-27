@@ -162,6 +162,13 @@ export const ncctRouter = new Hono()
           total,
           ''
         ]),
+        ...overview.reports.assessmentsByStatus.map(({ status, total }) => [
+          'assessments_by_status',
+          status,
+          total,
+          ''
+        ]),
+        ['training', 'completion_rate', overview.reports.completionRate, 'percent'],
         ['placements', 'applications', overview.reports.placements.applications, ''],
         ['placements', 'shortlisted', overview.reports.placements.shortlisted, ''],
         ['placements', 'selected', overview.reports.placements.selected, ''],

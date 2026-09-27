@@ -358,6 +358,19 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
           return counts;
         }, {})
       ).map(([status, total]) => ({ status, total })),
+      assessmentsByStatus: Object.entries(
+        visibleAssessments.reduce<Record<string, number>>((counts, { assessment }) => {
+          counts[assessment.status] = (counts[assessment.status] ?? 0) + 1;
+          return counts;
+        }, {})
+      ).map(([status, total]) => ({ status, total })),
+      completionRate: visibleEnrollments.length
+        ? Math.round(
+            (visibleEnrollments.filter(({ enrollment }) => enrollment.status === 'COMPLETED').length /
+              visibleEnrollments.length) *
+              100
+          )
+        : 0,
       placements: {
         applications: visibleApplications.length,
         shortlisted: visibleApplications.filter(({ application }) => application.status === 'SHORTLISTED').length,
