@@ -114,9 +114,11 @@
     if (!syncQueue || !isOnline) return;
     const sent = await syncQueue.flush();
     pendingSync = syncQueue.pendingCount();
-    lastSyncAt = new Date().toISOString();
-    localStorage.setItem(`ncct-sync-last:${data.orgName}`, lastSyncAt);
-    if (sent > 0) syncMessage = `${sent} queued event${sent === 1 ? '' : 's'} synchronized.`;
+    if (sent > 0) {
+      lastSyncAt = new Date().toISOString();
+      localStorage.setItem(`ncct-sync-last:${data.orgName}`, lastSyncAt);
+      syncMessage = `${sent} queued event${sent === 1 ? '' : 's'} synchronized.`;
+    }
   }
 
   async function registerSyncDevice() {
