@@ -80,6 +80,8 @@ import type {
 import { ZCreateNcctNomination, ZUpdateNcctProgress } from '@cio/utils/validation/ncct';
 import { ROLE } from '@cio/utils/constants';
 import { getOrgCourses } from '@cio/db/queries/course';
+import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
+import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
 import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
 import { canAccessNcctInstitution } from './access';
@@ -345,6 +347,131 @@ export async function listNcctCourses(organizationId: string) {
     lessonCount: course.lessonCount,
     exerciseCount: course.exerciseCount
   }));
+}
+
+export async function getNcctOfflineProgrammePack(
+  organizationId: string,
+  programmeId: string,
+  actorProfileId?: string,
+  orgRole?: number
+) {
+  const [programme] = (await listNcctProgrammes(organizationId)).filter((item) => item.id === programmeId);
+  if (!programme) throw new AppError('Programme not found', 'NCCT_PROGRAMME_NOT_FOUND', 404);
+
+  const steps = await listNcctProgrammeSteps(programme.id);
+  if (orgRole === ROLE.STUDENT) {
+    const trainee = (await listNcctTrainees(organizationId)).find((item) => item.profileId === actorProfileId);
+    const enrolled = trainee
+      ? (await listNcctEnrollments(organizationId)).some(
+          ({ enrollment, batch }) => enrollment.traineeId === trainee.id && batch.programmeId === programme.id
+        )
+      : false;
+    if (!enrolled) throw new AppError('You are not enrolled in this programme', 'NCCT_PROGRAMME_ACCESS_REQUIRED', 403);
+  }
+
+  if (orgRole === ROLE.TUTOR && actorProfileId) {
+    const [members, batches] = await Promise.all([
+      listNcctInstitutionMembers(organizationId),
+      listNcctBatches(organizationId)
+    ]);
+    const institutionIds = new Set(
+      members
+        .filter(({ member }) => member.profileId === actorProfileId && member.active)
+        .map(({ member }) => member.institutionId)
+    );
+    if (!batches.some((batch) => batch.programmeId === programme.id && institutionIds.has(batch.institutionId))) {
+      throw new AppError('You do not have access to this programme', 'NCCT_PROGRAMME_ACCESS_REQUIRED', 403);
+    }
+  }
+
+  const courseIds = [...new Set(steps.map((step) => step.courseId))];
+  const courseResult = await getOrgCourses({
+    orgId: organizationId,
+    courseIds,
+    page: 1,
+    limit: Math.max(courseIds.length, 1)
+  });
+  const courses = new Map(courseResult.items.map((course) => [course.id, course]));
+
+  const packedSteps = await Promise.all(
+    steps.map(async (step) => {
+      const course = courses.get(step.courseId);
+      if (!course) throw new AppError('Programme course not found', 'NCCT_COURSE_NOT_FOUND', 404);
+
+      const [lessons, exercises] = await Promise.all([
+        getLessonsByCourseId(course.id),
+        getExercisesByCourseId(course.id)
+      ]);
+      const exerciseIds = exercises.map((exercise) => exercise.id);
+      const questions = await getQuestionsByExerciseIds(exerciseIds);
+      const questionsByExercise = new Map<string, typeof questions>();
+      for (const question of questions) {
+        const existing = questionsByExercise.get(question.exerciseId) ?? [];
+        existing.push(question);
+        questionsByExercise.set(question.exerciseId, existing);
+      }
+      const packedLessons = await Promise.all(
+        lessons
+          .slice()
+          .sort((left, right) => left.order - right.order)
+          .map(async (lesson) => {
+            const enriched = await getLessonById(lesson.id);
+            return {
+              id: lesson.id,
+              title: lesson.title,
+              order: lesson.order,
+              note: lesson.note,
+              languages: (enriched?.lessonLanguages ?? []).map(({ locale, content }) => ({ locale, content })),
+              media: {
+                videos: lesson.videos?.length ?? 0,
+                documents: lesson.documents?.length ?? 0,
+                slides: lesson.slides?.length ?? 0
+              }
+            };
+          })
+      );
+
+      return {
+        id: step.id,
+        position: step.position,
+        required: step.required,
+        prerequisiteStepId: step.prerequisiteStepId,
+        course: {
+          id: course.id,
+          title: course.title,
+          description: course.description
+        },
+        lessons: packedLessons,
+        exercises: exercises
+          .slice()
+          .sort((left, right) => left.order - right.order)
+          .map((exercise) => ({
+            id: exercise.id,
+            title: exercise.title,
+            description: exercise.description,
+            order: exercise.order,
+            dueBy: exercise.dueBy,
+            questions: (questionsByExercise.get(exercise.id) ?? [])
+              .slice()
+              .sort((left, right) => Number(left.order ?? 0) - Number(right.order ?? 0))
+              .map(({ id, title, questionTypeId, points, order }) => ({ id, title, questionTypeId, points, order }))
+          }))
+      };
+    })
+  );
+
+  return {
+    generatedAt: new Date().toISOString(),
+    mediaRequiresConnection: true,
+    programme: {
+      id: programme.id,
+      title: programme.title,
+      description: programme.description,
+      language: programme.language,
+      status: programme.status
+    },
+    steps: packedSteps
+  };
 }
 
 export async function saveNcctInstitutionMember(

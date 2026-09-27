@@ -43,6 +43,7 @@ import {
   getCareerSnapshot,
   getAuditEvents,
   getEnrollmentProgress,
+  getNcctOfflineProgrammePack,
   getNcctProgrammeSteps,
   getProgrammeProgress,
   bookResource,
@@ -172,6 +173,31 @@ export const ncctRouter = new Hono()
       return handleError(c, error, 'Failed to load NCCT course catalogue');
     }
   })
+  .get(
+    '/offline-packs/:programmeId',
+    authMiddleware,
+    orgMemberMiddleware,
+    zValidator('param', programmeParam),
+    async (c) => {
+      try {
+        const { programmeId } = c.req.valid('param');
+        return c.json(
+          {
+            success: true,
+            data: await getNcctOfflineProgrammePack(
+              c.get('orgId')!,
+              programmeId,
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to prepare offline programme pack');
+      }
+    }
+  )
   .post(
     '/institutions',
     authMiddleware,

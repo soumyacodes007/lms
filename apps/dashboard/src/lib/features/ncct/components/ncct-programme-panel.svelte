@@ -29,9 +29,10 @@
     programmes: Programme[];
     programmeSteps: Array<{ programmeId: string; steps: ProgrammeStep[] }>;
     courses: Course[];
+    onDownloadPack: (programmeId: string) => void;
   };
 
-  let { institutions, programmes, programmeSteps, courses }: Props = $props();
+  let { institutions, programmes, programmeSteps, courses, onDownloadPack }: Props = $props();
   let programmeOpen = $state(false);
   let batchOpen = $state(false);
   let programmeBusy = $state(false);
@@ -220,7 +221,12 @@
       <div class="rounded-lg border p-3">
         <div class="flex items-center justify-between gap-3">
           <p class="font-medium">{programme.title}</p>
-          <Badge variant="secondary">{steps.length} steps</Badge>
+          <div class="flex items-center gap-2">
+            <Badge variant="secondary">{steps.length} steps</Badge>
+            <Button variant="ghost" size="sm" disabled={steps.length === 0} onclick={() => onDownloadPack(programme.id)}
+              >Cache offline</Button
+            >
+          </div>
         </div>
         <div class="mt-3 space-y-2">
           {#each steps as step}

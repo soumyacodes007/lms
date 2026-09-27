@@ -46,6 +46,7 @@
   let isOnline = $state(true);
   let syncMessage = $state('Offline centre sync is ready to configure.');
   let cacheMessage = $state('No encrypted workspace snapshot saved yet.');
+  let packMessage = $state('No offline programme pack cached yet.');
   let syncQueue: ReturnType<typeof createNcctOfflineQueue> | null = null;
   let decisionId = $state<string | null>(null);
   let actionMessage = $state('');
@@ -164,6 +165,33 @@
     }
   }
 
+  async function downloadOfflinePack(programmeId: string) {
+    if (!isOnline) {
+      packMessage = 'Reconnect before caching a programme pack.';
+      return;
+    }
+
+    packMessage = 'Preparing the offline programme pack…';
+    try {
+      const response = await classroomio.ncct['offline-packs'][':programmeId'].$get({
+        param: { programmeId }
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        data?: { generatedAt?: string };
+        error?: string;
+      };
+      if (!response.ok || !body.data) {
+        packMessage = body.error ?? 'The offline programme pack could not be prepared.';
+        return;
+      }
+
+      const result = await saveNcctOfflineSnapshot(`pack:${data.orgName}:${programmeId}`, body.data);
+      packMessage = `Offline programme pack cached ${new Date(result.savedAt).toLocaleTimeString()}.`;
+    } catch {
+      packMessage = 'The offline programme pack could not be prepared.';
+    }
+  }
+
   onMount(() => {
     isOnline = navigator.onLine;
     const storedDeviceId = localStorage.getItem(`ncct-sync-device:${data.orgName}`);
@@ -263,6 +291,7 @@
             programmes={overview.programmes}
             programmeSteps={overview.programmeSteps}
             courses={data.courses}
+            onDownloadPack={downloadOfflinePack}
           />
           <NcctNominationPanel
             trainees={overview.trainees}
@@ -339,6 +368,7 @@
                 >
                 <span class="ui:text-muted-foreground text-xs">{cacheMessage}</span>
               </div>
+              <p class="ui:text-muted-foreground mt-2 text-xs">{packMessage}</p>
             </section>
 
             <section class="ui:bg-card rounded-xl border p-5 xl:col-span-2">
