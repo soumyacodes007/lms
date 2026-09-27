@@ -91,6 +91,7 @@ import type {
 import { ZCreateNcctNomination, ZUpdateNcctProgress } from '@cio/utils/validation/ncct';
 import { ROLE } from '@cio/utils/constants';
 import { assertNcctApplicationTransition, assertNcctJobApplicationAllowed } from './employment';
+import { assertNcctAssessmentResultAllowed } from './assessments';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -1291,6 +1292,13 @@ export async function submitAssessment(
   const trainee = (await listNcctTrainees(organizationId)).find((item) => item.id === existing.assessment.traineeId);
   if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
   await assertNcctInstitutionAccess(organizationId, trainee.institutionId, actorProfileId, orgRole);
+  assertNcctAssessmentResultAllowed(
+    existing.assessment.status,
+    data.status,
+    existing.assessment.evaluatorProfileId,
+    actorProfileId,
+    orgRole
+  );
   const assessment = await submitNcctAssessmentQuery(assessmentId, data);
   await recordNcctAudit({
     organizationId,
