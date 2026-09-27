@@ -37,6 +37,7 @@
     endsOn: string;
     status: string;
     capacity: number;
+    instructorProfileId: string | null;
   };
   type Enrollment = { batchId: string; status: string };
   type Props = {
@@ -126,6 +127,13 @@
 
   function institutionName(institutionId: string) {
     return institutions.find((institution) => institution.id === institutionId)?.name ?? institutionId;
+  }
+
+  function instructorName(profileId: string | null) {
+    if (!profileId) return 'Instructor to be assigned';
+    return (
+      institutionMembers.find(({ member }) => member.profileId === profileId)?.profile.fullname ?? 'Assigned instructor'
+    );
   }
 
   function enrolledCount(batchId: string) {
@@ -378,6 +386,7 @@
               <p class="ui:text-muted-foreground mt-1 text-xs">
                 {institutionName(batch.institutionId)} · {batch.startsOn} to {batch.endsOn}
               </p>
+              <p class="ui:text-muted-foreground mt-1 text-xs">{instructorName(batch.instructorProfileId)}</p>
             </div>
             <Badge variant={batch.status === 'RUNNING' ? 'default' : 'outline'}>{batch.status}</Badge>
           </div>
