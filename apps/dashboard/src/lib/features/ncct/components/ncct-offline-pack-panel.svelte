@@ -1,7 +1,12 @@
 <script lang="ts">
   import { Button } from '@cio/ui/base/button';
   import { Badge } from '@cio/ui/base/badge';
-  import { cacheNcctMedia, clearNcctMediaCache, readNcctOfflineSnapshot } from '$lib/features/ncct/offline-cache';
+  import {
+    cacheNcctMedia,
+    clearNcctMediaCache,
+    getNcctMediaCacheStatus,
+    readNcctOfflineSnapshot
+  } from '$lib/features/ncct/offline-cache';
 
   type Programme = { id: string; title: string };
   type OfflinePack = {
@@ -37,6 +42,7 @@
   let loaded = $state(false);
   let mediaMessage = $state('');
   let cachingMediaId = $state<string | null>(null);
+  let mediaStatus = $state<Record<string, { total: number; cached: number }>>({});
 
   function mediaUrls(pack: OfflinePack) {
     return pack.steps.flatMap((step) =>
@@ -59,6 +65,7 @@
           : `${result.cached} of ${result.attempted} media item${result.attempted === 1 ? '' : 's'} cached${
               result.failed ? ` · ${result.failed} failed` : ''
             }.`;
+      mediaStatus = { ...mediaStatus, [pack.programme.id]: await getNcctMediaCacheStatus(mediaUrls(pack)) };
     } catch {
       mediaMessage = 'Media caching could not be completed on this device.';
     } finally {
@@ -67,7 +74,9 @@
   }
 
   async function clearMedia() {
-    mediaMessage = (await clearNcctMediaCache()) ? 'Cached media cleared from this PC.' : 'Media cache is unavailable.';
+    const cleared = await clearNcctMediaCache();
+    mediaStatus = {};
+    mediaMessage = cleared ? 'Cached media cleared from this PC.' : 'Media cache is unavailable.';
   }
 
   async function loadPacks() {
@@ -79,6 +88,13 @@
       })
     );
     packs = Object.fromEntries(entries.filter((entry): entry is readonly [string, OfflinePack] => Boolean(entry)));
+    mediaStatus = Object.fromEntries(
+      await Promise.all(
+        Object.values(packs).map(
+          async (pack) => [pack.programme.id, await getNcctMediaCacheStatus(mediaUrls(pack))] as const
+        )
+      )
+    );
     loaded = true;
   }
 
@@ -108,12 +124,16 @@
   {:else}
     <div class="mt-4 grid gap-3 md:grid-cols-2">
       {#each Object.values(packs) as pack}
+        {@const status = mediaStatus[pack.programme.id]}
         <details class="rounded-lg border p-3">
           <summary class="cursor-pointer font-medium">{pack.programme.title}</summary>
           <p class="ui:text-muted-foreground mt-2 text-xs">
-            Cached {new Date(pack.generatedAt).toLocaleString()} · media requires a connection
+            Cached {new Date(pack.generatedAt).toLocaleString()} · lesson text is available offline
           </p>
           <div class="mt-2 flex flex-wrap items-center gap-2">
+            <Badge variant="secondary"
+              >{status?.cached ?? 0}/{status?.total ?? mediaUrls(pack).length} media cached</Badge
+            >
             <Button
               size="sm"
               variant="outline"
