@@ -43,12 +43,12 @@ import {
   getCareerSnapshot,
   getAuditEvents,
   getEnrollmentProgress,
+  getNcctProgrammeSteps,
   getProgrammeProgress,
   bookResource,
   issueCredential,
   revokeCredential,
   listNcctAssessments,
-  listNcctProgrammeSteps,
   publishNcctProgramme,
   registerNcctInstitution,
   registerResource,
@@ -347,7 +347,13 @@ export const ncctRouter = new Hono()
     zValidator('param', programmeParam),
     async (c) => {
       try {
-        return c.json({ success: true, data: await listNcctProgrammeSteps(c.req.valid('param').programmeId) }, 200);
+        return c.json(
+          {
+            success: true,
+            data: await getNcctProgrammeSteps(c.get('orgId')!, c.req.valid('param').programmeId)
+          },
+          200
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to load programme steps');
       }

@@ -458,6 +458,12 @@ export async function addProgrammeStep(organizationId: string, data: TAddNcctPro
   return step;
 }
 
+export async function getNcctProgrammeSteps(organizationId: string, programmeId: string) {
+  const programme = (await listNcctProgrammes(organizationId)).find((item) => item.id === programmeId);
+  if (!programme) throw new AppError('Programme does not belong to this organization', 'NCCT_PROGRAMME_NOT_FOUND', 404);
+  return listNcctProgrammeSteps(programme.id);
+}
+
 export async function getProgrammeProgress(
   organizationId: string,
   programmeId: string,
