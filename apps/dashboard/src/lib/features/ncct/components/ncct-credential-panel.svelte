@@ -25,13 +25,41 @@
   let verificationUrl = $state('');
   let revokingId = $state<string | null>(null);
 
-  const availableBatches = $derived(batches.filter((batch) => !programmeId || batch.programmeId === programmeId));
+  const availableBatches = $derived(
+    batches.filter((batch) => {
+      const traineeInstitutionId = trainees.find((trainee) => trainee.id === traineeId)?.institutionId;
+      return (
+        (!programmeId || batch.programmeId === programmeId) &&
+        (!traineeInstitutionId || traineeInstitutionId === batch.institutionId)
+      );
+    })
+  );
 
   function reset() {
     traineeId = trainees[0]?.id ?? '';
     programmeId = programmes[0]?.id ?? '';
     batchId = batches.find((batch) => batch.programmeId === programmeId)?.id ?? '';
     message = '';
+  }
+
+  function updateTrainee(traineeIdValue: string) {
+    traineeId = traineeIdValue;
+    batchId =
+      batches.find(
+        (batch) =>
+          batch.programmeId === programmeId &&
+          batch.institutionId === trainees.find((trainee) => trainee.id === traineeIdValue)?.institutionId
+      )?.id ?? '';
+  }
+
+  function updateProgramme(programmeIdValue: string) {
+    programmeId = programmeIdValue;
+    batchId =
+      batches.find(
+        (batch) =>
+          batch.programmeId === programmeIdValue &&
+          batch.institutionId === trainees.find((trainee) => trainee.id === traineeId)?.institutionId
+      )?.id ?? '';
   }
 
   async function issueCredential() {
@@ -146,7 +174,11 @@
     <div class="grid gap-4">
       <label class="grid gap-2 text-sm font-medium">
         Trainee
-        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={traineeId}>
+        <select
+          class="ui:bg-background h-9 rounded-md border px-3"
+          value={traineeId}
+          onchange={(event) => updateTrainee(event.currentTarget.value)}
+        >
           {#each trainees as trainee}
             <option value={trainee.id}>{trainee.traineeNumber} · {trainee.district}, {trainee.state}</option>
           {/each}
@@ -154,7 +186,11 @@
       </label>
       <label class="grid gap-2 text-sm font-medium">
         Programme
-        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={programmeId}>
+        <select
+          class="ui:bg-background h-9 rounded-md border px-3"
+          value={programmeId}
+          onchange={(event) => updateProgramme(event.currentTarget.value)}
+        >
           {#each programmes as programme}
             <option value={programme.id}>{programme.title}</option>
           {/each}
