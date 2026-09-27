@@ -3,6 +3,7 @@
   import * as Dialog from '@cio/ui/base/dialog';
   import { Button } from '@cio/ui/base/button';
   import { InputField } from '@cio/ui/custom/input-field';
+  import { Textarea } from '@cio/ui/base/textarea';
   import { Badge } from '@cio/ui/base/badge';
   import { classroomio } from '$lib/utils/services/api';
 
@@ -34,6 +35,10 @@
   let open = $state(false);
   let busy = $state(false);
   let resultId = $state<string | null>(null);
+  let resultOpen = $state(false);
+  let resultStatus = $state<'PASSED' | 'FAILED'>('PASSED');
+  let resultScore = $state('');
+  let resultFeedback = $state('');
   let message = $state('');
   let traineeId = $state('');
   let batchId = $state('');
@@ -102,23 +107,36 @@
     }
   }
 
-  async function submitResult(assessmentId: string, status: 'PASSED' | 'FAILED') {
+  function openResult(assessmentId: string, status: 'PASSED' | 'FAILED') {
     resultId = assessmentId;
+    resultStatus = status;
+    resultScore = '';
+    resultFeedback = '';
+    resultOpen = true;
+    message = '';
+  }
+
+  async function submitResult() {
+    if (!resultId) return;
     message = '';
     try {
       const response = await classroomio.ncct.assessments[':assessmentId'].result.$post({
-        param: { assessmentId },
-        json: { status }
+        param: { assessmentId: resultId },
+        json: {
+          status: resultStatus,
+          score: resultScore.trim() ? Number(resultScore) : undefined,
+          feedback: resultFeedback.trim() || undefined
+        }
       });
       if (!response.ok) {
         message = 'The assessment result could not be saved.';
         return;
       }
+      resultOpen = false;
+      resultId = null;
       await invalidateAll();
     } catch {
       message = 'The assessment result could not be saved.';
-    } finally {
-      resultId = null;
     }
   }
 </script>
@@ -156,16 +174,14 @@
             {assessment.status}{assessment.score === null ? '' : ` · ${assessment.score}%`}
           </Badge>
           {#if assessment.status === 'SCHEDULED' || assessment.status === 'SUBMITTED'}
-            <Button
-              size="sm"
-              disabled={resultId === assessment.id}
-              onclick={() => void submitResult(assessment.id, 'PASSED')}>Pass</Button
+            <Button size="sm" disabled={resultId === assessment.id} onclick={() => openResult(assessment.id, 'PASSED')}
+              >Pass</Button
             >
             <Button
               size="sm"
               variant="outline"
               disabled={resultId === assessment.id}
-              onclick={() => void submitResult(assessment.id, 'FAILED')}>Fail</Button
+              onclick={() => openResult(assessment.id, 'FAILED')}>Fail</Button
             >
           {/if}
         </div>
@@ -175,6 +191,33 @@
     {/each}
   </div>
 </section>
+
+<Dialog.Root bind:open={resultOpen}>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>Record {resultStatus.toLowerCase()} result</Dialog.Title>
+      <Dialog.Description>Add the evaluator score and feedback for this trainee.</Dialog.Description>
+    </Dialog.Header>
+    <div class="grid gap-4">
+      <InputField label="Score (0–100, optional)" type="number" min="0" max="100" bind:value={resultScore} />
+      <label class="grid gap-2 text-sm font-medium">
+        Feedback
+        <Textarea rows={5} maxlength={3000} bind:value={resultFeedback} />
+      </label>
+    </div>
+    {#if message}<p class="ui:text-destructive text-sm">{message}</p>{/if}
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (resultOpen = false)}>Cancel</Button>
+      <Button
+        disabled={resultId === null ||
+          (resultScore.trim() !== '' && (Number(resultScore) < 0 || Number(resultScore) > 100))}
+        onclick={() => void submitResult()}
+      >
+        Save result
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
 <Dialog.Root bind:open>
   <Dialog.Content>
