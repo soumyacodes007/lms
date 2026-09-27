@@ -11,7 +11,7 @@ This matrix ties the SIH requirements to the current demonstration surface.
 | Timetables and logistics | Centre timetable and logistics | Sessions, resources, bookings, trainee logistics | Implemented |
 | Evaluator workflow | Evaluator workflow | Assessment scheduling, scores, feedback, audit events | Implemented |
 | Certificates and verification | Credential issuance; public verification page | Credential registry, revocation, verification token | Implemented |
-| Certified trainee directory | Directory filters | Institution, state, skill, and text filters | Implemented |
+| Certified trainee directory | Directory filters and incremental loading | Institution, state, skill, text filters, and bounded pagination | Implemented |
 | Employment exchange | Recruiter dashboard; vacancies and applications | Jobs, applications, status history | Implemented |
 | Career counselling | Career counselling assistant | Profile-aware matching and conversation records | Implemented |
 | Offline centre PCs | Offline learning packs and sync card | Encrypted packs, media cache, idempotent sync events | Implemented for learning content |
