@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Badge } from '@cio/ui/base/badge';
+  import { summarizeRecruiterApplications } from '../recruiter';
 
   type Job = { id: string; title: string; employerName: string; location: string; status: string };
   type Application = {
@@ -16,9 +17,7 @@
   let selectedApplications = $derived(
     selectedJob ? applications.filter((row) => row.job.id === selectedJob.id) : applications
   );
-  let shortlisted = $derived(applications.filter((row) => row.application.status === 'SHORTLISTED').length);
-  let selected = $derived(applications.filter((row) => row.application.status === 'SELECTED').length);
-  let pending = $derived(applications.filter((row) => row.application.status === 'APPLIED').length);
+  let applicationSummary = $derived(summarizeRecruiterApplications(applications));
 
   $effect(() => {
     if (selectedJobId && jobs.some((job) => job.id === selectedJobId)) return;
@@ -40,19 +39,19 @@
   <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
     <div class="rounded-lg border p-3">
       <p class="ui:text-muted-foreground text-xs uppercase">Applications</p>
-      <p class="mt-1 text-2xl font-semibold">{applications.length}</p>
+      <p class="mt-1 text-2xl font-semibold">{applicationSummary.total}</p>
     </div>
     <div class="rounded-lg border p-3">
       <p class="ui:text-muted-foreground text-xs uppercase">Awaiting review</p>
-      <p class="mt-1 text-2xl font-semibold">{pending}</p>
+      <p class="mt-1 text-2xl font-semibold">{applicationSummary.pending}</p>
     </div>
     <div class="rounded-lg border p-3">
       <p class="ui:text-muted-foreground text-xs uppercase">Shortlisted</p>
-      <p class="mt-1 text-2xl font-semibold">{shortlisted}</p>
+      <p class="mt-1 text-2xl font-semibold">{applicationSummary.shortlisted}</p>
     </div>
     <div class="rounded-lg border p-3">
       <p class="ui:text-muted-foreground text-xs uppercase">Selected</p>
-      <p class="mt-1 text-2xl font-semibold">{selected}</p>
+      <p class="mt-1 text-2xl font-semibold">{applicationSummary.selected}</p>
     </div>
   </div>
 
