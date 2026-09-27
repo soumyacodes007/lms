@@ -155,6 +155,24 @@
     }
   }
 
+  async function toggleSyncDevice(deviceId: string, active: boolean) {
+    syncMessage = active ? 'Deactivating centre PC…' : 'Activating centre PC…';
+    try {
+      const response = await classroomio.ncct['sync-devices'][':deviceId'].$patch({
+        param: { deviceId },
+        json: { active: !active }
+      });
+      if (!response.ok) {
+        syncMessage = 'The centre PC status could not be updated.';
+        return;
+      }
+      await invalidateAll();
+      syncMessage = active ? 'The centre PC was deactivated.' : 'The centre PC was activated.';
+    } catch {
+      syncMessage = 'The centre PC status could not be updated.';
+    }
+  }
+
   async function saveOfflineSnapshot() {
     if (!overview) return;
     try {
@@ -389,6 +407,29 @@
                 <span>{lastSyncAt ? `Last sync ${new Date(lastSyncAt).toLocaleString()}` : 'Never synchronized'}</span>
                 <span>{syncMessage}</span>
               </div>
+              {#if overview?.syncDevices?.length}
+                <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {#each overview.syncDevices as device}
+                    <div class="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <div class="min-w-0">
+                        <p class="truncate text-sm font-medium">{device.name}</p>
+                        <p class="ui:text-muted-foreground mt-1 text-xs">
+                          {device.active ? 'Active' : 'Deactivated'} · {device.lastSeenAt
+                            ? `Seen ${new Date(device.lastSeenAt).toLocaleString()}`
+                            : 'Not yet synchronized'}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onclick={() => void toggleSyncDevice(device.id, device.active)}
+                      >
+                        {device.active ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
               <div class="mt-4 flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onclick={() => void saveOfflineSnapshot()}
                   >Save encrypted snapshot</Button

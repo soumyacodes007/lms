@@ -183,6 +183,14 @@ type NcctOverview = {
       metadata: Record<string, unknown>;
       createdAt: string;
     }>;
+    syncDevices: Array<{
+      id: string;
+      institutionId: string;
+      name: string;
+      lastSeenAt: string | null;
+      active: boolean;
+      createdAt: string;
+    }>;
   };
 };
 

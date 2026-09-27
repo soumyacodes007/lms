@@ -200,6 +200,10 @@ export const ZCreateNcctSyncDevice = z.object({
   name: z.string().trim().min(2).max(120)
 });
 
+export const ZUpdateNcctSyncDevice = z.object({
+  active: z.boolean()
+});
+
 export const ZRecordNcctSyncEvents = z.object({
   events: z
     .array(
@@ -255,6 +259,7 @@ export type TUpdateNcctResource = z.infer<typeof ZUpdateNcctResource>;
 export type TBookNcctResource = z.infer<typeof ZBookNcctResource>;
 export type TSaveNcctTraineeLogistics = z.infer<typeof ZSaveNcctTraineeLogistics>;
 export type TCreateNcctSyncDevice = z.infer<typeof ZCreateNcctSyncDevice>;
+export type TUpdateNcctSyncDevice = z.infer<typeof ZUpdateNcctSyncDevice>;
 export type TRecordNcctSyncEvents = z.infer<typeof ZRecordNcctSyncEvents>;
 export type TUpdateNcctProgress = z.infer<typeof ZUpdateNcctProgress>;
 export type TSearchNcctDirectory = z.infer<typeof ZSearchNcctDirectory>;

@@ -22,6 +22,7 @@ import {
   ZUpdateNcctResource,
   ZCreateNcctSession,
   ZCreateNcctSyncDevice,
+  ZUpdateNcctSyncDevice,
   ZCreateNcctTrainee,
   ZDecideNcctNomination,
   ZIssueNcctCredential,
@@ -79,7 +80,8 @@ import {
   updateEmploymentJobStatus,
   updateEnrollmentProgress,
   updateNcctBatchLifecycle,
-  updateResourceStatus
+  updateResourceStatus,
+  updateSyncDeviceStatus
 } from '@api/services/ncct/ncct';
 import {
   listNcctBatches,
@@ -1047,6 +1049,33 @@ export const ncctRouter = new Hono()
         );
       } catch (error) {
         return handleError(c, error, 'Failed to register sync device');
+      }
+    }
+  )
+  .patch(
+    '/sync-devices/:deviceId',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', syncDeviceParam),
+    zValidator('json', ZUpdateNcctSyncDevice),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await updateSyncDeviceStatus(
+              c.get('orgId')!,
+              c.req.valid('param').deviceId,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to update sync device');
       }
     }
   )

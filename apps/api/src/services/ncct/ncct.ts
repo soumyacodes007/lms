@@ -19,6 +19,7 @@ import {
   getNcctNomination,
   getNcctProgrammeProgress,
   getNcctSyncDevice,
+  listNcctSyncDevices,
   issueNcctCredential,
   listNcctAssessments,
   listNcctBatches,
@@ -53,6 +54,7 @@ import {
   saveNcctTraineeLogistics,
   submitNcctAssessment as submitNcctAssessmentQuery,
   updateNcctSyncEventStatus,
+  updateNcctSyncDevice,
   updateNcctJobApplication,
   reapplyNcctJobApplication,
   updateNcctJobStatus,
@@ -84,6 +86,7 @@ import type {
   TUpdateNcctResource,
   TCreateNcctSession,
   TCreateNcctSyncDevice,
+  TUpdateNcctSyncDevice,
   TRecordNcctSyncEvents,
   TSaveNcctTraineeLogistics,
   TUpdateNcctProgress,
@@ -163,7 +166,8 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     applicationEvents,
     assessments,
     enrollments,
-    auditEvents
+    auditEvents,
+    syncDevices
   ] = await Promise.all([
     getNcctDashboardSummary(organizationId),
     listNcctInstitutions(organizationId),
@@ -182,7 +186,8 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     listNcctJobApplicationEvents(organizationId),
     listNcctAssessments(organizationId),
     listNcctEnrollments(organizationId),
-    listNcctAuditEvents(organizationId)
+    listNcctAuditEvents(organizationId),
+    listNcctSyncDevices(organizationId)
   ]);
   const programmeSteps = await Promise.all(
     programmes.map(async (programme) => ({
@@ -286,6 +291,11 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     : hasStudentScope
       ? []
       : auditEvents;
+  const visibleSyncDevices = hasTutorScope
+    ? syncDevices.filter((device) => tutorCentreIds.has(device.institutionId))
+    : hasStudentScope
+      ? []
+      : syncDevices;
   const visibleSummary = hasScopedView
     ? {
         institutions: visibleInstitutions.length,
@@ -322,6 +332,7 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     assessments: visibleAssessments.map(({ assessment }) => assessment),
     enrollments: visibleEnrollments,
     auditEvents: visibleAuditEvents,
+    syncDevices: visibleSyncDevices,
     reports: {
       institutionsByActivity: visibleInstitutions
         .map((institution) => ({
@@ -1703,6 +1714,31 @@ export async function registerSyncDevice(
     metadata: { name: device.name }
   });
   return device;
+}
+
+export async function updateSyncDeviceStatus(
+  organizationId: string,
+  deviceId: string,
+  data: TUpdateNcctSyncDevice,
+  actorProfileId?: string,
+  orgRole?: number
+) {
+  const device = await getNcctSyncDevice(organizationId, deviceId);
+  if (!device)
+    throw new AppError('Sync device does not belong to this organization', 'NCCT_SYNC_DEVICE_NOT_FOUND', 404);
+  await assertNcctInstitutionAccess(organizationId, device.institutionId, actorProfileId, orgRole);
+  const updated = await updateNcctSyncDevice(organizationId, deviceId, data);
+  if (!updated) throw new AppError('Sync device could not be updated', 'NCCT_SYNC_DEVICE_NOT_FOUND', 404);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: device.institutionId,
+    action: data.active ? 'SYNC_DEVICE_ACTIVATED' : 'SYNC_DEVICE_DEACTIVATED',
+    entityType: 'sync_device',
+    entityId: deviceId,
+    metadata: { name: device.name }
+  });
+  return updated;
 }
 
 export async function receiveSyncEvents(

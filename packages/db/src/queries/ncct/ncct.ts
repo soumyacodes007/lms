@@ -865,6 +865,28 @@ export async function getNcctSyncDevice(organizationId: string, deviceId: string
   return device ?? null;
 }
 
+export async function listNcctSyncDevices(organizationId: string) {
+  return db
+    .select()
+    .from(schema.ncctSyncDevice)
+    .where(eq(schema.ncctSyncDevice.organizationId, organizationId))
+    .orderBy(desc(schema.ncctSyncDevice.createdAt));
+}
+
+export async function updateNcctSyncDevice(
+  organizationId: string,
+  deviceId: string,
+  data: Pick<typeof schema.ncctSyncDevice.$inferInsert, 'active'>,
+  client: DbOrTxClient = db
+) {
+  const [device] = await client
+    .update(schema.ncctSyncDevice)
+    .set(data)
+    .where(and(eq(schema.ncctSyncDevice.organizationId, organizationId), eq(schema.ncctSyncDevice.id, deviceId)))
+    .returning();
+  return device ?? null;
+}
+
 export async function recordNcctSyncEvents(
   deviceId: string,
   events: Array<Pick<typeof schema.ncctSyncEvent.$inferInsert, 'eventId' | 'eventType' | 'payload'>>,
