@@ -40,6 +40,7 @@ The seed is safe to run more than once. It creates two centres, three trainees, 
 2. Select **Cache offline** beside an ordered programme. Confirm its lessons and assessment prompts appear in **Offline learning packs**, then use **Cache media** to download supported media assets. The pack shows the cached-versus-total media count for this PC.
 3. Select **Register this PC** in the offline centre sync card.
 4. Queue permitted centre events while the browser is offline. When connectivity returns, select **Sync now** and confirm the pending count falls to zero.
+5. Confirm the sync card records the latest synchronization time for this centre PC.
 
 ## Current scope
 
