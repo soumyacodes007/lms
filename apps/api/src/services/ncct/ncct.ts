@@ -22,6 +22,7 @@ import {
   listNcctAssessments,
   listNcctBatches,
   listNcctInstitutions,
+  listNcctInstitutionMembers,
   listNcctJobs,
   listNcctJobApplications,
   listNcctJobApplicationEvents,
@@ -32,6 +33,8 @@ import {
   listNcctSessions,
   listNcctTrainees,
   updateNcctTrainee as updateNcctTraineeQuery,
+  updateNcctInstitutionMember,
+  upsertNcctInstitutionMember,
   listNcctCredentials,
   listNcctEnrollments,
   listNcctCareerMessages,
@@ -55,6 +58,8 @@ import type {
   TCreateNcctAssessment,
   TNcctCareerChat,
   TCreateNcctInstitution,
+  TUpsertNcctInstitutionMember,
+  TUpdateNcctInstitutionMember,
   TCreateNcctJob,
   TCreateNcctNomination,
   TCreateNcctProgramme,
@@ -73,6 +78,7 @@ import type {
   TUpdateNcctJobApplication
 } from '@cio/utils/validation/ncct';
 import { ZCreateNcctNomination, ZUpdateNcctProgress } from '@cio/utils/validation/ncct';
+import { ROLE } from '@cio/utils/constants';
 import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
 
@@ -92,10 +98,11 @@ async function recordNcctAudit(data: {
   }
 }
 
-export async function getNcctOverview(organizationId: string) {
+export async function getNcctOverview(organizationId: string, actorProfileId?: string, orgRole?: number) {
   const [
     summary,
     institutions,
+    institutionMembers,
     trainees,
     programmes,
     batches,
@@ -112,6 +119,7 @@ export async function getNcctOverview(organizationId: string) {
   ] = await Promise.all([
     getNcctDashboardSummary(organizationId),
     listNcctInstitutions(organizationId),
+    listNcctInstitutionMembers(organizationId),
     listNcctTrainees(organizationId),
     listNcctProgrammes(organizationId),
     listNcctBatches(organizationId),
@@ -127,25 +135,82 @@ export async function getNcctOverview(organizationId: string) {
     listNcctAuditEvents(organizationId)
   ]);
 
+  const hasCentreScope = orgRole === ROLE.TUTOR && Boolean(actorProfileId);
+  const assignedInstitutionIds = hasCentreScope
+    ? new Set(
+        institutionMembers
+          .filter(({ member }) => member.profileId === actorProfileId && member.active)
+          .map(({ member }) => member.institutionId)
+      )
+    : null;
+  const visibleInstitutions = hasCentreScope
+    ? institutions.filter((institution) => assignedInstitutionIds.has(institution.id))
+    : institutions;
+  const visibleTrainees = hasCentreScope
+    ? trainees.filter((trainee) => assignedInstitutionIds.has(trainee.institutionId))
+    : trainees;
+  const visibleBatches = hasCentreScope
+    ? batches.filter((batch) => assignedInstitutionIds.has(batch.institutionId))
+    : batches;
+  const visibleNominations = hasCentreScope
+    ? nominations.filter(({ institution }) => assignedInstitutionIds.has(institution.id))
+    : nominations;
+  const visibleSessions = hasCentreScope
+    ? sessions.filter(({ session }) => visibleBatches.some((batch) => batch.id === session.batchId))
+    : sessions;
+  const visibleResources = hasCentreScope
+    ? resources.filter(({ resource }) => assignedInstitutionIds.has(resource.institutionId))
+    : resources;
+  const visibleAssessments = hasCentreScope
+    ? assessments.filter(({ assessment }) => visibleTrainees.some((trainee) => trainee.id === assessment.traineeId))
+    : assessments;
+  const visibleEnrollments = hasCentreScope
+    ? enrollments.filter(({ batch }) => assignedInstitutionIds.has(batch.institutionId))
+    : enrollments;
+  const visibleCredentials = hasCentreScope
+    ? credentials.filter(({ trainee }) => assignedInstitutionIds.has(trainee.institutionId))
+    : credentials;
+  const visibleApplications = hasCentreScope
+    ? applications.filter(({ trainee }) => visibleTrainees.some((item) => item.id === trainee.id))
+    : applications;
+  const visibleApplicationIds = new Set(visibleApplications.map(({ application }) => application.id));
+  const visibleApplicationEvents = hasCentreScope
+    ? applicationEvents.filter(({ application }) => visibleApplicationIds.has(application.id))
+    : applicationEvents;
+  const visibleSummary = hasCentreScope
+    ? {
+        institutions: visibleInstitutions.length,
+        trainees: visibleTrainees.length,
+        programmes: programmes.length,
+        batches: visibleBatches.length,
+        pendingNominations: visibleNominations.filter(({ nomination }) => nomination.status === 'PENDING').length,
+        credentials: visibleCredentials.length,
+        jobs: jobs.length
+      }
+    : summary;
+
   return {
-    summary,
-    institutions,
-    trainees,
+    summary: visibleSummary,
+    institutions: visibleInstitutions,
+    institutionMembers: hasCentreScope
+      ? institutionMembers.filter(({ member }) => assignedInstitutionIds.has(member.institutionId))
+      : institutionMembers,
+    trainees: visibleTrainees,
     programmes,
-    batches,
+    batches: visibleBatches,
     jobs,
-    sessions: sessions.map(({ session }) => session),
-    resources: resources.map(({ resource }) => resource),
-    nominations,
-    credentials,
-    applications,
-    applicationEvents,
-    assessments: assessments.map(({ assessment }) => assessment),
-    enrollments,
+    sessions: visibleSessions.map(({ session }) => session),
+    resources: visibleResources.map(({ resource }) => resource),
+    nominations: visibleNominations,
+    credentials: visibleCredentials,
+    applications: visibleApplications,
+    applicationEvents: visibleApplicationEvents,
+    assessments: visibleAssessments.map(({ assessment }) => assessment),
+    enrollments: visibleEnrollments,
     auditEvents,
     reports: {
       traineesByState: Object.entries(
-        trainees.reduce<Record<string, number>>((counts, trainee) => {
+        visibleTrainees.reduce<Record<string, number>>((counts, trainee) => {
           counts[trainee.state] = (counts[trainee.state] ?? 0) + 1;
           return counts;
         }, {})
@@ -153,21 +218,21 @@ export async function getNcctOverview(organizationId: string) {
         .map(([state, total]) => ({ state, total }))
         .sort((a, b) => b.total - a.total || a.state.localeCompare(b.state)),
       nominationsByStatus: Object.entries(
-        nominations.reduce<Record<string, number>>((counts, row) => {
+        visibleNominations.reduce<Record<string, number>>((counts, row) => {
           counts[row.nomination.status] = (counts[row.nomination.status] ?? 0) + 1;
           return counts;
         }, {})
       ).map(([status, total]) => ({ status, total })),
       batchesByStatus: Object.entries(
-        batches.reduce<Record<string, number>>((counts, batch) => {
+        visibleBatches.reduce<Record<string, number>>((counts, batch) => {
           counts[batch.status] = (counts[batch.status] ?? 0) + 1;
           return counts;
         }, {})
       ).map(([status, total]) => ({ status, total })),
       placements: {
-        applications: applications.length,
-        shortlisted: applications.filter(({ application }) => application.status === 'SHORTLISTED').length,
-        selected: applications.filter(({ application }) => application.status === 'SELECTED').length,
+        applications: visibleApplications.length,
+        shortlisted: visibleApplications.filter(({ application }) => application.status === 'SHORTLISTED').length,
+        selected: visibleApplications.filter(({ application }) => application.status === 'SELECTED').length,
         openJobs: jobs.filter((job) => job.status === 'OPEN').length
       }
     }
@@ -176,6 +241,58 @@ export async function getNcctOverview(organizationId: string) {
 
 export async function registerNcctInstitution(organizationId: string, data: TCreateNcctInstitution) {
   return createNcctInstitution({ ...data, organizationId });
+}
+
+export async function getNcctInstitutionMembers(organizationId: string) {
+  return listNcctInstitutionMembers(organizationId);
+}
+
+export async function saveNcctInstitutionMember(
+  organizationId: string,
+  data: TUpsertNcctInstitutionMember,
+  actorProfileId?: string
+) {
+  const institutions = await listNcctInstitutions(organizationId);
+  const institution = institutions.find((item) => item.id === data.institutionId);
+  if (!institution)
+    throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
+
+  const member = await upsertNcctInstitutionMember(data);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: institution.id,
+    action: 'INSTITUTION_MEMBER_SAVED',
+    entityType: 'institution_member',
+    entityId: member.id,
+    metadata: { profileId: data.profileId, role: data.role }
+  });
+  return member;
+}
+
+export async function updateNcctInstitutionMemberRole(
+  organizationId: string,
+  memberId: string,
+  data: TUpdateNcctInstitutionMember,
+  actorProfileId?: string
+) {
+  const member = (await listNcctInstitutionMembers(organizationId)).find(({ member: item }) => item.id === memberId);
+  if (!member)
+    throw new AppError('Institution member does not belong to this organization', 'NCCT_MEMBER_NOT_FOUND', 404);
+  const updated = await updateNcctInstitutionMember(memberId, {
+    role: data.role ?? member.member.role,
+    active: data.active ?? member.member.active
+  });
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: member.institution.id,
+    action: 'INSTITUTION_MEMBER_UPDATED',
+    entityType: 'institution_member',
+    entityId: memberId,
+    metadata: { role: updated.role, active: updated.active }
+  });
+  return updated;
 }
 
 export async function registerNcctTrainee(organizationId: string, data: TCreateNcctTrainee) {
@@ -478,11 +595,7 @@ export async function getAuditEvents(organizationId: string) {
   return listNcctAuditEvents(organizationId);
 }
 
-export async function scheduleAssessment(
-  organizationId: string,
-  data: TCreateNcctAssessment,
-  actorProfileId?: string
-) {
+export async function scheduleAssessment(organizationId: string, data: TCreateNcctAssessment, actorProfileId?: string) {
   const [trainees, batches, enrollments] = await Promise.all([
     listNcctTrainees(organizationId),
     listNcctBatches(organizationId),
@@ -557,7 +670,9 @@ export async function issueCredential(organizationId: string, data: TIssueNcctCr
   if (batch.programmeId !== data.programmeId) {
     throw new AppError('Batch does not belong to the selected programme', 'NCCT_BATCH_PROGRAMME_MISMATCH', 409);
   }
-  if (!enrollments.some(({ enrollment }) => enrollment.batchId === batch.id && enrollment.traineeId === data.traineeId)) {
+  if (
+    !enrollments.some(({ enrollment }) => enrollment.batchId === batch.id && enrollment.traineeId === data.traineeId)
+  ) {
     throw new AppError('The trainee must be enrolled in this batch first', 'NCCT_ENROLLMENT_REQUIRED', 409);
   }
   const passed = assessments.some(
@@ -629,7 +744,11 @@ export async function scheduleSession(organizationId: string, data: TCreateNcctS
       throw new AppError('This batch already has a session during that time', 'NCCT_SESSION_BATCH_CONFLICT', 409);
     }
     if (error instanceof Error && error.message === 'SESSION_INSTRUCTOR_CONFLICT') {
-      throw new AppError('The instructor is already scheduled during that time', 'NCCT_SESSION_INSTRUCTOR_CONFLICT', 409);
+      throw new AppError(
+        'The instructor is already scheduled during that time',
+        'NCCT_SESSION_INSTRUCTOR_CONFLICT',
+        409
+      );
     }
     throw error;
   }
@@ -645,7 +764,10 @@ export async function registerResource(organizationId: string, data: TCreateNcct
 }
 
 export async function bookResource(organizationId: string, data: TBookNcctResource) {
-  const [sessions, resources] = await Promise.all([listNcctSessions(organizationId), listNcctResources(organizationId)]);
+  const [sessions, resources] = await Promise.all([
+    listNcctSessions(organizationId),
+    listNcctResources(organizationId)
+  ]);
   if (!sessions.some(({ session }) => session.id === data.sessionId)) {
     throw new AppError('Session does not belong to this organization', 'NCCT_SESSION_NOT_FOUND', 404);
   }
@@ -657,7 +779,11 @@ export async function bookResource(organizationId: string, data: TBookNcctResour
     return await bookNcctResource(data);
   } catch (error) {
     if (error instanceof Error && error.message === 'RESOURCE_INSTITUTION_CONFLICT') {
-      throw new AppError('The resource belongs to a different training centre', 'NCCT_RESOURCE_INSTITUTION_CONFLICT', 409);
+      throw new AppError(
+        'The resource belongs to a different training centre',
+        'NCCT_RESOURCE_INSTITUTION_CONFLICT',
+        409
+      );
     }
     if (error instanceof Error && error.message === 'RESOURCE_OUTSIDE_SESSION') {
       throw new AppError('Resource booking must stay within the session time', 'NCCT_RESOURCE_OUTSIDE_SESSION', 409);

@@ -4246,6 +4246,11 @@ export const ncctApplicationStatus = pgEnum('NCCT_APPLICATION_STATUS', [
   'REJECTED',
   'WITHDRAWN'
 ]);
+export const ncctInstitutionMemberRole = pgEnum('NCCT_INSTITUTION_MEMBER_ROLE', [
+  'COORDINATOR',
+  'INSTRUCTOR',
+  'EVALUATOR'
+]);
 export const ncctCareerMessageRole = pgEnum('NCCT_CAREER_MESSAGE_ROLE', ['USER', 'ASSISTANT']);
 
 export const ncctResourceType = pgEnum('NCCT_RESOURCE_TYPE', ['ROOM', 'HOSTEL', 'MEAL', 'TRANSPORT', 'EQUIPMENT']);
@@ -4317,6 +4322,37 @@ export const ncctInstitution = pgTable(
     unique('ncct_institution_org_code_key').on(table.organizationId, table.code),
     index('idx_ncct_institution_org').on(table.organizationId),
     index('idx_ncct_institution_region').on(table.state, table.district)
+  ]
+);
+
+export const ncctInstitutionMember = pgTable(
+  'ncct_institution_member',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    institutionId: uuid('institution_id').notNull(),
+    profileId: uuid('profile_id').notNull(),
+    role: ncctInstitutionMemberRole().default('COORDINATOR').notNull(),
+    active: boolean().default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.institutionId],
+      foreignColumns: [ncctInstitution.id],
+      name: 'ncct_institution_member_institution_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.profileId],
+      foreignColumns: [profile.id],
+      name: 'ncct_institution_member_profile_id_fkey'
+    }).onDelete('cascade'),
+    unique('ncct_institution_member_unique').on(table.institutionId, table.profileId),
+    index('idx_ncct_institution_member_profile').on(table.profileId),
+    index('idx_ncct_institution_member_institution').on(table.institutionId)
   ]
 );
 

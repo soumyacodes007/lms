@@ -3,6 +3,7 @@ import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, lt, or, sql } fr
 import { db, type DbOrTxClient } from '@db/drizzle';
 
 export type TNcctInstitution = typeof schema.ncctInstitution.$inferSelect;
+export type TNcctInstitutionMember = typeof schema.ncctInstitutionMember.$inferSelect;
 export type TNcctTrainee = typeof schema.ncctTrainee.$inferSelect;
 export type TNcctProgramme = typeof schema.ncctProgramme.$inferSelect;
 export type TNcctBatch = typeof schema.ncctBatch.$inferSelect;
@@ -84,6 +85,46 @@ export async function createNcctInstitution(
   const [institution] = await client.insert(schema.ncctInstitution).values(data).returning();
   if (!institution) throw new Error('Failed to create institution');
   return institution;
+}
+
+export async function listNcctInstitutionMembers(organizationId: string) {
+  return db
+    .select({ member: schema.ncctInstitutionMember, institution: schema.ncctInstitution, profile: schema.profile })
+    .from(schema.ncctInstitutionMember)
+    .innerJoin(schema.ncctInstitution, eq(schema.ncctInstitutionMember.institutionId, schema.ncctInstitution.id))
+    .innerJoin(schema.profile, eq(schema.ncctInstitutionMember.profileId, schema.profile.id))
+    .where(eq(schema.ncctInstitution.organizationId, organizationId))
+    .orderBy(asc(schema.ncctInstitution.name), asc(schema.profile.fullname));
+}
+
+export async function upsertNcctInstitutionMember(
+  data: typeof schema.ncctInstitutionMember.$inferInsert,
+  client: DbOrTxClient = db
+) {
+  const [member] = await client
+    .insert(schema.ncctInstitutionMember)
+    .values(data)
+    .onConflictDoUpdate({
+      target: [schema.ncctInstitutionMember.institutionId, schema.ncctInstitutionMember.profileId],
+      set: { role: data.role, active: data.active ?? true, updatedAt: new Date().toISOString() }
+    })
+    .returning();
+  if (!member) throw new Error('Failed to save institution member');
+  return member;
+}
+
+export async function updateNcctInstitutionMember(
+  memberId: string,
+  data: Pick<typeof schema.ncctInstitutionMember.$inferInsert, 'role' | 'active'>,
+  client: DbOrTxClient = db
+) {
+  const [member] = await client
+    .update(schema.ncctInstitutionMember)
+    .set({ ...data, updatedAt: new Date().toISOString() })
+    .where(eq(schema.ncctInstitutionMember.id, memberId))
+    .returning();
+  if (!member) throw new Error('Institution member not found');
+  return member;
 }
 
 export async function listNcctTrainees(organizationId: string, institutionId?: string): Promise<TNcctTrainee[]> {
@@ -426,11 +467,14 @@ export async function updateNcctJobApplication(
     .where(eq(schema.ncctJobApplication.id, applicationId))
     .limit(1);
   if (!existing) throw new Error('Job application not found');
-  if (existing.status === status) return (await client
-    .select()
-    .from(schema.ncctJobApplication)
-    .where(eq(schema.ncctJobApplication.id, applicationId))
-    .limit(1))[0]!;
+  if (existing.status === status)
+    return (
+      await client
+        .select()
+        .from(schema.ncctJobApplication)
+        .where(eq(schema.ncctJobApplication.id, applicationId))
+        .limit(1)
+    )[0]!;
 
   const [application] = await client
     .update(schema.ncctJobApplication)
@@ -452,7 +496,10 @@ export async function listNcctJobApplicationEvents(organizationId: string) {
   return db
     .select({ event: schema.ncctJobApplicationEvent, application: schema.ncctJobApplication })
     .from(schema.ncctJobApplicationEvent)
-    .innerJoin(schema.ncctJobApplication, eq(schema.ncctJobApplicationEvent.applicationId, schema.ncctJobApplication.id))
+    .innerJoin(
+      schema.ncctJobApplication,
+      eq(schema.ncctJobApplicationEvent.applicationId, schema.ncctJobApplication.id)
+    )
     .innerJoin(schema.ncctJob, eq(schema.ncctJobApplication.jobId, schema.ncctJob.id))
     .where(eq(schema.ncctJob.organizationId, organizationId))
     .orderBy(desc(schema.ncctJobApplicationEvent.createdAt));
@@ -599,7 +646,11 @@ export async function bookNcctResource(
   if (!session) throw new Error('RESOURCE_SESSION_NOT_FOUND');
 
   const [resource] = await client
-    .select({ institutionId: schema.ncctResource.institutionId, capacity: schema.ncctResource.capacity, active: schema.ncctResource.active })
+    .select({
+      institutionId: schema.ncctResource.institutionId,
+      capacity: schema.ncctResource.capacity,
+      active: schema.ncctResource.active
+    })
     .from(schema.ncctResource)
     .where(eq(schema.ncctResource.id, data.resourceId))
     .limit(1);

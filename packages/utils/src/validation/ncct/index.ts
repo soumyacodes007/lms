@@ -11,6 +11,17 @@ export const ZCreateNcctInstitution = z.object({
   contactEmail: z.string().email().optional()
 });
 
+export const ZUpsertNcctInstitutionMember = z.object({
+  institutionId: z.string().uuid(),
+  profileId: z.string().uuid(),
+  role: z.enum(['COORDINATOR', 'INSTRUCTOR', 'EVALUATOR']).default('COORDINATOR')
+});
+
+export const ZUpdateNcctInstitutionMember = z.object({
+  role: z.enum(['COORDINATOR', 'INSTRUCTOR', 'EVALUATOR']).optional(),
+  active: z.boolean().optional()
+});
+
 export const ZCreateNcctTrainee = z.object({
   institutionId: z.string().uuid(),
   traineeNumber: z.string().trim().min(2).max(40),
@@ -187,6 +198,8 @@ export const ZSearchNcctDirectory = z.object({
 });
 
 export type TCreateNcctInstitution = z.infer<typeof ZCreateNcctInstitution>;
+export type TUpsertNcctInstitutionMember = z.infer<typeof ZUpsertNcctInstitutionMember>;
+export type TUpdateNcctInstitutionMember = z.infer<typeof ZUpdateNcctInstitutionMember>;
 export type TCreateNcctTrainee = z.infer<typeof ZCreateNcctTrainee>;
 export type TUpdateNcctTrainee = z.infer<typeof ZUpdateNcctTrainee>;
 export type TCreateNcctProgramme = z.infer<typeof ZCreateNcctProgramme>;

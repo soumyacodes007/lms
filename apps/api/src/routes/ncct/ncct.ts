@@ -1,5 +1,6 @@
 import { Hono } from '@api/utils/hono';
 import { authMiddleware } from '@api/middlewares/auth';
+import { orgAdminMiddleware } from '@api/middlewares/org-admin';
 import { orgMemberMiddleware } from '@api/middlewares/org-member';
 import { orgTeamMemberMiddleware } from '@api/middlewares/org-team-member';
 import { handleError } from '@api/utils/errors';
@@ -24,6 +25,8 @@ import {
   ZRecordNcctSyncEvents,
   ZSaveNcctTraineeLogistics,
   ZSearchNcctDirectory,
+  ZUpsertNcctInstitutionMember,
+  ZUpdateNcctInstitutionMember,
   ZUpdateNcctJobApplication,
   ZUpdateNcctTrainee,
   ZUpdateNcctProgress
@@ -56,6 +59,9 @@ import {
   scheduleNcctBatch,
   scheduleSession,
   searchCertifiedTrainees,
+  getNcctInstitutionMembers,
+  saveNcctInstitutionMember,
+  updateNcctInstitutionMemberRole,
   submitAssessment,
   submitJobApplication,
   submitNcctNomination,
@@ -86,6 +92,7 @@ const assessmentParam = z.object({ assessmentId: z.string().uuid() });
 const syncDeviceParam = z.object({ deviceId: z.string().uuid() });
 const careerParam = z.object({ traineeId: z.string().uuid() });
 const traineeParam = z.object({ traineeId: z.string().uuid() });
+const memberParam = z.object({ memberId: z.string().uuid() });
 const enrollmentParam = z.object({ enrollmentId: z.string().uuid() });
 const verificationParam = z.object({ verificationToken: z.string().min(16).max(128) });
 const credentialParam = z.object({ credentialId: z.string().uuid() });
@@ -105,7 +112,13 @@ export const ncctRouter = new Hono()
   })
   .get('/overview', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      return c.json({ success: true, data: await getNcctOverview(c.get('orgId')!) }, 200);
+      return c.json(
+        {
+          success: true,
+          data: await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined)
+        },
+        200
+      );
     } catch (error) {
       return handleError(c, error, 'Failed to load NCCT overview');
     }
@@ -118,7 +131,12 @@ export const ncctRouter = new Hono()
         ['section', 'key', 'value', 'detail'],
         ...Object.entries(overview.summary).map(([key, value]) => ['summary', key, value, '']),
         ...overview.reports.traineesByState.map(({ state, total }) => ['trainees_by_state', state, total, '']),
-        ...overview.reports.nominationsByStatus.map(({ status, total }) => ['nominations_by_status', status, total, '']),
+        ...overview.reports.nominationsByStatus.map(({ status, total }) => [
+          'nominations_by_status',
+          status,
+          total,
+          ''
+        ]),
         ...overview.reports.batchesByStatus.map(({ status, total }) => ['batches_by_status', status, total, '']),
         ['placements', 'applications', overview.reports.placements.applications, ''],
         ['placements', 'shortlisted', overview.reports.placements.shortlisted, ''],
@@ -168,6 +186,59 @@ export const ncctRouter = new Hono()
       return handleError(c, error, 'Failed to load trainees');
     }
   })
+  .get('/institution-members', authMiddleware, orgMemberMiddleware, async (c) => {
+    try {
+      return c.json({ success: true, data: await getNcctInstitutionMembers(c.get('orgId')!) }, 200);
+    } catch (error) {
+      return handleError(c, error, 'Failed to load institution members');
+    }
+  })
+  .post(
+    '/institution-members',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgAdminMiddleware,
+    zValidator('json', ZUpsertNcctInstitutionMember),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await saveNcctInstitutionMember(c.get('orgId')!, c.req.valid('json'), c.get('user')!.id)
+          },
+          201
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to save institution member');
+      }
+    }
+  )
+  .patch(
+    '/institution-members/:memberId',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgAdminMiddleware,
+    zValidator('param', memberParam),
+    zValidator('json', ZUpdateNcctInstitutionMember),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await updateNcctInstitutionMemberRole(
+              c.get('orgId')!,
+              c.req.valid('param').memberId,
+              c.req.valid('json'),
+              c.get('user')!.id
+            )
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to update institution member');
+      }
+    }
+  )
   .post(
     '/trainees',
     authMiddleware,

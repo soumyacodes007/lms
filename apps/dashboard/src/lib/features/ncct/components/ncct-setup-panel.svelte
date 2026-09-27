@@ -30,14 +30,23 @@
   type Props = {
     institutions: Institution[];
     trainees: Trainee[];
+    institutionMembers: InstitutionMember[];
   };
 
-  let { institutions, trainees }: Props = $props();
+  type InstitutionMember = {
+    member: { id: string; institutionId: string; profileId: string; role: string; active: boolean };
+    institution: { id: string; name: string; code: string };
+    profile: { id: string; fullname: string; email: string | null };
+  };
+
+  let { institutions, trainees, institutionMembers }: Props = $props();
   let institutionOpen = $state(false);
   let traineeOpen = $state(false);
   let traineeEditOpen = $state(false);
+  let memberOpen = $state(false);
   let institutionBusy = $state(false);
   let traineeBusy = $state(false);
+  let memberBusy = $state(false);
   let formMessage = $state('');
 
   let institutionCode = $state('');
@@ -56,6 +65,9 @@
   let traineeSkills = $state('');
   let traineeDirectoryVisible = $state(true);
   let editingTraineeId = $state<string | null>(null);
+  let memberInstitutionId = $state('');
+  let memberProfileId = $state('');
+  let memberRole = $state('COORDINATOR');
 
   function resetInstitution() {
     institutionCode = '';
@@ -76,6 +88,13 @@
     traineePhone = '';
     traineeSkills = '';
     traineeDirectoryVisible = true;
+    formMessage = '';
+  }
+
+  function resetMember() {
+    memberInstitutionId = institutions[0]?.id ?? '';
+    memberProfileId = '';
+    memberRole = 'COORDINATOR';
     formMessage = '';
   }
 
@@ -187,6 +206,44 @@
       traineeBusy = false;
     }
   }
+
+  async function saveMember() {
+    memberBusy = true;
+    formMessage = '';
+    try {
+      const response = await classroomio.ncct['institution-members'].$post({
+        json: {
+          institutionId: memberInstitutionId,
+          profileId: memberProfileId.trim(),
+          role: memberRole as 'COORDINATOR' | 'INSTRUCTOR' | 'EVALUATOR'
+        }
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        formMessage = body.error ?? 'The centre access assignment could not be saved.';
+        return;
+      }
+      memberOpen = false;
+      resetMember();
+      await invalidateAll();
+    } catch {
+      formMessage = 'The centre access assignment could not be saved.';
+    } finally {
+      memberBusy = false;
+    }
+  }
+
+  async function toggleMember(member: InstitutionMember) {
+    try {
+      const response = await classroomio.ncct['institution-members'][':memberId'].$patch({
+        param: { memberId: member.member.id },
+        json: { active: !member.member.active }
+      });
+      if (response.ok) await invalidateAll();
+    } catch {
+      formMessage = 'The centre access status could not be updated.';
+    }
+  }
 </script>
 
 <section class="ui:bg-card rounded-xl border p-5">
@@ -214,6 +271,15 @@
           traineeOpen = true;
         }}>Register trainee</Button
       >
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={institutions.length === 0}
+        onclick={() => {
+          resetMember();
+          memberOpen = true;
+        }}>Assign centre access</Button
+      >
     </div>
   </div>
   <div class="ui:text-muted-foreground mt-4 flex flex-wrap gap-2 text-sm">
@@ -225,8 +291,12 @@
       {#each trainees.slice(0, 5) as trainee}
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
           <div>
-            <p class="font-medium">{trainee.traineeNumber}{trainee.cooperativeName ? ` · ${trainee.cooperativeName}` : ''}</p>
-            <p class="ui:text-muted-foreground">{trainee.district}, {trainee.state} · {trainee.skills.join(', ') || 'No skills recorded'}</p>
+            <p class="font-medium">
+              {trainee.traineeNumber}{trainee.cooperativeName ? ` · ${trainee.cooperativeName}` : ''}
+            </p>
+            <p class="ui:text-muted-foreground">
+              {trainee.district}, {trainee.state} · {trainee.skills.join(', ') || 'No skills recorded'}
+            </p>
           </div>
           <div class="flex items-center gap-2">
             <Badge variant={trainee.directoryVisible ? 'secondary' : 'outline'}>
@@ -238,6 +308,34 @@
       {/each}
     </div>
   {/if}
+  <div class="mt-5 border-t pt-4">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <p class="font-medium">Centre access</p>
+        <p class="ui:text-muted-foreground text-xs">Assign coordinators, instructors, and evaluators to a centre.</p>
+      </div>
+      <Badge variant="secondary">{institutionMembers.filter((item) => item.member.active).length} active</Badge>
+    </div>
+    {#if institutionMembers.length > 0}
+      <div class="mt-3 space-y-2">
+        {#each institutionMembers.slice(0, 5) as member}
+          <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+            <div>
+              <p class="font-medium">{member.profile.fullname} · {member.member.role}</p>
+              <p class="ui:text-muted-foreground">
+                {member.institution.name} · {member.profile.email ?? member.member.profileId}
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onclick={() => void toggleMember(member)}>
+              {member.member.active ? 'Disable' : 'Enable'}
+            </Button>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <p class="ui:text-muted-foreground mt-3 text-sm">No centre access assignments yet.</p>
+    {/if}
+  </div>
 </section>
 
 <Dialog.Root bind:open={institutionOpen}>
@@ -284,14 +382,17 @@
   <Dialog.Content>
     <Dialog.Header>
       <Dialog.Title>Edit trainee profile</Dialog.Title>
-      <Dialog.Description>Keep the cooperative profile and employer directory visibility up to date.</Dialog.Description>
+      <Dialog.Description>Keep the cooperative profile and employer directory visibility up to date.</Dialog.Description
+      >
     </Dialog.Header>
     <div class="grid gap-4 sm:grid-cols-2">
       <InputField label="Trainee number" value={traineeNumber} disabled />
       <label class="grid gap-2 text-sm font-medium sm:col-span-2">
         Institution
         <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={traineeInstitutionId}>
-          {#each institutions as institution}<option value={institution.id}>{institution.name} ({institution.code})</option>{/each}
+          {#each institutions as institution}<option value={institution.id}
+              >{institution.name} ({institution.code})</option
+            >{/each}
         </select>
       </label>
       <InputField label="Cooperative name" bind:value={traineeCooperative} />
@@ -310,6 +411,43 @@
       <Button
         disabled={traineeBusy || !traineeInstitutionId || !traineeDistrict.trim() || !traineeState.trim()}
         onclick={() => void updateTrainee()}>Save profile</Button
+      >
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={memberOpen}>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>Assign centre access</Dialog.Title>
+      <Dialog.Description
+        >Use the profile ID of an organization team member to assign their NCCT centre role.</Dialog.Description
+      >
+    </Dialog.Header>
+    <div class="grid gap-4">
+      <label class="grid gap-2 text-sm font-medium">
+        Institution
+        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={memberInstitutionId}>
+          {#each institutions as institution}<option value={institution.id}
+              >{institution.name} ({institution.code})</option
+            >{/each}
+        </select>
+      </label>
+      <InputField label="Profile ID" bind:value={memberProfileId} />
+      <label class="grid gap-2 text-sm font-medium">
+        Role
+        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={memberRole}>
+          <option value="COORDINATOR">Coordinator</option>
+          <option value="INSTRUCTOR">Instructor</option>
+          <option value="EVALUATOR">Evaluator</option>
+        </select>
+      </label>
+    </div>
+    {#if formMessage}<p class="ui:text-destructive text-sm">{formMessage}</p>{/if}
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (memberOpen = false)}>Cancel</Button>
+      <Button disabled={memberBusy || !memberInstitutionId || !memberProfileId.trim()} onclick={() => void saveMember()}
+        >Save access</Button
       >
     </Dialog.Footer>
   </Dialog.Content>

@@ -211,7 +211,11 @@
             {/each}
           </div>
 
-          <NcctSetupPanel institutions={overview.institutions} trainees={overview.trainees} />
+          <NcctSetupPanel
+            institutions={overview.institutions}
+            trainees={overview.trainees}
+            institutionMembers={overview.institutionMembers}
+          />
           <NcctProgrammePanel institutions={overview.institutions} programmes={overview.programmes} />
           <NcctNominationPanel
             trainees={overview.trainees}
@@ -245,11 +249,7 @@
             sessions={overview.sessions}
             resources={overview.resources}
           />
-          <NcctProgressPanel
-            enrollments={overview.enrollments}
-            offline={!isOnline}
-            onQueueEvent={queueOfflineEvent}
-          />
+          <NcctProgressPanel enrollments={overview.enrollments} offline={!isOnline} onQueueEvent={queueOfflineEvent} />
           <NcctDirectoryPanel />
           <NcctAuditPanel events={overview.auditEvents} />
 

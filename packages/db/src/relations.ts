@@ -24,6 +24,7 @@ import {
   ncctEnrollment,
   ncctEnrollmentProgress,
   ncctInstitution,
+  ncctInstitutionMember,
   ncctJob,
   ncctJobApplication,
   ncctJobApplicationEvent,
@@ -79,7 +80,19 @@ export const ncctInstitutionRelations = relations(ncctInstitution, ({ one, many 
     references: [organization.id]
   }),
   trainees: many(ncctTrainee),
+  members: many(ncctInstitutionMember),
   batches: many(ncctBatch)
+}));
+
+export const ncctInstitutionMemberRelations = relations(ncctInstitutionMember, ({ one }) => ({
+  institution: one(ncctInstitution, {
+    fields: [ncctInstitutionMember.institutionId],
+    references: [ncctInstitution.id]
+  }),
+  profile: one(profile, {
+    fields: [ncctInstitutionMember.profileId],
+    references: [profile.id]
+  })
 }));
 
 export const ncctAuditEventRelations = relations(ncctAuditEvent, ({ one }) => ({
