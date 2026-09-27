@@ -95,6 +95,7 @@ import { assertNcctApplicationTransition, assertNcctJobApplicationAllowed } from
 import { assertNcctAssessmentResultAllowed, assertNcctAssessmentSlotAvailable } from './assessments';
 import { assertNcctSyncDeviceActive } from './sync';
 import { assertNcctCredentialIssuanceAllowed, assertNcctCredentialPrerequisites } from './credentials';
+import { assertNcctBatchInstructorRole, assertNcctBatchProgramme } from './batches';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -821,17 +822,23 @@ export async function scheduleNcctBatch(
   actorProfileId?: string,
   orgRole?: number
 ) {
-  const institutions = await listNcctInstitutions(organizationId);
+  const [institutions, programmes] = await Promise.all([
+    listNcctInstitutions(organizationId),
+    listNcctProgrammes(organizationId)
+  ]);
   if (!institutions.some((institution) => institution.id === data.institutionId)) {
     throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
   }
+  assertNcctBatchProgramme(
+    programmes.map((programme) => programme.id),
+    data.programmeId
+  );
   await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
   if (data.instructorProfileId) {
     const members = await listNcctInstitutionMembers(organizationId);
     const instructor = members.find(
-      ({ member }) =>
-        member.institutionId === data.institutionId && member.profileId === data.instructorProfileId && member.active
+      ({ member }) => member.institutionId === data.institutionId && member.profileId === data.instructorProfileId
     );
     if (!instructor) {
       throw new AppError(
@@ -840,6 +847,7 @@ export async function scheduleNcctBatch(
         422
       );
     }
+    assertNcctBatchInstructorRole(instructor.member.role, instructor.member.active);
   }
 
   const batch = await createNcctBatch({ ...data, status: 'OPEN' });
