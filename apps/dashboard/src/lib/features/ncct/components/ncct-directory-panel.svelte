@@ -13,7 +13,7 @@
       state: string;
       skills: string[];
     };
-    credential: { certificateNumber: string; issuedAt: string };
+    credential: { certificateNumber: string; verificationToken: string; issuedAt: string };
     programme: { title: string };
     institution: { name: string; code: string; contactEmail: string | null };
   };
@@ -140,7 +140,17 @@
           <div class="mt-3 flex flex-wrap gap-1">
             {#each row.trainee.skills.slice(0, 6) as skill}<Badge variant="secondary">{skill}</Badge>{/each}
           </div>
-          <p class="ui:text-muted-foreground mt-3 text-xs">Certificate {row.credential.certificateNumber}</p>
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <p class="ui:text-muted-foreground text-xs">Certificate {row.credential.certificateNumber}</p>
+            <a
+              class="ui:text-primary text-xs underline"
+              href={`/verify/${row.credential.verificationToken}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Verify credential
+            </a>
+          </div>
           {#if row.institution.contactEmail}
             <a class="ui:text-primary mt-1 block text-xs underline" href={`mailto:${row.institution.contactEmail}`}>
               Contact centre
