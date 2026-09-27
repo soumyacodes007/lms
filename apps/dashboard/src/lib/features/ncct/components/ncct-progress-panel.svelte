@@ -113,6 +113,17 @@
       }
       setSnapshot((await response.json()).data as ProgressSnapshot);
     } catch {
+      if (
+        offline &&
+        onQueueEvent?.({
+          eventId: globalThis.crypto?.randomUUID?.() ?? `progress-${Date.now()}`,
+          eventType: 'progress.update',
+          payload: { enrollmentId: selectedId, programmeStepId: stepId, status, score }
+        })
+      ) {
+        message = 'The progress update is queued for the next successful sync.';
+        return;
+      }
       message = 'The progress update could not be saved.';
     } finally {
       savingId = null;

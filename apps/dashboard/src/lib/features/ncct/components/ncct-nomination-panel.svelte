@@ -55,6 +55,19 @@
       reset();
       await invalidateAll();
     } catch {
+      if (
+        offline &&
+        onQueueEvent?.({
+          eventId: globalThis.crypto?.randomUUID?.() ?? `nomination-${Date.now()}`,
+          eventType: 'nomination.submit',
+          payload: { traineeId, batchId }
+        })
+      ) {
+        message = 'Nomination queued for sync when this centre reconnects.';
+        open = false;
+        reset();
+        return;
+      }
       message = 'The nomination could not be submitted.';
     } finally {
       busy = false;
