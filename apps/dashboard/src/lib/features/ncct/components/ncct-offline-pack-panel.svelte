@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { Badge } from '@cio/ui/base/badge';
   import { readNcctOfflineSnapshot } from '$lib/features/ncct/offline-cache';
 
@@ -15,22 +14,27 @@
       exercises: Array<{ id: string; title: string; questions: Array<{ id: number }> }>;
     }>;
   };
-  type Props = { orgName: string; programmes: Programme[] };
+  type Props = { orgName: string; programmes: Programme[]; refreshToken: number };
 
-  let { orgName, programmes }: Props = $props();
+  let { orgName, programmes, refreshToken }: Props = $props();
   let packs = $state<Record<string, OfflinePack>>({});
   let loaded = $state(false);
 
-  onMount(() => {
-    void Promise.all(
+  async function loadPacks() {
+    loaded = false;
+    const entries = await Promise.all(
       programmes.map(async (programme) => {
         const cached = await readNcctOfflineSnapshot<OfflinePack>(`pack:${orgName}:${programme.id}`);
         return cached ? ([programme.id, cached.value] as const) : null;
       })
-    ).then((entries) => {
-      packs = Object.fromEntries(entries.filter((entry): entry is readonly [string, OfflinePack] => Boolean(entry)));
-      loaded = true;
-    });
+    );
+    packs = Object.fromEntries(entries.filter((entry): entry is readonly [string, OfflinePack] => Boolean(entry)));
+    loaded = true;
+  }
+
+  $effect(() => {
+    refreshToken;
+    void loadPacks();
   });
 </script>
 

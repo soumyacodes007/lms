@@ -48,6 +48,7 @@
   let syncMessage = $state('Offline centre sync is ready to configure.');
   let cacheMessage = $state('No encrypted workspace snapshot saved yet.');
   let packMessage = $state('No offline programme pack cached yet.');
+  let offlinePackVersion = $state(0);
   let syncQueue: ReturnType<typeof createNcctOfflineQueue> | null = null;
   let decisionId = $state<string | null>(null);
   let actionMessage = $state('');
@@ -187,6 +188,7 @@
       }
 
       const result = await saveNcctOfflineSnapshot(`pack:${data.orgName}:${programmeId}`, body.data);
+      offlinePackVersion += 1;
       packMessage = `Offline programme pack cached ${new Date(result.savedAt).toLocaleTimeString()}.`;
     } catch {
       packMessage = 'The offline programme pack could not be prepared.';
@@ -294,7 +296,11 @@
             courses={data.courses}
             onDownloadPack={downloadOfflinePack}
           />
-          <NcctOfflinePackPanel orgName={data.orgName} programmes={overview.programmes} />
+          <NcctOfflinePackPanel
+            orgName={data.orgName}
+            programmes={overview.programmes}
+            refreshToken={offlinePackVersion}
+          />
           <NcctNominationPanel
             trainees={overview.trainees}
             batches={overview.batches}
