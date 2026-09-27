@@ -503,9 +503,21 @@ export async function getNcctOfflineProgrammePack(
               note: lesson.note,
               languages: (enriched?.lessonLanguages ?? []).map(({ locale, content }) => ({ locale, content })),
               media: {
-                videos: lesson.videos?.length ?? 0,
-                documents: lesson.documents?.length ?? 0,
-                slides: lesson.slides?.length ?? 0
+                videos: (lesson.videos ?? []).map((video) => ({
+                  type: video.type,
+                  url: video.link,
+                  title: video.fileName ?? video.metadata?.title ?? 'Lesson video'
+                })),
+                documents: (lesson.documents ?? []).map((document) => ({
+                  type: document.type,
+                  url: document.link,
+                  title: document.name
+                })),
+                slides: (lesson.slides ?? []).map((slide) => ({
+                  platform: slide.platform,
+                  url: slide.src,
+                  title: 'Lesson slides'
+                }))
               }
             };
           })
