@@ -157,6 +157,8 @@ type NcctOverview = {
       batchesByStatus: Array<{ status: string; total: number }>;
       enrollmentsByStatus: Array<{ status: string; total: number }>;
       credentialsByStatus: Array<{ status: string; total: number }>;
+      assessmentsByStatus: Array<{ status: string; total: number }>;
+      completionRate: number;
       placements: { applications: number; shortlisted: number; selected: number; openJobs: number };
     };
     auditEvents: Array<{

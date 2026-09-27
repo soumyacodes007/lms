@@ -18,6 +18,8 @@
     batchesByStatus: Array<{ status: string; total: number }>;
     enrollmentsByStatus: Array<{ status: string; total: number }>;
     credentialsByStatus: Array<{ status: string; total: number }>;
+    assessmentsByStatus: Array<{ status: string; total: number }>;
+    completionRate: number;
     placements: { applications: number; shortlisted: number; selected: number; openJobs: number };
   };
   type Props = { report: Report };
@@ -125,6 +127,21 @@
           {item.status.toLowerCase()} credentials
         {/each}
       </div>
+    </div>
+
+    <div class="rounded-lg border p-4">
+      <p class="ui:text-muted-foreground text-sm">Assessment outcomes</p>
+      <div class="mt-3 space-y-2">
+        {#each report.assessmentsByStatus as item}
+          <div class="flex items-center justify-between text-sm">
+            <span>{item.status}</span>
+            <Badge variant="outline">{item.total}</Badge>
+          </div>
+        {:else}
+          <p class="ui:text-muted-foreground text-sm">No assessments yet.</p>
+        {/each}
+      </div>
+      <p class="ui:text-muted-foreground mt-3 border-t pt-3 text-xs">Completion rate {report.completionRate}%</p>
     </div>
   </div>
 
