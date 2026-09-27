@@ -306,6 +306,19 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
           return counts;
         }, {})
       ).map(([status, total]) => ({ status, total })),
+      enrollmentsByStatus: Object.entries(
+        visibleEnrollments.reduce<Record<string, number>>((counts, { enrollment }) => {
+          counts[enrollment.status] = (counts[enrollment.status] ?? 0) + 1;
+          return counts;
+        }, {})
+      ).map(([status, total]) => ({ status, total })),
+      credentialsByStatus: Object.entries(
+        visibleCredentials.reduce<Record<string, number>>((counts, { credential }) => {
+          const status = credential.revokedAt ? 'REVOKED' : 'ACTIVE';
+          counts[status] = (counts[status] ?? 0) + 1;
+          return counts;
+        }, {})
+      ).map(([status, total]) => ({ status, total })),
       placements: {
         applications: visibleApplications.length,
         shortlisted: visibleApplications.filter(({ application }) => application.status === 'SHORTLISTED').length,

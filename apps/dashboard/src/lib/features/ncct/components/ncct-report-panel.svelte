@@ -7,6 +7,8 @@
     traineesByState: Array<{ state: string; total: number }>;
     nominationsByStatus: Array<{ status: string; total: number }>;
     batchesByStatus: Array<{ status: string; total: number }>;
+    enrollmentsByStatus: Array<{ status: string; total: number }>;
+    credentialsByStatus: Array<{ status: string; total: number }>;
     placements: { applications: number; shortlisted: number; selected: number; openJobs: number };
   };
   type Props = { report: Report };
@@ -90,6 +92,28 @@
           </div>
         {:else}
           <p class="ui:text-muted-foreground text-sm">No batches yet.</p>
+        {/each}
+      </div>
+    </div>
+
+    <div class="rounded-lg border p-4">
+      <p class="ui:text-muted-foreground text-sm">Training funnel</p>
+      <div class="mt-3 space-y-2">
+        {#each report.enrollmentsByStatus as item}
+          <div class="flex items-center justify-between text-sm">
+            <span>{item.status}</span>
+            <Badge variant="outline">{item.total}</Badge>
+          </div>
+        {:else}
+          <p class="ui:text-muted-foreground text-sm">No enrolments yet.</p>
+        {/each}
+      </div>
+      <div class="ui:text-muted-foreground mt-3 border-t pt-3 text-xs">
+        {#each report.credentialsByStatus as item, index}
+          {#if index > 0}
+            ·
+          {/if}{item.total}
+          {item.status.toLowerCase()} credentials
         {/each}
       </div>
     </div>
