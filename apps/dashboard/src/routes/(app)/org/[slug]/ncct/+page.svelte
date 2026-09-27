@@ -47,6 +47,7 @@
   let pendingSync = $state(0);
   let isOnline = $state(true);
   let syncMessage = $state('Offline centre sync is ready to configure.');
+  let lastSyncAt = $state<string | null>(null);
   let cacheMessage = $state('No encrypted workspace snapshot saved yet.');
   let packMessage = $state('No offline programme pack cached yet.');
   let offlinePackVersion = $state(0);
@@ -113,6 +114,8 @@
     if (!syncQueue || !isOnline) return;
     const sent = await syncQueue.flush();
     pendingSync = syncQueue.pendingCount();
+    lastSyncAt = new Date().toISOString();
+    localStorage.setItem(`ncct-sync-last:${data.orgName}`, lastSyncAt);
     if (sent > 0) syncMessage = `${sent} queued event${sent === 1 ? '' : 's'} synchronized.`;
   }
 
@@ -200,6 +203,7 @@
   onMount(() => {
     isOnline = navigator.onLine;
     const storedDeviceId = localStorage.getItem(`ncct-sync-device:${data.orgName}`);
+    lastSyncAt = localStorage.getItem(`ncct-sync-last:${data.orgName}`);
     if (storedDeviceId) {
       syncDeviceId = storedDeviceId;
       createQueue(storedDeviceId);
@@ -380,6 +384,7 @@
               <div class="ui:text-muted-foreground mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
                 <span>{isOnline ? 'Online' : 'Offline'}</span>
                 <span>{pendingSync} pending event{pendingSync === 1 ? '' : 's'}</span>
+                <span>{lastSyncAt ? `Last sync ${new Date(lastSyncAt).toLocaleString()}` : 'Never synchronized'}</span>
                 <span>{syncMessage}</span>
               </div>
               <div class="mt-4 flex flex-wrap items-center gap-2">
