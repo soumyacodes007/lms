@@ -23,6 +23,7 @@
   let programmeId = $state('');
   let batchId = $state('');
   let verificationUrl = $state('');
+  let copyState = $state<'idle' | 'copied'>('idle');
   let revokingId = $state<string | null>(null);
 
   const availableBatches = $derived(
@@ -75,6 +76,7 @@
       const result = (await response.json()) as { data?: { verificationToken?: string } };
       if (result.data?.verificationToken) {
         verificationUrl = `${window.location.origin}/verify/${result.data.verificationToken}`;
+        copyState = 'idle';
       }
       open = false;
       reset();
@@ -83,6 +85,16 @@
       message = 'The credential could not be issued.';
     } finally {
       busy = false;
+    }
+  }
+
+  async function copyVerificationUrl() {
+    if (!verificationUrl) return;
+    try {
+      await navigator.clipboard.writeText(verificationUrl);
+      copyState = 'copied';
+    } catch {
+      message = 'The verification link could not be copied.';
     }
   }
 
@@ -129,10 +141,22 @@
   </div>
   {#if verificationUrl}
     <div class="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
-      <p class="font-medium">Credential verification link ready</p>
-      <a class="ui:text-primary mt-1 block break-all underline" href={verificationUrl} target="_blank" rel="noreferrer">
-        {verificationUrl}
-      </a>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="font-medium">Credential verification link ready</p>
+          <a
+            class="ui:text-primary mt-1 block break-all underline"
+            href={verificationUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {verificationUrl}
+          </a>
+        </div>
+        <Button size="sm" variant="outline" onclick={() => void copyVerificationUrl()}>
+          {copyState === 'copied' ? 'Copied' : 'Copy link'}
+        </Button>
+      </div>
     </div>
   {/if}
   {#if credentials.length > 0}
