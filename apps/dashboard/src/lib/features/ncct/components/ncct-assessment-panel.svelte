@@ -168,6 +168,7 @@
             {traineeLabel(assessment.traineeId)} · {batchLabel(assessment.batchId)} ·
             {new Date(assessment.scheduledAt).toLocaleString()} · {evaluatorLabel(assessment.evaluatorProfileId)}
           </p>
+          {#if assessment.feedback}<p class="ui:text-muted-foreground mt-2 text-xs">{assessment.feedback}</p>{/if}
         </div>
         <div class="flex items-center gap-2">
           <Badge variant={assessment.status === 'PASSED' ? 'default' : 'outline'}>
