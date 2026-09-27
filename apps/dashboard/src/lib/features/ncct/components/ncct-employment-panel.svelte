@@ -57,6 +57,8 @@
   let applicationNotes = $state<Record<string, string>>({});
   let updatingJobId = $state<string | null>(null);
   let openJobs = $derived(jobs.filter((job) => job.status === 'OPEN'));
+  let jobFilter = $state<'ALL' | 'OPEN' | 'CLOSED'>('OPEN');
+  let visibleJobs = $derived(jobFilter === 'ALL' ? jobs : jobs.filter((job) => job.status === jobFilter));
 
   function resetPost() {
     employerName = '';
@@ -194,8 +196,16 @@
       >
     </div>
   </div>
+  <div class="mt-4 flex flex-wrap items-center gap-2">
+    <span class="ui:text-muted-foreground text-sm">Show vacancies</span>
+    <select class="ui:bg-background h-9 rounded-md border px-3 text-sm" bind:value={jobFilter}>
+      <option value="OPEN">Open</option>
+      <option value="CLOSED">Closed</option>
+      <option value="ALL">All</option>
+    </select>
+  </div>
   <div class="mt-4 grid gap-3 md:grid-cols-2">
-    {#each jobs.slice(0, 6) as job}
+    {#each visibleJobs.slice(0, 6) as job}
       <div class="rounded-lg border p-3">
         <div class="flex items-start justify-between gap-3">
           <div>
