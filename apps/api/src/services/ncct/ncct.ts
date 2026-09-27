@@ -97,6 +97,7 @@ import { assertNcctSyncDeviceActive } from './sync';
 import { assertNcctCredentialIssuanceAllowed, assertNcctCredentialPrerequisites } from './credentials';
 import { assertNcctBatchInstructorRole, assertNcctBatchProgramme } from './batches';
 import { assertNcctTraineeNumberAvailable } from './trainees';
+import { assertNcctProgressUpdateAllowed } from './progress';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -1214,8 +1215,11 @@ export async function updateEnrollmentProgress(
   const step = steps.find((item) => item.id === data.programmeStepId);
   if (!step) throw new AppError('Programme step does not belong to this batch', 'NCCT_STEP_NOT_FOUND', 404);
 
+  const saved = await listNcctEnrollmentProgress(enrollmentId);
+  const current = saved.find(({ progress }) => progress.programmeStepId === data.programmeStepId)?.progress;
+  assertNcctProgressUpdateAllowed(current?.status, data.status, enrollment.enrollment.status);
+
   if (data.status !== 'NOT_STARTED' && step.prerequisiteStepId) {
-    const saved = await listNcctEnrollmentProgress(enrollmentId);
     const prerequisite = saved.find(({ progress }) => progress.programmeStepId === step.prerequisiteStepId);
     if (prerequisite?.progress.status !== 'COMPLETED') {
       throw new AppError('Complete the prerequisite step first', 'NCCT_PREREQUISITE_REQUIRED', 409);
