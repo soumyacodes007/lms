@@ -833,12 +833,12 @@ export const ncctRouter = new Hono()
   .get('/directory', authMiddleware, orgMemberMiddleware, zValidator('query', directoryQuery), async (c) => {
     try {
       const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
-      const { q, state, skill, institutionId } = c.req.valid('query');
+      const { q, state, skill, institutionId, limit, offset } = c.req.valid('query');
       const normalized = q?.trim().toLowerCase();
       const normalizedState = state?.trim().toLowerCase();
       const normalizedSkill = skill?.trim().toLowerCase();
       const institutions = new Map(overview.institutions.map((institution) => [institution.id, institution]));
-      const matches = overview.credentials
+      const allMatches = overview.credentials
         .filter(({ credential, trainee }) => {
           if (trainee.directoryVisible === false || credential.revokedAt) return false;
           if (institutionId && trainee.institutionId !== institutionId) return false;
@@ -856,7 +856,15 @@ export const ncctRouter = new Hono()
         })
         .map((row) => ({ ...row, institution: institutions.get(row.trainee.institutionId) ?? null }))
         .filter((row) => row.institution);
-      return c.json({ success: true, data: matches }, 200);
+      const data = allMatches.slice(offset, offset + limit);
+      return c.json(
+        {
+          success: true,
+          data,
+          meta: { total: allMatches.length, offset, limit, hasMore: offset + data.length < allMatches.length }
+        },
+        200
+      );
     } catch (error) {
       return handleError(c, error, 'Failed to search certified trainee directory');
     }
