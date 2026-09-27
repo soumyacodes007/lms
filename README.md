@@ -13,7 +13,8 @@ This repository is the SIH demonstration build for a central NCCT server with ce
 5. Record a pass, issue a verifiable credential, and open the public verification page.
 6. Publish a vacancy, submit an application, and review placement status history.
 7. Export the NCCT operations report as CSV.
-8. Disconnect a centre PC, queue a nomination or progress update, then reconnect and review synchronisation results.
+8. Cache an ordered programme for offline lesson text and assessment prompts.
+9. Disconnect a centre PC, queue a nomination or progress update, then reconnect and review synchronisation results.
 
 ## Stack
 
@@ -41,7 +42,7 @@ The API runs on port 3002 and the dashboard on port 5173 in local development. T
 
 ## Feature status
 
-The implementation plan is in [NCCT_IMPLEMENTATION_PLAN.md](NCCT_IMPLEMENTATION_PLAN.md). The English SIH demonstration path is implemented. Centre membership permissions, encrypted offline course content, multilingual content, and QR/NFC or face attendance remain explicitly tracked follow-up work; attendance was deferred for the first version.
+The implementation plan is in [NCCT_IMPLEMENTATION_PLAN.md](NCCT_IMPLEMENTATION_PLAN.md). The English SIH demonstration path is implemented. Centre membership permissions and encrypted offline text learning packs are included. Downloadable media, multilingual content, and QR/NFC or face attendance remain explicitly tracked follow-up work; attendance was deferred for the first version.
 
 ## Repository
 

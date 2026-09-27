@@ -37,11 +37,13 @@ The seed is safe to run more than once. It creates two centres, three trainees, 
 ## 3. Centre operations and offline sync
 
 1. Use **Centre timetable and logistics** to schedule a session, register a hostel or room, and save trainee logistics.
-2. Select **Register this PC** in the offline centre sync card.
-3. Queue permitted centre events while the browser is offline. When connectivity returns, select **Sync now** and confirm the pending count falls to zero.
+2. Select **Cache offline** beside an ordered programme. Confirm its lessons and assessment prompts appear in **Offline learning packs**.
+3. Select **Register this PC** in the offline centre sync card.
+4. Queue permitted centre events while the browser is offline. When connectivity returns, select **Sync now** and confirm the pending count falls to zero.
 
 ## Current scope
 
 - English UI and content are enabled for the first SIH version.
+- Offline packs include lesson text, translation content, exercise prompts, and question metadata; media still needs a connection.
 - QR/NFC and face-recognition attendance remain deferred as agreed for the first demo.
 - Existing course, lesson, exercise, certificate, and organization features remain available alongside NCCT.
