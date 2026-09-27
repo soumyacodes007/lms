@@ -10,8 +10,18 @@
     steps: Array<{
       position: number;
       course: { id: string; title: string; description: string };
-      lessons: Array<{ id: string; title: string; note: string | null }>;
-      exercises: Array<{ id: string; title: string; questions: Array<{ id: number }> }>;
+      lessons: Array<{
+        id: string;
+        title: string;
+        note: string | null;
+        languages: Array<{ locale: string; content: string }>;
+      }>;
+      exercises: Array<{
+        id: string;
+        title: string;
+        description: string | null;
+        questions: Array<{ id: number; title: string; points: number | null }>;
+      }>;
     }>;
   };
   type Props = { orgName: string; programmes: Programme[]; refreshToken: number };
@@ -78,9 +88,45 @@
                 </p>
                 <ul class="ui:text-muted-foreground mt-2 list-disc space-y-1 pl-4 text-xs">
                   {#each step.lessons as lesson}
-                    <li>{lesson.title}</li>
+                    <li>
+                      <details>
+                        <summary class="cursor-pointer">{lesson.title}</summary>
+                        {#if lesson.note}<p class="mt-1">{lesson.note}</p>{/if}
+                        {#each lesson.languages as language}
+                          <div class="ui:bg-background mt-2 rounded-md border p-2">
+                            <p class="ui:text-muted-foreground mb-1 text-[11px] uppercase">{language.locale}</p>
+                            <p class="text-sm whitespace-pre-wrap">{language.content}</p>
+                          </div>
+                        {:else}
+                          <p class="mt-1">No text content is available for this lesson.</p>
+                        {/each}
+                      </details>
+                    </li>
                   {/each}
                 </ul>
+                {#if step.exercises.length > 0}
+                  <div class="mt-3 border-t pt-3">
+                    <p class="font-medium">Assessment prompts</p>
+                    <div class="mt-2 space-y-2">
+                      {#each step.exercises as exercise}
+                        <details class="rounded-md border px-2 py-1">
+                          <summary class="cursor-pointer text-xs font-medium">{exercise.title}</summary>
+                          {#if exercise.description}<p class="ui:text-muted-foreground mt-1 text-xs">
+                              {exercise.description}
+                            </p>{/if}
+                          <ol class="mt-2 list-decimal space-y-1 pl-4 text-xs">
+                            {#each exercise.questions as question}
+                              <li>
+                                {question.title}{#if question.points}
+                                  · {question.points} points{/if}
+                              </li>
+                            {/each}
+                          </ol>
+                        </details>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
               </div>
             {/each}
           </div>
