@@ -57,6 +57,7 @@ type NcctOverview = {
       endsOn: string;
       status: string;
       capacity: number;
+      instructorProfileId: string | null;
     }>;
     jobs: Array<{
       id: string;
@@ -76,6 +77,12 @@ type NcctOverview = {
       instructorProfileId: string | null;
     }>;
     resources: Array<{ id: string; type: string; name: string; capacity: number; active: boolean }>;
+    logistics: Array<{
+      logistics: { mealRequired: boolean; transportRequired: boolean; notes: string | null };
+      batch: { name: string; institutionId: string };
+      trainee: { id: string; traineeNumber: string; institutionId: string };
+      resource: { id: string; name: string } | null;
+    }>;
     nominations: Array<{
       nomination: { id: string; status: string; decisionNote: string | null; createdAt: string };
       batch: { name: string; capacity: number };
@@ -122,6 +129,15 @@ type NcctOverview = {
       feedback: string | null;
     }>;
     reports: {
+      institutionsByActivity: Array<{
+        institutionId: string;
+        code: string;
+        name: string;
+        trainees: number;
+        batches: number;
+        activeBatches: number;
+        credentials: number;
+      }>;
       traineesByState: Array<{ state: string; total: number }>;
       nominationsByStatus: Array<{ status: string; total: number }>;
       batchesByStatus: Array<{ status: string; total: number }>;
