@@ -901,6 +901,9 @@ export async function submitNcctNomination(
     throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
   }
   if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
+  if (batch.status !== 'OPEN') {
+    throw new AppError('Only open batches accept nominations', 'NCCT_BATCH_NOT_OPEN', 409);
+  }
   if (trainee.institutionId !== batch.institutionId) {
     throw new AppError('Trainee and batch must belong to the same institution', 'NCCT_INSTITUTION_MISMATCH', 409);
   }
