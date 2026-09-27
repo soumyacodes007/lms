@@ -160,6 +160,12 @@ export const ZRecordNcctSyncEvents = z.object({
     .max(500)
 });
 
+export const ZUpdateNcctProgress = z.object({
+  programmeStepId: z.string().uuid(),
+  status: z.enum(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED']),
+  score: z.number().int().min(0).max(100).optional()
+});
+
 export type TCreateNcctInstitution = z.infer<typeof ZCreateNcctInstitution>;
 export type TCreateNcctTrainee = z.infer<typeof ZCreateNcctTrainee>;
 export type TCreateNcctProgramme = z.infer<typeof ZCreateNcctProgramme>;
@@ -179,3 +185,4 @@ export type TBookNcctResource = z.infer<typeof ZBookNcctResource>;
 export type TSaveNcctTraineeLogistics = z.infer<typeof ZSaveNcctTraineeLogistics>;
 export type TCreateNcctSyncDevice = z.infer<typeof ZCreateNcctSyncDevice>;
 export type TRecordNcctSyncEvents = z.infer<typeof ZRecordNcctSyncEvents>;
+export type TUpdateNcctProgress = z.infer<typeof ZUpdateNcctProgress>;

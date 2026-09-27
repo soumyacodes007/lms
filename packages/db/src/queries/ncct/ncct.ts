@@ -296,6 +296,57 @@ export async function listNcctEnrollments(organizationId: string) {
     .orderBy(desc(schema.ncctEnrollment.enrolledAt));
 }
 
+export async function listNcctEnrollmentProgress(enrollmentId: string) {
+  return db
+    .select({ progress: schema.ncctEnrollmentProgress, step: schema.ncctProgrammeStep })
+    .from(schema.ncctEnrollmentProgress)
+    .innerJoin(schema.ncctProgrammeStep, eq(schema.ncctEnrollmentProgress.programmeStepId, schema.ncctProgrammeStep.id))
+    .where(eq(schema.ncctEnrollmentProgress.enrollmentId, enrollmentId))
+    .orderBy(asc(schema.ncctProgrammeStep.position));
+}
+
+export async function upsertNcctEnrollmentProgress(
+  data: {
+    enrollmentId: string;
+    programmeStepId: string;
+    status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+    score?: number;
+  },
+  client: DbOrTxClient = db
+) {
+  const [progress] = await client
+    .insert(schema.ncctEnrollmentProgress)
+    .values({
+      enrollmentId: data.enrollmentId,
+      programmeStepId: data.programmeStepId,
+      status: data.status,
+      score: data.score,
+      completedAt: data.status === 'COMPLETED' ? new Date().toISOString() : null,
+      updatedAt: new Date().toISOString()
+    })
+    .onConflictDoUpdate({
+      target: [schema.ncctEnrollmentProgress.enrollmentId, schema.ncctEnrollmentProgress.programmeStepId],
+      set: {
+        status: data.status,
+        score: data.score,
+        completedAt: data.status === 'COMPLETED' ? new Date().toISOString() : null,
+        updatedAt: new Date().toISOString()
+      }
+    })
+    .returning();
+  if (!progress) throw new Error('Failed to save enrolment progress');
+  return progress;
+}
+
+export async function markNcctEnrollmentCompleted(enrollmentId: string, client: DbOrTxClient = db) {
+  const [enrollment] = await client
+    .update(schema.ncctEnrollment)
+    .set({ status: 'COMPLETED', completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+    .where(eq(schema.ncctEnrollment.id, enrollmentId))
+    .returning();
+  return enrollment ?? null;
+}
+
 export async function listNcctJobs(organizationId: string): Promise<TNcctJob[]> {
   return db
     .select()

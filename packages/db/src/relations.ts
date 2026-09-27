@@ -21,6 +21,7 @@ import {
   ncctCareerMessage,
   ncctCredential,
   ncctEnrollment,
+  ncctEnrollmentProgress,
   ncctInstitution,
   ncctJob,
   ncctJobApplication,
@@ -110,11 +111,12 @@ export const ncctProgrammeRelations = relations(ncctProgramme, ({ one, many }) =
   credentials: many(ncctCredential)
 }));
 
-export const ncctProgrammeStepRelations = relations(ncctProgrammeStep, ({ one }) => ({
+export const ncctProgrammeStepRelations = relations(ncctProgrammeStep, ({ one, many }) => ({
   programme: one(ncctProgramme, {
     fields: [ncctProgrammeStep.programmeId],
     references: [ncctProgramme.id]
   }),
+  progress: many(ncctEnrollmentProgress),
   course: one(course, {
     fields: [ncctProgrammeStep.courseId],
     references: [course.id]
@@ -166,7 +168,7 @@ export const ncctNominationRelations = relations(ncctNomination, ({ one }) => ({
   })
 }));
 
-export const ncctEnrollmentRelations = relations(ncctEnrollment, ({ one }) => ({
+export const ncctEnrollmentRelations = relations(ncctEnrollment, ({ one, many }) => ({
   batch: one(ncctBatch, {
     fields: [ncctEnrollment.batchId],
     references: [ncctBatch.id]
@@ -174,6 +176,18 @@ export const ncctEnrollmentRelations = relations(ncctEnrollment, ({ one }) => ({
   trainee: one(ncctTrainee, {
     fields: [ncctEnrollment.traineeId],
     references: [ncctTrainee.id]
+  }),
+  progress: many(ncctEnrollmentProgress)
+}));
+
+export const ncctEnrollmentProgressRelations = relations(ncctEnrollmentProgress, ({ one }) => ({
+  enrollment: one(ncctEnrollment, {
+    fields: [ncctEnrollmentProgress.enrollmentId],
+    references: [ncctEnrollment.id]
+  }),
+  programmeStep: one(ncctProgrammeStep, {
+    fields: [ncctEnrollmentProgress.programmeStepId],
+    references: [ncctProgrammeStep.id]
   })
 }));
 

@@ -22,7 +22,8 @@ import {
   ZSubmitNcctAssessment,
   ZBookNcctResource,
   ZRecordNcctSyncEvents,
-  ZSaveNcctTraineeLogistics
+  ZSaveNcctTraineeLogistics,
+  ZUpdateNcctProgress
 } from '@cio/utils/validation/ncct';
 import { zValidator } from '@hono/zod-validator';
 import * as z from 'zod';
@@ -33,6 +34,7 @@ import {
   decideNomination,
   getNcctOverview,
   getCareerSnapshot,
+  getEnrollmentProgress,
   getProgrammeProgress,
   bookResource,
   issueCredential,
@@ -50,7 +52,8 @@ import {
   scheduleSession,
   submitAssessment,
   submitJobApplication,
-  submitNcctNomination
+  submitNcctNomination,
+  updateEnrollmentProgress
 } from '@api/services/ncct/ncct';
 import {
   listNcctBatches,
@@ -73,6 +76,7 @@ const jobParam = z.object({ jobId: z.string().uuid() });
 const assessmentParam = z.object({ assessmentId: z.string().uuid() });
 const syncDeviceParam = z.object({ deviceId: z.string().uuid() });
 const careerParam = z.object({ traineeId: z.string().uuid() });
+const enrollmentParam = z.object({ enrollmentId: z.string().uuid() });
 const verificationParam = z.object({ verificationToken: z.string().min(16).max(128) });
 
 export const ncctRouter = new Hono()
@@ -170,6 +174,47 @@ export const ncctRouter = new Hono()
         return c.json({ success: true, data: await listNcctProgrammeSteps(c.req.valid('param').programmeId) }, 200);
       } catch (error) {
         return handleError(c, error, 'Failed to load programme steps');
+      }
+    }
+  )
+  .get(
+    '/enrollments/:enrollmentId/progress',
+    authMiddleware,
+    orgMemberMiddleware,
+    zValidator('param', enrollmentParam),
+    async (c) => {
+      try {
+        return c.json(
+          { success: true, data: await getEnrollmentProgress(c.get('orgId')!, c.req.valid('param').enrollmentId) },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to load enrolment progress');
+      }
+    }
+  )
+  .post(
+    '/enrollments/:enrollmentId/progress',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', enrollmentParam),
+    zValidator('json', ZUpdateNcctProgress),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await updateEnrollmentProgress(
+              c.get('orgId')!,
+              c.req.valid('param').enrollmentId,
+              c.req.valid('json')
+            )
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to update enrolment progress');
       }
     }
   )

@@ -31,6 +31,9 @@ import {
   listNcctCredentials,
   listNcctEnrollments,
   listNcctCareerMessages,
+  listNcctEnrollmentProgress,
+  markNcctEnrollmentCompleted,
+  upsertNcctEnrollmentProgress,
   bookNcctResource,
   recordNcctSyncEvents,
   saveNcctTraineeLogistics,
@@ -55,7 +58,8 @@ import type {
   TCreateNcctSession,
   TCreateNcctSyncDevice,
   TRecordNcctSyncEvents,
-  TSaveNcctTraineeLogistics
+  TSaveNcctTraineeLogistics,
+  TUpdateNcctProgress
 } from '@cio/utils/validation/ncct';
 import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
@@ -270,6 +274,74 @@ export async function chatCareer(organizationId: string, traineeId: string, data
         : 'Add your skills to your trainee profile to get personalised job matches.';
   await createNcctCareerMessage({ traineeId, role: 'ASSISTANT', message: assistantMessage });
   return getCareerSnapshot(organizationId, traineeId);
+}
+
+async function getNcctEnrollment(organizationId: string, enrollmentId: string) {
+  const enrollment = (await listNcctEnrollments(organizationId)).find(
+    ({ enrollment: item }) => item.id === enrollmentId
+  );
+  if (!enrollment) {
+    throw new AppError('Enrolment does not belong to this organization', 'NCCT_ENROLLMENT_NOT_FOUND', 404);
+  }
+  return enrollment;
+}
+
+export async function getEnrollmentProgress(organizationId: string, enrollmentId: string) {
+  const enrollment = await getNcctEnrollment(organizationId, enrollmentId);
+  const [steps, saved] = await Promise.all([
+    listNcctProgrammeSteps(enrollment.batch.programmeId),
+    listNcctEnrollmentProgress(enrollmentId)
+  ]);
+  const savedByStep = new Map(saved.map(({ progress }) => [progress.programmeStepId, progress]));
+  const completedSteps = new Set(
+    saved.filter(({ progress }) => progress.status === 'COMPLETED').map(({ progress }) => progress.programmeStepId)
+  );
+
+  return {
+    enrollment,
+    steps: steps.map((step) => ({
+      step,
+      progress: savedByStep.get(step.id) ?? null,
+      status: savedByStep.get(step.id)?.status ?? 'NOT_STARTED',
+      available: !step.prerequisiteStepId || completedSteps.has(step.prerequisiteStepId)
+    }))
+  };
+}
+
+export async function updateEnrollmentProgress(
+  organizationId: string,
+  enrollmentId: string,
+  data: TUpdateNcctProgress
+) {
+  const enrollment = await getNcctEnrollment(organizationId, enrollmentId);
+  const steps = await listNcctProgrammeSteps(enrollment.batch.programmeId);
+  const step = steps.find((item) => item.id === data.programmeStepId);
+  if (!step) throw new AppError('Programme step does not belong to this batch', 'NCCT_STEP_NOT_FOUND', 404);
+
+  if (data.status !== 'NOT_STARTED' && step.prerequisiteStepId) {
+    const saved = await listNcctEnrollmentProgress(enrollmentId);
+    const prerequisite = saved.find(({ progress }) => progress.programmeStepId === step.prerequisiteStepId);
+    if (prerequisite?.progress.status !== 'COMPLETED') {
+      throw new AppError('Complete the prerequisite step first', 'NCCT_PREREQUISITE_REQUIRED', 409);
+    }
+  }
+
+  const progress = await upsertNcctEnrollmentProgress({
+    enrollmentId,
+    programmeStepId: data.programmeStepId,
+    status: data.status,
+    score: data.score
+  });
+
+  if (data.status === 'COMPLETED') {
+    const updated = await getEnrollmentProgress(organizationId, enrollmentId);
+    const complete = updated.steps
+      .filter(({ step: item }) => item.required)
+      .every(({ status }) => status === 'COMPLETED');
+    if (complete && enrollment.enrollment.status === 'ENROLLED') await markNcctEnrollmentCompleted(enrollmentId);
+  }
+
+  return { progress, ...(await getEnrollmentProgress(organizationId, enrollmentId)) };
 }
 
 export async function scheduleAssessment(organizationId: string, data: TCreateNcctAssessment) {

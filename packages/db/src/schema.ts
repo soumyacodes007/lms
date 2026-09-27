@@ -4231,6 +4231,8 @@ export const ncctNominationStatus = pgEnum('NCCT_NOMINATION_STATUS', [
 
 export const ncctEnrollmentStatus = pgEnum('NCCT_ENROLLMENT_STATUS', ['ENROLLED', 'COMPLETED', 'WITHDRAWN']);
 
+export const ncctProgressStatus = pgEnum('NCCT_PROGRESS_STATUS', ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED']);
+
 export const ncctBatchStatus = pgEnum('NCCT_BATCH_STATUS', ['DRAFT', 'OPEN', 'RUNNING', 'COMPLETED', 'CANCELLED']);
 
 export const ncctAssessmentStatus = pgEnum('NCCT_ASSESSMENT_STATUS', ['SCHEDULED', 'SUBMITTED', 'PASSED', 'FAILED']);
@@ -4503,6 +4505,37 @@ export const ncctEnrollment = pgTable(
     unique('ncct_enrollment_batch_trainee_key').on(table.batchId, table.traineeId),
     index('idx_ncct_enrollment_batch_status').on(table.batchId, table.status),
     index('idx_ncct_enrollment_trainee').on(table.traineeId)
+  ]
+);
+
+export const ncctEnrollmentProgress = pgTable(
+  'ncct_enrollment_progress',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    enrollmentId: uuid('enrollment_id').notNull(),
+    programmeStepId: uuid('programme_step_id').notNull(),
+    status: ncctProgressStatus().default('NOT_STARTED').notNull(),
+    score: integer(),
+    completedAt: timestamp('completed_at', { withTimezone: true, mode: 'string' }),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.enrollmentId],
+      foreignColumns: [ncctEnrollment.id],
+      name: 'ncct_enrollment_progress_enrollment_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.programmeStepId],
+      foreignColumns: [ncctProgrammeStep.id],
+      name: 'ncct_enrollment_progress_programme_step_id_fkey'
+    }).onDelete('cascade'),
+    unique('ncct_enrollment_progress_enrollment_step_key').on(table.enrollmentId, table.programmeStepId),
+    index('idx_ncct_enrollment_progress_enrollment').on(table.enrollmentId),
+    index('idx_ncct_enrollment_progress_step').on(table.programmeStepId)
   ]
 );
 
