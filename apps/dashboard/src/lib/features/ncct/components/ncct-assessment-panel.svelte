@@ -55,7 +55,7 @@
 
   function reset() {
     traineeId = trainees[0]?.id ?? '';
-    batchId = batches[0]?.id ?? '';
+    batchId = batchesForTrainee(traineeId)[0]?.id ?? '';
     evaluatorProfileId = evaluatorsFor(traineeId)[0]?.member.profileId ?? '';
     title = 'Practical certification interview';
     scheduledAt = '';
@@ -65,6 +65,12 @@
   function updateTrainee(traineeIdValue: string) {
     traineeId = traineeIdValue;
     evaluatorProfileId = evaluatorsFor(traineeIdValue)[0]?.member.profileId ?? '';
+    batchId = batchesForTrainee(traineeIdValue)[0]?.id ?? '';
+  }
+
+  function batchesForTrainee(traineeIdValue: string) {
+    const institutionId = trainees.find((trainee) => trainee.id === traineeIdValue)?.institutionId;
+    return batches.filter((batch) => batch.institutionId === institutionId);
   }
 
   function evaluatorLabel(profileId: string | null) {
@@ -252,7 +258,7 @@
       <label class="grid gap-2 text-sm font-medium">
         Batch
         <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={batchId}>
-          {#each batches as batch}<option value={batch.id}>{batch.name}</option>{/each}
+          {#each batchesForTrainee(traineeId) as batch}<option value={batch.id}>{batch.name}</option>{/each}
         </select>
       </label>
       <InputField label="Assessment title" bind:value={title} />
