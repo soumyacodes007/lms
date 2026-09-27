@@ -21,10 +21,11 @@
   let message = $state('');
   let traineeId = $state('');
   let batchId = $state('');
+  let openBatches = $derived(batches.filter((batch) => batch.status === 'OPEN'));
 
   function reset() {
     traineeId = trainees[0]?.id ?? '';
-    batchId = batches[0]?.id ?? '';
+    batchId = openBatches[0]?.id ?? '';
     message = '';
   }
 
@@ -69,7 +70,7 @@
     </div>
     <Button
       size="sm"
-      disabled={trainees.length === 0 || batches.length === 0}
+      disabled={trainees.length === 0 || openBatches.length === 0}
       onclick={() => {
         reset();
         open = true;
@@ -78,7 +79,7 @@
   </div>
   <div class="ui:text-muted-foreground mt-4 flex flex-wrap gap-2 text-sm">
     <Badge variant="secondary">{trainees.length} eligible trainees</Badge>
-    <Badge variant="secondary">{batches.length} scheduled batches</Badge>
+    <Badge variant="secondary">{openBatches.length} open batches</Badge>
   </div>
 </section>
 
@@ -102,7 +103,7 @@
       <label class="grid gap-2 text-sm font-medium">
         Batch
         <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={batchId}>
-          {#each batches as batch}
+          {#each openBatches as batch}
             <option value={batch.id}>{batch.name} · {batch.startsOn} to {batch.endsOn} · {batch.capacity} seats</option>
           {/each}
         </select>
