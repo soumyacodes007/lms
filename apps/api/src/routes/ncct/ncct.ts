@@ -336,7 +336,15 @@ export const ncctRouter = new Hono()
     async (c) => {
       try {
         return c.json(
-          { success: true, data: await getEnrollmentProgress(c.get('orgId')!, c.req.valid('param').enrollmentId) },
+          {
+            success: true,
+            data: await getEnrollmentProgress(
+              c.get('orgId')!,
+              c.req.valid('param').enrollmentId,
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
           200
         );
       } catch (error) {
@@ -395,7 +403,16 @@ export const ncctRouter = new Hono()
       try {
         const { programmeId, traineeId } = c.req.valid('param');
         return c.json(
-          { success: true, data: await getProgrammeProgress(c.get('orgId')!, programmeId, traineeId) },
+          {
+            success: true,
+            data: await getProgrammeProgress(
+              c.get('orgId')!,
+              programmeId,
+              traineeId,
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
           200
         );
       } catch (error) {

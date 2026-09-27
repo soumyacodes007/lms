@@ -411,7 +411,13 @@ export async function addProgrammeStep(data: TAddNcctProgrammeStep) {
   return addNcctProgrammeStep(data);
 }
 
-export async function getProgrammeProgress(organizationId: string, programmeId: string, traineeId: string) {
+export async function getProgrammeProgress(
+  organizationId: string,
+  programmeId: string,
+  traineeId: string,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const [programme, trainee] = await Promise.all([
     listNcctProgrammes(organizationId).then((programmes) => programmes.find((item) => item.id === programmeId)),
     listNcctTrainees(organizationId).then((trainees) => trainees.find((item) => item.id === traineeId))
@@ -419,6 +425,10 @@ export async function getProgrammeProgress(organizationId: string, programmeId: 
 
   if (!programme) throw new AppError('Programme does not belong to this organization', 'NCCT_PROGRAMME_NOT_FOUND', 404);
   if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+  if (orgRole === ROLE.STUDENT && trainee.profileId !== actorProfileId) {
+    throw new AppError('Students can only view their own progress', 'NCCT_TRAINEE_ACCESS_REQUIRED', 403);
+  }
+  await assertNcctInstitutionAccess(organizationId, trainee.institutionId, actorProfileId, orgRole);
 
   return getNcctProgrammeProgress(programmeId, trainee.profileId);
 }
@@ -631,8 +641,17 @@ async function getNcctEnrollment(organizationId: string, enrollmentId: string) {
   return enrollment;
 }
 
-export async function getEnrollmentProgress(organizationId: string, enrollmentId: string) {
+export async function getEnrollmentProgress(
+  organizationId: string,
+  enrollmentId: string,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const enrollment = await getNcctEnrollment(organizationId, enrollmentId);
+  if (orgRole === ROLE.STUDENT && enrollment.trainee.profileId !== actorProfileId) {
+    throw new AppError('Students can only view their own progress', 'NCCT_TRAINEE_ACCESS_REQUIRED', 403);
+  }
+  await assertNcctInstitutionAccess(organizationId, enrollment.trainee.institutionId, actorProfileId, orgRole);
   const [steps, saved] = await Promise.all([
     listNcctProgrammeSteps(enrollment.batch.programmeId),
     listNcctEnrollmentProgress(enrollmentId)
@@ -682,7 +701,7 @@ export async function updateEnrollmentProgress(
   });
 
   if (data.status === 'COMPLETED') {
-    const updated = await getEnrollmentProgress(organizationId, enrollmentId);
+    const updated = await getEnrollmentProgress(organizationId, enrollmentId, actorProfileId, orgRole);
     const complete = updated.steps
       .filter(({ step: item }) => item.required)
       .every(({ status }) => status === 'COMPLETED');
@@ -699,7 +718,7 @@ export async function updateEnrollmentProgress(
     metadata: { enrollmentId, programmeStepId: data.programmeStepId, score: data.score ?? null }
   });
 
-  return { progress, ...(await getEnrollmentProgress(organizationId, enrollmentId)) };
+  return { progress, ...(await getEnrollmentProgress(organizationId, enrollmentId, actorProfileId, orgRole)) };
 }
 
 export async function searchCertifiedTrainees(organizationId: string, search?: string) {
