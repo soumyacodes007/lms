@@ -4,12 +4,18 @@
   import { Button } from '@cio/ui/base/button';
   import { Badge } from '@cio/ui/base/badge';
   import { classroomio } from '$lib/utils/services/api';
+  import type { NcctQueuedEvent } from '../offline-queue';
 
   type Trainee = { id: string; traineeNumber: string; district: string; state: string };
   type Batch = { id: string; name: string; startsOn: string; endsOn: string; status: string; capacity: number };
-  type Props = { trainees: Trainee[]; batches: Batch[] };
+  type Props = {
+    trainees: Trainee[];
+    batches: Batch[];
+    offline?: boolean;
+    onQueueEvent?: (event: NcctQueuedEvent) => boolean;
+  };
 
-  let { trainees, batches }: Props = $props();
+  let { trainees, batches, offline = false, onQueueEvent }: Props = $props();
   let open = $state(false);
   let busy = $state(false);
   let message = $state('');
@@ -28,6 +34,19 @@
     try {
       const response = await classroomio.ncct.nominations.$post({ json: { traineeId, batchId } });
       if (!response.ok) {
+        if (
+          offline &&
+          onQueueEvent?.({
+            eventId: globalThis.crypto?.randomUUID?.() ?? `nomination-${Date.now()}`,
+            eventType: 'nomination.submit',
+            payload: { traineeId, batchId }
+          })
+        ) {
+          message = 'Nomination queued for sync when this centre reconnects.';
+          open = false;
+          reset();
+          return;
+        }
         message = 'The nomination could not be submitted.';
         return;
       }

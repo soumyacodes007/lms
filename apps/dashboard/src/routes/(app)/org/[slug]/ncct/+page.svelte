@@ -77,6 +77,17 @@
     pendingSync = syncQueue.pendingCount();
   }
 
+  function queueOfflineEvent(event: NcctQueuedEvent) {
+    if (!syncQueue) {
+      syncMessage = 'Register this centre PC before queuing offline actions.';
+      return false;
+    }
+    syncQueue.enqueue(event);
+    pendingSync = syncQueue.pendingCount();
+    syncMessage = 'The action is queued for the next successful sync.';
+    return true;
+  }
+
   async function flushSync() {
     if (!syncQueue || !isOnline) return;
     const sent = await syncQueue.flush();
@@ -194,7 +205,12 @@
 
           <NcctSetupPanel institutions={overview.institutions} trainees={overview.trainees} />
           <NcctProgrammePanel institutions={overview.institutions} programmes={overview.programmes} />
-          <NcctNominationPanel trainees={overview.trainees} batches={overview.batches} />
+          <NcctNominationPanel
+            trainees={overview.trainees}
+            batches={overview.batches}
+            offline={!isOnline}
+            onQueueEvent={queueOfflineEvent}
+          />
           <NcctAssessmentPanel
             trainees={overview.trainees}
             batches={overview.batches}
