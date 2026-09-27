@@ -23,6 +23,7 @@
   import NcctAssessmentPanel from '$lib/features/ncct/components/ncct-assessment-panel.svelte';
   import NcctCredentialPanel from '$lib/features/ncct/components/ncct-credential-panel.svelte';
   import NcctEmploymentPanel from '$lib/features/ncct/components/ncct-employment-panel.svelte';
+  import NcctRecruiterPanel from '$lib/features/ncct/components/ncct-recruiter-panel.svelte';
   import NcctCareerPanel from '$lib/features/ncct/components/ncct-career-panel.svelte';
   import NcctReportPanel from '$lib/features/ncct/components/ncct-report-panel.svelte';
   import NcctOperationsPanel from '$lib/features/ncct/components/ncct-operations-panel.svelte';
@@ -323,6 +324,7 @@
             batches={overview.batches}
             credentials={overview.credentials}
           />
+          <NcctRecruiterPanel jobs={overview.jobs} applications={overview.applications} />
           <NcctEmploymentPanel
             jobs={overview.jobs}
             trainees={overview.trainees}
