@@ -48,6 +48,7 @@
   };
 
   let { institutions, trainees, institutionMembers, institutionMemberCandidates }: Props = $props();
+  const canManageMembers = $derived(institutionMemberCandidates.length > 0);
   let institutionOpen = $state(false);
   let traineeOpen = $state(false);
   let traineeEditOpen = $state(false);
@@ -279,15 +280,17 @@
           traineeOpen = true;
         }}>Register trainee</Button
       >
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={institutions.length === 0}
-        onclick={() => {
-          resetMember();
-          memberOpen = true;
-        }}>Assign centre access</Button
-      >
+      {#if canManageMembers}
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={institutions.length === 0}
+          onclick={() => {
+            resetMember();
+            memberOpen = true;
+          }}>Assign centre access</Button
+        >
+      {/if}
     </div>
   </div>
   <div class="ui:text-muted-foreground mt-4 flex flex-wrap gap-2 text-sm">
@@ -334,9 +337,11 @@
                 {member.institution.name} · {member.profile.email ?? member.member.profileId}
               </p>
             </div>
-            <Button size="sm" variant="outline" onclick={() => void toggleMember(member)}>
-              {member.member.active ? 'Disable' : 'Enable'}
-            </Button>
+            {#if canManageMembers}
+              <Button size="sm" variant="outline" onclick={() => void toggleMember(member)}>
+                {member.member.active ? 'Disable' : 'Enable'}
+              </Button>
+            {/if}
           </div>
         {/each}
       </div>
