@@ -193,6 +193,9 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
   const visibleApplicationEvents = hasCentreScope
     ? applicationEvents.filter(({ application }) => visibleApplicationIds.has(application.id))
     : applicationEvents;
+  const visibleAuditEvents = hasCentreScope
+    ? auditEvents.filter((event) => event.institutionId && centreIds.has(event.institutionId))
+    : auditEvents;
   const visibleSummary = hasCentreScope
     ? {
         institutions: visibleInstitutions.length,
@@ -223,7 +226,7 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     applicationEvents: visibleApplicationEvents,
     assessments: visibleAssessments.map(({ assessment }) => assessment),
     enrollments: visibleEnrollments,
-    auditEvents,
+    auditEvents: visibleAuditEvents,
     reports: {
       traineesByState: Object.entries(
         visibleTrainees.reduce<Record<string, number>>((counts, trainee) => {

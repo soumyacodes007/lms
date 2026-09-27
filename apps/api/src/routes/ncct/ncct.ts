@@ -125,7 +125,7 @@ export const ncctRouter = new Hono()
   })
   .get('/reports/export', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      const overview = await getNcctOverview(c.get('orgId')!);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
       const escape = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`;
       const rows = [
         ['section', 'key', 'value', 'detail'],
@@ -157,7 +157,8 @@ export const ncctRouter = new Hono()
   })
   .get('/institutions', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      return c.json({ success: true, data: await listNcctInstitutions(c.get('orgId')!) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.institutions }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load institutions');
     }
@@ -181,14 +182,16 @@ export const ncctRouter = new Hono()
   )
   .get('/trainees', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      return c.json({ success: true, data: await listNcctTrainees(c.get('orgId')!) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.trainees }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load trainees');
     }
   })
   .get('/institution-members', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      return c.json({ success: true, data: await getNcctInstitutionMembers(c.get('orgId')!) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.institutionMembers }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load institution members');
     }
@@ -402,7 +405,8 @@ export const ncctRouter = new Hono()
   )
   .get('/batches', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      return c.json({ success: true, data: await listNcctBatches(c.get('orgId')!) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.batches }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load batches');
     }
@@ -459,7 +463,8 @@ export const ncctRouter = new Hono()
   )
   .get('/nominations', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      return c.json({ success: true, data: await listNcctNominations(c.get('orgId')!) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.nominations }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load nominations');
     }
@@ -494,8 +499,8 @@ export const ncctRouter = new Hono()
   )
   .get('/assessments', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      const rows = await listNcctAssessments(c.get('orgId')!);
-      return c.json({ success: true, data: rows.map(({ assessment }) => assessment) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.assessments }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load assessments');
     }
@@ -579,7 +584,8 @@ export const ncctRouter = new Hono()
   )
   .get('/credentials', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      return c.json({ success: true, data: await listNcctCredentials(c.get('orgId')!) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.credentials }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load credentials');
     }
@@ -611,25 +617,40 @@ export const ncctRouter = new Hono()
   )
   .get('/directory', authMiddleware, orgMemberMiddleware, zValidator('query', directoryQuery), async (c) => {
     try {
-      return c.json(
-        { success: true, data: await searchCertifiedTrainees(c.get('orgId')!, c.req.valid('query').q) },
-        200
-      );
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      const normalized = c.req.valid('query').q?.trim().toLowerCase();
+      const institutions = new Map(overview.institutions.map((institution) => [institution.id, institution]));
+      const matches = overview.credentials
+        .filter(({ credential, trainee }) => {
+          if (trainee.directoryVisible === false || credential.revokedAt) return false;
+          if (!normalized) return true;
+          return [
+            trainee.traineeNumber,
+            trainee.cooperativeName,
+            trainee.district,
+            trainee.state,
+            ...trainee.skills
+          ].some((value) => value?.toLowerCase().includes(normalized));
+        })
+        .map((row) => ({ ...row, institution: institutions.get(row.trainee.institutionId) ?? null }))
+        .filter((row) => row.institution);
+      return c.json({ success: true, data: matches }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to search certified trainee directory');
     }
   })
   .get('/audit', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      return c.json({ success: true, data: await getAuditEvents(c.get('orgId')!) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.auditEvents }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load NCCT audit events');
     }
   })
   .get('/sessions', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      const rows = await listNcctSessions(c.get('orgId')!);
-      return c.json({ success: true, data: rows.map(({ session }) => session) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.sessions }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load sessions');
     }
@@ -661,8 +682,8 @@ export const ncctRouter = new Hono()
   )
   .get('/resources', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      const rows = await listNcctResources(c.get('orgId')!);
-      return c.json({ success: true, data: rows.map(({ resource }) => resource) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.resources }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load resources');
     }
@@ -802,7 +823,8 @@ export const ncctRouter = new Hono()
   })
   .get('/applications', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      return c.json({ success: true, data: await listNcctJobApplications(c.get('orgId')!) }, 200);
+      const overview = await getNcctOverview(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined);
+      return c.json({ success: true, data: overview.applications }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load job applications');
     }
