@@ -273,7 +273,8 @@ export const ncctRouter = new Hono()
             data: await updateEnrollmentProgress(
               c.get('orgId')!,
               c.req.valid('param').enrollmentId,
-              c.req.valid('json')
+              c.req.valid('json'),
+              c.get('user')!.id
             )
           },
           200

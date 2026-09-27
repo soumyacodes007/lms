@@ -2,6 +2,7 @@
   import { Badge } from '@cio/ui/base/badge';
   import { Button } from '@cio/ui/base/button';
   import { classroomio } from '$lib/utils/services/api';
+  import type { NcctQueuedEvent } from '../offline-queue';
 
   type Enrollment = {
     enrollment: { id: string; status: string };
@@ -16,9 +17,13 @@
       available: boolean;
     }>;
   };
-  type Props = { enrollments: Enrollment[] };
+  type Props = {
+    enrollments: Enrollment[];
+    offline?: boolean;
+    onQueueEvent?: (event: NcctQueuedEvent) => boolean;
+  };
 
-  let { enrollments }: Props = $props();
+  let { enrollments, offline = false, onQueueEvent }: Props = $props();
   let selectedId = $state(enrollments[0]?.enrollment.id ?? '');
   let snapshot = $state<ProgressSnapshot | null>(null);
   let loading = $state(false);
@@ -55,6 +60,22 @@
         json: { programmeStepId: stepId, status }
       });
       if (!response.ok) {
+        if (offline && onQueueEvent?.({
+          eventId: crypto.randomUUID(),
+          eventType: 'progress.update',
+          payload: { enrollmentId: selectedId, programmeStepId: stepId, status }
+        })) {
+          if (snapshot) {
+            snapshot = {
+              ...snapshot,
+              steps: snapshot.steps.map((item) =>
+                item.step.id === stepId ? { ...item, status } : item
+              )
+            };
+          }
+          message = 'The progress update is queued for the next successful sync.';
+          return;
+        }
         message = status === 'COMPLETED' ? 'The step could not be completed.' : 'The step could not be started.';
         return;
       }
@@ -148,5 +169,6 @@
       {/if}
     </div>
   {/if}
+  {#if offline}<p class="ui:text-muted-foreground mt-3 text-xs">Offline mode queues progress changes until the centre reconnects.</p>{/if}
   {#if message}<p class="ui:text-destructive mt-3 text-sm">{message}</p>{/if}
 </section>

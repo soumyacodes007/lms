@@ -71,7 +71,7 @@ import type {
   TUpdateNcctProgress,
   TUpdateNcctJobApplication
 } from '@cio/utils/validation/ncct';
-import { ZCreateNcctNomination } from '@cio/utils/validation/ncct';
+import { ZCreateNcctNomination, ZUpdateNcctProgress } from '@cio/utils/validation/ncct';
 import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
 
@@ -420,7 +420,8 @@ export async function getEnrollmentProgress(organizationId: string, enrollmentId
 export async function updateEnrollmentProgress(
   organizationId: string,
   enrollmentId: string,
-  data: TUpdateNcctProgress
+  data: TUpdateNcctProgress,
+  actorProfileId?: string
 ) {
   const enrollment = await getNcctEnrollment(organizationId, enrollmentId);
   const steps = await listNcctProgrammeSteps(enrollment.batch.programmeId);
@@ -449,6 +450,16 @@ export async function updateEnrollmentProgress(
       .every(({ status }) => status === 'COMPLETED');
     if (complete && enrollment.enrollment.status === 'ENROLLED') await markNcctEnrollmentCompleted(enrollmentId);
   }
+
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: enrollment.trainee.institutionId,
+    action: `PROGRESS_${data.status}`,
+    entityType: 'enrollment_progress',
+    entityId: progress.id,
+    metadata: { enrollmentId, programmeStepId: data.programmeStepId, score: data.score ?? null }
+  });
 
   return { progress, ...(await getEnrollmentProgress(organizationId, enrollmentId)) };
 }
@@ -659,6 +670,12 @@ export async function receiveSyncEvents(organizationId: string, deviceId: string
           throw new Error('The queued batch is not assigned to this centre');
         }
         await submitNcctNomination(organizationId, null, parsed.data);
+      } else if (event.eventType === 'progress.update') {
+        const enrollmentId = event.payload.enrollmentId;
+        if (typeof enrollmentId !== 'string') throw new Error('Invalid progress payload');
+        const parsed = ZUpdateNcctProgress.safeParse(event.payload);
+        if (!parsed.success) throw new Error('Invalid progress payload');
+        await updateEnrollmentProgress(organizationId, enrollmentId, parsed.data);
       }
       await updateNcctSyncEventStatus(event.eventId, 'ACKNOWLEDGED');
       acknowledged += 1;

@@ -240,7 +240,11 @@
             sessions={overview.sessions}
             resources={overview.resources}
           />
-          <NcctProgressPanel enrollments={overview.enrollments} />
+          <NcctProgressPanel
+            enrollments={overview.enrollments}
+            offline={!isOnline}
+            onQueueEvent={queueOfflineEvent}
+          />
           <NcctDirectoryPanel />
           <NcctAuditPanel events={overview.auditEvents} />
 
