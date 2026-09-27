@@ -28,16 +28,28 @@
     member: { institutionId: string; profileId: string; role: string; active: boolean };
     profile: { fullname: string; email: string | null };
   };
+  type Batch = {
+    id: string;
+    programmeId: string;
+    institutionId: string;
+    name: string;
+    startsOn: string;
+    endsOn: string;
+    status: string;
+    capacity: number;
+  };
   type Props = {
     institutions: Institution[];
     institutionMembers: InstitutionMember[];
     programmes: Programme[];
+    batches: Batch[];
     programmeSteps: Array<{ programmeId: string; steps: ProgrammeStep[] }>;
     courses: Course[];
     onDownloadPack: (programmeId: string) => void;
   };
 
-  let { institutions, institutionMembers, programmes, programmeSteps, courses, onDownloadPack }: Props = $props();
+  let { institutions, institutionMembers, programmes, batches, programmeSteps, courses, onDownloadPack }: Props =
+    $props();
   let programmeOpen = $state(false);
   let batchOpen = $state(false);
   let programmeBusy = $state(false);
@@ -45,6 +57,7 @@
   let stepOpen = $state(false);
   let stepBusy = $state(false);
   let movingStepId = $state<string | null>(null);
+  let updatingBatchId = $state<string | null>(null);
   let formMessage = $state('');
 
   let programmeTitle = $state('');
@@ -99,6 +112,21 @@
 
   function courseTitle(courseId: string) {
     return courses.find((course) => course.id === courseId)?.title ?? courseId;
+  }
+
+  function institutionName(institutionId: string) {
+    return institutions.find((institution) => institution.id === institutionId)?.name ?? institutionId;
+  }
+
+  function nextBatchStatuses(status: string) {
+    const transitions: Record<string, string[]> = {
+      DRAFT: ['OPEN', 'CANCELLED'],
+      OPEN: ['RUNNING', 'CANCELLED'],
+      RUNNING: ['COMPLETED', 'CANCELLED'],
+      COMPLETED: [],
+      CANCELLED: []
+    };
+    return transitions[status] ?? [];
   }
 
   function resetStep() {
@@ -217,6 +245,27 @@
       movingStepId = null;
     }
   }
+
+  async function updateBatchStatus(batchId: string, status: 'OPEN' | 'RUNNING' | 'COMPLETED' | 'CANCELLED') {
+    updatingBatchId = batchId;
+    formMessage = '';
+    try {
+      const response = await classroomio.ncct.batches[':batchId'].status.$patch({
+        param: { batchId },
+        json: { status }
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        formMessage = body.error ?? 'The batch status could not be updated.';
+        return;
+      }
+      await invalidateAll();
+    } catch {
+      formMessage = 'The batch status could not be updated.';
+    } finally {
+      updatingBatchId = null;
+    }
+  }
 </script>
 
 <section class="ui:bg-card rounded-xl border p-5">
@@ -299,6 +348,42 @@
         </div>
       </div>
     {/each}
+  </div>
+  <div class="mt-6">
+    <div class="flex items-center justify-between gap-3">
+      <h3 class="font-medium">Scheduled batches</h3>
+      <Badge variant="secondary">{batches.length}</Badge>
+    </div>
+    <div class="mt-3 grid gap-3 md:grid-cols-2">
+      {#each batches as batch}
+        <div class="rounded-lg border p-3">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-medium">{batch.name}</p>
+              <p class="ui:text-muted-foreground mt-1 text-xs">
+                {institutionName(batch.institutionId)} · {batch.startsOn} to {batch.endsOn}
+              </p>
+            </div>
+            <Badge variant={batch.status === 'RUNNING' ? 'default' : 'outline'}>{batch.status}</Badge>
+          </div>
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <span class="ui:text-muted-foreground text-xs">Capacity {batch.capacity}</span>
+            {#each nextBatchStatuses(batch.status) as nextStatus}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={updatingBatchId !== null}
+                onclick={() =>
+                  void updateBatchStatus(batch.id, nextStatus as 'OPEN' | 'RUNNING' | 'COMPLETED' | 'CANCELLED')}
+                >{nextStatus}</Button
+              >
+            {/each}
+          </div>
+        </div>
+      {:else}
+        <p class="ui:text-muted-foreground text-sm">No batches have been scheduled yet.</p>
+      {/each}
+    </div>
   </div>
 </section>
 

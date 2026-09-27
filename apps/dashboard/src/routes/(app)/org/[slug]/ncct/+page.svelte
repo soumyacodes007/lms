@@ -293,6 +293,7 @@
             institutions={overview.institutions}
             institutionMembers={overview.institutionMembers}
             programmes={overview.programmes}
+            batches={overview.batches}
             programmeSteps={overview.programmeSteps}
             courses={data.courses}
             onDownloadPack={downloadOfflinePack}
