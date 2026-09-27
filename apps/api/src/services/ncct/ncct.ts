@@ -7,6 +7,9 @@ import {
   createNcctJob,
   createNcctNomination,
   createNcctProgramme,
+  createNcctResource,
+  createNcctSession,
+  createNcctSyncDevice,
   createNcctTrainee,
   decideNcctNomination,
   getNcctDashboardSummary,
@@ -18,6 +21,9 @@ import {
   listNcctProgrammeSteps,
   listNcctProgrammes,
   listNcctTrainees,
+  bookNcctResource,
+  recordNcctSyncEvents,
+  saveNcctTraineeLogistics,
   submitNcctAssessment as submitNcctAssessmentQuery
 } from '@cio/db/queries/ncct';
 import type {
@@ -32,7 +38,13 @@ import type {
   TCreateNcctTrainee,
   TDecideNcctNomination,
   TIssueNcctCredential,
-  TSubmitNcctAssessment
+  TSubmitNcctAssessment,
+  TBookNcctResource,
+  TCreateNcctResource,
+  TCreateNcctSession,
+  TCreateNcctSyncDevice,
+  TRecordNcctSyncEvents,
+  TSaveNcctTraineeLogistics
 } from '@cio/utils/validation/ncct';
 import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
@@ -120,6 +132,45 @@ export async function issueCredential(data: TIssueNcctCredential) {
     data.certificateNumber ?? `NCCT-${new Date().getUTCFullYear()}-${verificationToken.slice(0, 10).toUpperCase()}`;
 
   return issueNcctCredential({ ...data, certificateNumber, verificationToken });
+}
+
+export async function scheduleSession(organizationId: string, data: TCreateNcctSession) {
+  const batches = await listNcctBatches(organizationId);
+  if (!batches.some((batch) => batch.id === data.batchId)) {
+    throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
+  }
+
+  return createNcctSession(data);
+}
+
+export async function registerResource(organizationId: string, data: TCreateNcctResource) {
+  const institutions = await listNcctInstitutions(organizationId);
+  if (!institutions.some((institution) => institution.id === data.institutionId)) {
+    throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
+  }
+
+  return createNcctResource(data);
+}
+
+export async function bookResource(data: TBookNcctResource) {
+  return bookNcctResource(data);
+}
+
+export async function saveTraineeLogistics(data: TSaveNcctTraineeLogistics) {
+  return saveNcctTraineeLogistics(data);
+}
+
+export async function registerSyncDevice(organizationId: string, data: TCreateNcctSyncDevice) {
+  const institutions = await listNcctInstitutions(organizationId);
+  if (!institutions.some((institution) => institution.id === data.institutionId)) {
+    throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
+  }
+
+  return createNcctSyncDevice({ ...data, organizationId });
+}
+
+export async function receiveSyncEvents(deviceId: string, data: TRecordNcctSyncEvents) {
+  return recordNcctSyncEvents(deviceId, data.events);
 }
 
 export { listNcctAssessments, listNcctProgrammeSteps };

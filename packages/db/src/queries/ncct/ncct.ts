@@ -1,5 +1,5 @@
 import * as schema from '@db/schema';
-import { and, asc, count, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, lt } from 'drizzle-orm';
 import { db, type DbOrTxClient } from '@db/drizzle';
 
 export type TNcctInstitution = typeof schema.ncctInstitution.$inferSelect;
@@ -152,6 +152,107 @@ export async function applyToNcctJob(data: typeof schema.ncctJobApplication.$inf
   const [application] = await client.insert(schema.ncctJobApplication).values(data).returning();
   if (!application) throw new Error('Failed to apply for job');
   return application;
+}
+
+export async function listNcctSessions(organizationId: string) {
+  return db
+    .select({ session: schema.ncctSession })
+    .from(schema.ncctSession)
+    .innerJoin(schema.ncctBatch, eq(schema.ncctSession.batchId, schema.ncctBatch.id))
+    .innerJoin(schema.ncctInstitution, eq(schema.ncctBatch.institutionId, schema.ncctInstitution.id))
+    .where(eq(schema.ncctInstitution.organizationId, organizationId))
+    .orderBy(asc(schema.ncctSession.startsAt));
+}
+
+export async function createNcctSession(data: typeof schema.ncctSession.$inferInsert, client: DbOrTxClient = db) {
+  if (data.endsAt <= data.startsAt) throw new Error('Session end must be after its start');
+  const [session] = await client.insert(schema.ncctSession).values(data).returning();
+  if (!session) throw new Error('Failed to create session');
+  return session;
+}
+
+export async function listNcctResources(organizationId: string) {
+  return db
+    .select({ resource: schema.ncctResource })
+    .from(schema.ncctResource)
+    .innerJoin(schema.ncctInstitution, eq(schema.ncctResource.institutionId, schema.ncctInstitution.id))
+    .where(eq(schema.ncctInstitution.organizationId, organizationId))
+    .orderBy(asc(schema.ncctResource.name));
+}
+
+export async function createNcctResource(data: typeof schema.ncctResource.$inferInsert, client: DbOrTxClient = db) {
+  if (data.capacity !== undefined && data.capacity < 1) throw new Error('Resource capacity must be positive');
+  const [resource] = await client.insert(schema.ncctResource).values(data).returning();
+  if (!resource) throw new Error('Failed to create resource');
+  return resource;
+}
+
+export async function bookNcctResource(
+  data: typeof schema.ncctResourceBooking.$inferInsert,
+  client: DbOrTxClient = db
+) {
+  const [conflict] = await client
+    .select({ id: schema.ncctResourceBooking.id })
+    .from(schema.ncctResourceBooking)
+    .where(
+      and(
+        eq(schema.ncctResourceBooking.resourceId, data.resourceId),
+        lt(schema.ncctResourceBooking.startsAt, data.endsAt),
+        gt(schema.ncctResourceBooking.endsAt, data.startsAt)
+      )
+    )
+    .limit(1);
+  if (conflict) throw new Error('Resource is already booked for this time');
+
+  const [booking] = await client.insert(schema.ncctResourceBooking).values(data).returning();
+  if (!booking) throw new Error('Failed to book resource');
+  return booking;
+}
+
+export async function saveNcctTraineeLogistics(
+  data: typeof schema.ncctTraineeLogistics.$inferInsert,
+  client: DbOrTxClient = db
+) {
+  const [logistics] = await client
+    .insert(schema.ncctTraineeLogistics)
+    .values(data)
+    .onConflictDoUpdate({
+      target: [schema.ncctTraineeLogistics.batchId, schema.ncctTraineeLogistics.traineeId],
+      set: {
+        hostelResourceId: data.hostelResourceId,
+        mealRequired: data.mealRequired,
+        transportRequired: data.transportRequired,
+        notes: data.notes,
+        updatedAt: new Date().toISOString()
+      }
+    })
+    .returning();
+  if (!logistics) throw new Error('Failed to save trainee logistics');
+  return logistics;
+}
+
+export async function createNcctSyncDevice(data: typeof schema.ncctSyncDevice.$inferInsert, client: DbOrTxClient = db) {
+  const [device] = await client.insert(schema.ncctSyncDevice).values(data).returning();
+  if (!device) throw new Error('Failed to register sync device');
+  return device;
+}
+
+export async function recordNcctSyncEvents(
+  deviceId: string,
+  events: Array<Pick<typeof schema.ncctSyncEvent.$inferInsert, 'eventId' | 'eventType' | 'payload'>>,
+  client: DbOrTxClient = db
+) {
+  if (events.length === 0) return [];
+  const received = await client
+    .insert(schema.ncctSyncEvent)
+    .values(events.map((event) => ({ ...event, deviceId, status: 'RECEIVED' as const })))
+    .onConflictDoNothing({ target: schema.ncctSyncEvent.eventId })
+    .returning({ eventId: schema.ncctSyncEvent.eventId });
+  await client
+    .update(schema.ncctSyncDevice)
+    .set({ lastSeenAt: new Date().toISOString() })
+    .where(eq(schema.ncctSyncDevice.id, deviceId));
+  return received;
 }
 
 export async function listNcctAssessments(organizationId: string) {

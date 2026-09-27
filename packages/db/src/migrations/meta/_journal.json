@@ -169,6 +169,13 @@
       "when": 1790466987201,
       "tag": "0023_ncct_core",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790467774510,
+      "tag": "0024_ncct_operations",
+      "breakpoints": true
     }
   ]
 }

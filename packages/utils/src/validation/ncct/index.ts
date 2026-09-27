@@ -94,6 +94,68 @@ export const ZIssueNcctCredential = z.object({
   certificateNumber: z.string().trim().min(4).max(80).optional()
 });
 
+export const ZCreateNcctSession = z
+  .object({
+    batchId: z.string().uuid(),
+    title: z.string().trim().min(2).max(160),
+    startsAt: z.string().datetime(),
+    endsAt: z.string().datetime(),
+    room: z.string().trim().max(120).optional(),
+    instructorProfileId: z.string().uuid().nullable().optional(),
+    notes: z.string().trim().max(2000).optional()
+  })
+  .refine((value) => value.endsAt > value.startsAt, {
+    message: 'Session end must be after its start',
+    path: ['endsAt']
+  });
+
+export const ZCreateNcctResource = z.object({
+  institutionId: z.string().uuid(),
+  type: z.enum(['ROOM', 'HOSTEL', 'MEAL', 'TRANSPORT', 'EQUIPMENT']),
+  name: z.string().trim().min(2).max(160),
+  capacity: z.number().int().positive().max(10000)
+});
+
+export const ZBookNcctResource = z
+  .object({
+    sessionId: z.string().uuid(),
+    resourceId: z.string().uuid(),
+    startsAt: z.string().datetime(),
+    endsAt: z.string().datetime(),
+    quantity: z.number().int().positive().default(1),
+    notes: z.string().trim().max(1000).optional()
+  })
+  .refine((value) => value.endsAt > value.startsAt, {
+    message: 'Booking end must be after its start',
+    path: ['endsAt']
+  });
+
+export const ZSaveNcctTraineeLogistics = z.object({
+  batchId: z.string().uuid(),
+  traineeId: z.string().uuid(),
+  hostelResourceId: z.string().uuid().nullable().optional(),
+  mealRequired: z.boolean().default(false),
+  transportRequired: z.boolean().default(false),
+  notes: z.string().trim().max(1000).optional()
+});
+
+export const ZCreateNcctSyncDevice = z.object({
+  institutionId: z.string().uuid(),
+  name: z.string().trim().min(2).max(120)
+});
+
+export const ZRecordNcctSyncEvents = z.object({
+  events: z
+    .array(
+      z.object({
+        eventId: z.string().trim().min(8).max(120),
+        eventType: z.string().trim().min(2).max(120),
+        payload: z.record(z.string(), z.unknown())
+      })
+    )
+    .max(500)
+});
+
 export type TCreateNcctInstitution = z.infer<typeof ZCreateNcctInstitution>;
 export type TCreateNcctTrainee = z.infer<typeof ZCreateNcctTrainee>;
 export type TCreateNcctProgramme = z.infer<typeof ZCreateNcctProgramme>;
@@ -106,3 +168,9 @@ export type TApplyToNcctJob = z.infer<typeof ZApplyToNcctJob>;
 export type TCreateNcctAssessment = z.infer<typeof ZCreateNcctAssessment>;
 export type TSubmitNcctAssessment = z.infer<typeof ZSubmitNcctAssessment>;
 export type TIssueNcctCredential = z.infer<typeof ZIssueNcctCredential>;
+export type TCreateNcctSession = z.infer<typeof ZCreateNcctSession>;
+export type TCreateNcctResource = z.infer<typeof ZCreateNcctResource>;
+export type TBookNcctResource = z.infer<typeof ZBookNcctResource>;
+export type TSaveNcctTraineeLogistics = z.infer<typeof ZSaveNcctTraineeLogistics>;
+export type TCreateNcctSyncDevice = z.infer<typeof ZCreateNcctSyncDevice>;
+export type TRecordNcctSyncEvents = z.infer<typeof ZRecordNcctSyncEvents>;

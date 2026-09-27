@@ -25,7 +25,13 @@ import {
   ncctNomination,
   ncctProgramme,
   ncctProgrammeStep,
+  ncctResource,
+  ncctResourceBooking,
+  ncctSession,
+  ncctSyncDevice,
+  ncctSyncEvent,
   ncctTrainee,
+  ncctTraineeLogistics,
   lesson,
   lessonComment,
   lessonCompletion,
@@ -205,6 +211,72 @@ export const ncctJobApplicationRelations = relations(ncctJobApplication, ({ one 
   trainee: one(ncctTrainee, {
     fields: [ncctJobApplication.traineeId],
     references: [ncctTrainee.id]
+  })
+}));
+
+export const ncctSessionRelations = relations(ncctSession, ({ one, many }) => ({
+  batch: one(ncctBatch, {
+    fields: [ncctSession.batchId],
+    references: [ncctBatch.id]
+  }),
+  instructor: one(profile, {
+    fields: [ncctSession.instructorProfileId],
+    references: [profile.id]
+  }),
+  resourceBookings: many(ncctResourceBooking)
+}));
+
+export const ncctResourceRelations = relations(ncctResource, ({ one, many }) => ({
+  institution: one(ncctInstitution, {
+    fields: [ncctResource.institutionId],
+    references: [ncctInstitution.id]
+  }),
+  bookings: many(ncctResourceBooking),
+  traineeLogistics: many(ncctTraineeLogistics)
+}));
+
+export const ncctResourceBookingRelations = relations(ncctResourceBooking, ({ one }) => ({
+  session: one(ncctSession, {
+    fields: [ncctResourceBooking.sessionId],
+    references: [ncctSession.id]
+  }),
+  resource: one(ncctResource, {
+    fields: [ncctResourceBooking.resourceId],
+    references: [ncctResource.id]
+  })
+}));
+
+export const ncctTraineeLogisticsRelations = relations(ncctTraineeLogistics, ({ one }) => ({
+  batch: one(ncctBatch, {
+    fields: [ncctTraineeLogistics.batchId],
+    references: [ncctBatch.id]
+  }),
+  trainee: one(ncctTrainee, {
+    fields: [ncctTraineeLogistics.traineeId],
+    references: [ncctTrainee.id]
+  }),
+  hostelResource: one(ncctResource, {
+    fields: [ncctTraineeLogistics.hostelResourceId],
+    references: [ncctResource.id]
+  })
+}));
+
+export const ncctSyncDeviceRelations = relations(ncctSyncDevice, ({ one, many }) => ({
+  organization: one(organization, {
+    fields: [ncctSyncDevice.organizationId],
+    references: [organization.id]
+  }),
+  institution: one(ncctInstitution, {
+    fields: [ncctSyncDevice.institutionId],
+    references: [ncctInstitution.id]
+  }),
+  events: many(ncctSyncEvent)
+}));
+
+export const ncctSyncEventRelations = relations(ncctSyncEvent, ({ one }) => ({
+  device: one(ncctSyncDevice, {
+    fields: [ncctSyncEvent.deviceId],
+    references: [ncctSyncDevice.id]
   })
 }));
 

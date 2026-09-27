@@ -4243,6 +4243,15 @@ export const ncctApplicationStatus = pgEnum('NCCT_APPLICATION_STATUS', [
   'WITHDRAWN'
 ]);
 
+export const ncctResourceType = pgEnum('NCCT_RESOURCE_TYPE', ['ROOM', 'HOSTEL', 'MEAL', 'TRANSPORT', 'EQUIPMENT']);
+
+export const ncctSyncEventStatus = pgEnum('NCCT_SYNC_EVENT_STATUS', [
+  'RECEIVED',
+  'ACKNOWLEDGED',
+  'CONFLICT',
+  'REJECTED'
+]);
+
 export const ncctInstitution = pgTable(
   'ncct_institution',
   {
@@ -4603,5 +4612,185 @@ export const ncctJobApplication = pgTable(
     }).onDelete('cascade'),
     unique('ncct_job_application_job_trainee_key').on(table.jobId, table.traineeId),
     index('idx_ncct_job_application_status').on(table.status)
+  ]
+);
+
+export const ncctSession = pgTable(
+  'ncct_session',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    batchId: uuid('batch_id').notNull(),
+    title: varchar().notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true, mode: 'string' }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true, mode: 'string' }).notNull(),
+    room: varchar(),
+    instructorProfileId: uuid('instructor_profile_id'),
+    notes: text(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.batchId],
+      foreignColumns: [ncctBatch.id],
+      name: 'ncct_session_batch_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.instructorProfileId],
+      foreignColumns: [profile.id],
+      name: 'ncct_session_instructor_profile_id_fkey'
+    }).onDelete('set null'),
+    index('idx_ncct_session_batch_start').on(table.batchId, table.startsAt),
+    index('idx_ncct_session_instructor_start').on(table.instructorProfileId, table.startsAt)
+  ]
+);
+
+export const ncctResource = pgTable(
+  'ncct_resource',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    institutionId: uuid('institution_id').notNull(),
+    type: ncctResourceType().notNull(),
+    name: varchar().notNull(),
+    capacity: integer().default(1).notNull(),
+    active: boolean().default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.institutionId],
+      foreignColumns: [ncctInstitution.id],
+      name: 'ncct_resource_institution_id_fkey'
+    }).onDelete('cascade'),
+    index('idx_ncct_resource_institution_type').on(table.institutionId, table.type)
+  ]
+);
+
+export const ncctResourceBooking = pgTable(
+  'ncct_resource_booking',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    sessionId: uuid('session_id').notNull(),
+    resourceId: uuid('resource_id').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true, mode: 'string' }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true, mode: 'string' }).notNull(),
+    quantity: integer().default(1).notNull(),
+    notes: text(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.sessionId],
+      foreignColumns: [ncctSession.id],
+      name: 'ncct_resource_booking_session_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.resourceId],
+      foreignColumns: [ncctResource.id],
+      name: 'ncct_resource_booking_resource_id_fkey'
+    }).onDelete('cascade'),
+    index('idx_ncct_resource_booking_resource_time').on(table.resourceId, table.startsAt, table.endsAt)
+  ]
+);
+
+export const ncctTraineeLogistics = pgTable(
+  'ncct_trainee_logistics',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    batchId: uuid('batch_id').notNull(),
+    traineeId: uuid('trainee_id').notNull(),
+    hostelResourceId: uuid('hostel_resource_id'),
+    mealRequired: boolean('meal_required').default(false).notNull(),
+    transportRequired: boolean('transport_required').default(false).notNull(),
+    notes: text(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.batchId],
+      foreignColumns: [ncctBatch.id],
+      name: 'ncct_trainee_logistics_batch_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.traineeId],
+      foreignColumns: [ncctTrainee.id],
+      name: 'ncct_trainee_logistics_trainee_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.hostelResourceId],
+      foreignColumns: [ncctResource.id],
+      name: 'ncct_trainee_logistics_hostel_resource_id_fkey'
+    }).onDelete('set null'),
+    unique('ncct_trainee_logistics_batch_trainee_key').on(table.batchId, table.traineeId)
+  ]
+);
+
+export const ncctSyncDevice = pgTable(
+  'ncct_sync_device',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    institutionId: uuid('institution_id').notNull(),
+    name: varchar().notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true, mode: 'string' }),
+    active: boolean().default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.organizationId],
+      foreignColumns: [organization.id],
+      name: 'ncct_sync_device_organization_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.institutionId],
+      foreignColumns: [ncctInstitution.id],
+      name: 'ncct_sync_device_institution_id_fkey'
+    }).onDelete('cascade'),
+    index('idx_ncct_sync_device_org').on(table.organizationId)
+  ]
+);
+
+export const ncctSyncEvent = pgTable(
+  'ncct_sync_event',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    deviceId: uuid('device_id').notNull(),
+    eventId: varchar('event_id').notNull(),
+    eventType: varchar('event_type').notNull(),
+    payload: jsonb().notNull(),
+    status: ncctSyncEventStatus().default('RECEIVED').notNull(),
+    error: text(),
+    receivedAt: timestamp('received_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    processedAt: timestamp('processed_at', { withTimezone: true, mode: 'string' })
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.deviceId],
+      foreignColumns: [ncctSyncDevice.id],
+      name: 'ncct_sync_event_device_id_fkey'
+    }).onDelete('cascade'),
+    unique('ncct_sync_event_event_id_key').on(table.eventId),
+    index('idx_ncct_sync_event_device_status').on(table.deviceId, table.status)
   ]
 );

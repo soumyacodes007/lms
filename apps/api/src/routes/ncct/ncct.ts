@@ -12,10 +12,16 @@ import {
   ZCreateNcctJob,
   ZCreateNcctNomination,
   ZCreateNcctProgramme,
+  ZCreateNcctResource,
+  ZCreateNcctSession,
+  ZCreateNcctSyncDevice,
   ZCreateNcctTrainee,
   ZDecideNcctNomination,
   ZIssueNcctCredential,
-  ZSubmitNcctAssessment
+  ZSubmitNcctAssessment,
+  ZBookNcctResource,
+  ZRecordNcctSyncEvents,
+  ZSaveNcctTraineeLogistics
 } from '@cio/utils/validation/ncct';
 import { zValidator } from '@hono/zod-validator';
 import * as z from 'zod';
@@ -24,14 +30,20 @@ import {
   createEmploymentJob,
   decideNomination,
   getNcctOverview,
+  bookResource,
   issueCredential,
   listNcctAssessments,
   listNcctProgrammeSteps,
   publishNcctProgramme,
   registerNcctInstitution,
+  registerResource,
+  registerSyncDevice,
   registerNcctTrainee,
+  receiveSyncEvents,
+  saveTraineeLogistics,
   scheduleAssessment,
   scheduleNcctBatch,
+  scheduleSession,
   submitAssessment,
   submitJobApplication,
   submitNcctNomination
@@ -41,6 +53,8 @@ import {
   listNcctInstitutions,
   listNcctJobs,
   listNcctProgrammes,
+  listNcctResources,
+  listNcctSessions,
   listNcctTrainees,
   verifyNcctCredential
 } from '@cio/db/queries/ncct';
@@ -49,6 +63,7 @@ const programmeParam = z.object({ programmeId: z.string().uuid() });
 const nominationParam = z.object({ nominationId: z.string().uuid() });
 const jobParam = z.object({ jobId: z.string().uuid() });
 const assessmentParam = z.object({ assessmentId: z.string().uuid() });
+const syncDeviceParam = z.object({ deviceId: z.string().uuid() });
 const verificationParam = z.object({ verificationToken: z.string().min(16).max(128) });
 
 export const ncctRouter = new Hono()
@@ -272,6 +287,109 @@ export const ncctRouter = new Hono()
         return c.json({ success: true, data: await issueCredential(c.req.valid('json')) }, 201);
       } catch (error) {
         return handleError(c, error, 'Failed to issue credential');
+      }
+    }
+  )
+  .get('/sessions', authMiddleware, orgMemberMiddleware, async (c) => {
+    try {
+      const rows = await listNcctSessions(c.get('orgId')!);
+      return c.json({ success: true, data: rows.map(({ session }) => session) }, 200);
+    } catch (error) {
+      return handleError(c, error, 'Failed to load sessions');
+    }
+  })
+  .post(
+    '/sessions',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('json', ZCreateNcctSession),
+    async (c) => {
+      try {
+        return c.json({ success: true, data: await scheduleSession(c.get('orgId')!, c.req.valid('json')) }, 201);
+      } catch (error) {
+        return handleError(c, error, 'Failed to schedule session');
+      }
+    }
+  )
+  .get('/resources', authMiddleware, orgMemberMiddleware, async (c) => {
+    try {
+      const rows = await listNcctResources(c.get('orgId')!);
+      return c.json({ success: true, data: rows.map(({ resource }) => resource) }, 200);
+    } catch (error) {
+      return handleError(c, error, 'Failed to load resources');
+    }
+  })
+  .post(
+    '/resources',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('json', ZCreateNcctResource),
+    async (c) => {
+      try {
+        return c.json({ success: true, data: await registerResource(c.get('orgId')!, c.req.valid('json')) }, 201);
+      } catch (error) {
+        return handleError(c, error, 'Failed to register resource');
+      }
+    }
+  )
+  .post(
+    '/resource-bookings',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('json', ZBookNcctResource),
+    async (c) => {
+      try {
+        return c.json({ success: true, data: await bookResource(c.req.valid('json')) }, 201);
+      } catch (error) {
+        return handleError(c, error, 'Failed to book resource');
+      }
+    }
+  )
+  .post(
+    '/trainee-logistics',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('json', ZSaveNcctTraineeLogistics),
+    async (c) => {
+      try {
+        return c.json({ success: true, data: await saveTraineeLogistics(c.req.valid('json')) }, 200);
+      } catch (error) {
+        return handleError(c, error, 'Failed to save trainee logistics');
+      }
+    }
+  )
+  .post(
+    '/sync-devices',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('json', ZCreateNcctSyncDevice),
+    async (c) => {
+      try {
+        return c.json({ success: true, data: await registerSyncDevice(c.get('orgId')!, c.req.valid('json')) }, 201);
+      } catch (error) {
+        return handleError(c, error, 'Failed to register sync device');
+      }
+    }
+  )
+  .post(
+    '/sync-devices/:deviceId/events',
+    authMiddleware,
+    orgMemberMiddleware,
+    zValidator('param', syncDeviceParam),
+    zValidator('json', ZRecordNcctSyncEvents),
+    async (c) => {
+      try {
+        return c.json(
+          { success: true, data: await receiveSyncEvents(c.req.valid('param').deviceId, c.req.valid('json')) },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to receive sync events');
       }
     }
   )
