@@ -13,6 +13,7 @@
   type ProgressSnapshot = {
     steps: Array<{
       step: { id: string; position: number; courseId: string; required: boolean };
+      progress: { score: number | null } | null;
       status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
       available: boolean;
     }>;
@@ -28,7 +29,17 @@
   let snapshot = $state<ProgressSnapshot | null>(null);
   let loading = $state(false);
   let savingId = $state<string | null>(null);
+  let scoreByStep = $state<Record<string, string>>({});
   let message = $state('');
+
+  function setSnapshot(next: ProgressSnapshot) {
+    snapshot = next;
+    scoreByStep = Object.fromEntries(
+      next.steps
+        .filter((item) => item.progress?.score !== null && item.progress?.score !== undefined)
+        .map((item) => [item.step.id, String(item.progress?.score)])
+    );
+  }
 
   async function loadProgress(enrollmentId = selectedId) {
     if (!enrollmentId) return;
@@ -42,7 +53,7 @@
         message = 'Progress could not be loaded.';
         return;
       }
-      snapshot = (await response.json()).data as ProgressSnapshot;
+      setSnapshot((await response.json()).data as ProgressSnapshot);
     } catch {
       message = 'Progress could not be loaded.';
     } finally {
@@ -54,22 +65,28 @@
     if (!selectedId) return;
     savingId = stepId;
     message = '';
+    const score = scoreByStep[stepId]?.trim() ? Number(scoreByStep[stepId]) : undefined;
     try {
       const response = await classroomio.ncct.enrollments[':enrollmentId'].progress.$post({
         param: { enrollmentId: selectedId },
-        json: { programmeStepId: stepId, status }
+        json: { programmeStepId: stepId, status, score }
       });
       if (!response.ok) {
-        if (offline && onQueueEvent?.({
-          eventId: crypto.randomUUID(),
-          eventType: 'progress.update',
-          payload: { enrollmentId: selectedId, programmeStepId: stepId, status }
-        })) {
+        if (
+          offline &&
+          onQueueEvent?.({
+            eventId: crypto.randomUUID(),
+            eventType: 'progress.update',
+            payload: { enrollmentId: selectedId, programmeStepId: stepId, status, score }
+          })
+        ) {
           if (snapshot) {
             snapshot = {
               ...snapshot,
               steps: snapshot.steps.map((item) =>
-                item.step.id === stepId ? { ...item, status } : item
+                item.step.id === stepId
+                  ? { ...item, status, progress: { ...item.progress, score: score ?? item.progress?.score ?? null } }
+                  : item
               )
             };
           }
@@ -79,7 +96,7 @@
         message = status === 'COMPLETED' ? 'The step could not be completed.' : 'The step could not be started.';
         return;
       }
-      snapshot = (await response.json()).data as ProgressSnapshot;
+      setSnapshot((await response.json()).data as ProgressSnapshot);
     } catch {
       message = 'The progress update could not be saved.';
     } finally {
@@ -134,6 +151,8 @@
                   {item.step.required ? 'Required' : 'Optional'} · {item.available
                     ? 'Available'
                     : 'Locked by prerequisite'}
+                  {#if item.progress?.score !== null && item.progress?.score !== undefined}
+                    · Score {item.progress.score}%{/if}
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -154,9 +173,20 @@
                     onclick={() => void updateStep(item.step.id, 'IN_PROGRESS')}>Start</Button
                   >
                 {:else if item.available && item.status === 'IN_PROGRESS'}
+                  <input
+                    class="ui:bg-background h-9 w-24 rounded-md border px-2 text-sm"
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="Score"
+                    aria-label={`Score for step ${item.step.position}`}
+                    bind:value={scoreByStep[item.step.id]}
+                  />
                   <Button
                     size="sm"
-                    disabled={savingId === item.step.id}
+                    disabled={savingId === item.step.id ||
+                      (scoreByStep[item.step.id]?.trim() !== '' &&
+                        (Number(scoreByStep[item.step.id]) < 0 || Number(scoreByStep[item.step.id]) > 100))}
                     onclick={() => void updateStep(item.step.id, 'COMPLETED')}>Complete</Button
                   >
                 {/if}
@@ -169,6 +199,8 @@
       {/if}
     </div>
   {/if}
-  {#if offline}<p class="ui:text-muted-foreground mt-3 text-xs">Offline mode queues progress changes until the centre reconnects.</p>{/if}
+  {#if offline}<p class="ui:text-muted-foreground mt-3 text-xs">
+      Offline mode queues progress changes until the centre reconnects.
+    </p>{/if}
   {#if message}<p class="ui:text-destructive mt-3 text-sm">{message}</p>{/if}
 </section>
