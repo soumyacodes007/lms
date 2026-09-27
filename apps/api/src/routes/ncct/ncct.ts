@@ -12,6 +12,7 @@ import {
   ZUpdateNcctBatchStatus,
   ZCreateNcctAssessment,
   ZCreateNcctInstitution,
+  ZUpdateNcctInstitution,
   ZCreateNcctJob,
   ZUpdateNcctJobStatus,
   ZCreateNcctNomination,
@@ -69,6 +70,7 @@ import {
   getNcctInstitutionMembers,
   saveNcctInstitutionMember,
   updateNcctInstitutionMemberRole,
+  updateNcctInstitutionProfile,
   submitAssessment,
   submitJobApplication,
   submitNcctNomination,
@@ -101,6 +103,7 @@ const assessmentParam = z.object({ assessmentId: z.string().uuid() });
 const syncDeviceParam = z.object({ deviceId: z.string().uuid() });
 const careerParam = z.object({ traineeId: z.string().uuid() });
 const traineeParam = z.object({ traineeId: z.string().uuid() });
+const institutionParam = z.object({ institutionId: z.string().uuid() });
 const memberParam = z.object({ memberId: z.string().uuid() });
 const enrollmentParam = z.object({ enrollmentId: z.string().uuid() });
 const verificationParam = z.object({ verificationToken: z.string().min(16).max(128) });
@@ -245,6 +248,33 @@ export const ncctRouter = new Hono()
         );
       } catch (error) {
         return handleError(c, error, 'Failed to create institution');
+      }
+    }
+  )
+  .patch(
+    '/institutions/:institutionId',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', institutionParam),
+    zValidator('json', ZUpdateNcctInstitution),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await updateNcctInstitutionProfile(
+              c.get('orgId')!,
+              c.req.valid('param').institutionId,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to update institution');
       }
     }
   )

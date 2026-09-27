@@ -35,6 +35,7 @@ import {
   listNcctTraineeLogistics,
   listNcctSessions,
   listNcctTrainees,
+  updateNcctInstitution,
   updateNcctTrainee as updateNcctTraineeQuery,
   updateNcctInstitutionMember,
   upsertNcctInstitutionMember,
@@ -65,6 +66,7 @@ import type {
   TCreateNcctAssessment,
   TNcctCareerChat,
   TCreateNcctInstitution,
+  TUpdateNcctInstitution,
   TUpsertNcctInstitutionMember,
   TUpdateNcctInstitutionMember,
   TCreateNcctJob,
@@ -382,6 +384,30 @@ export async function registerNcctInstitution(
     metadata: { code: institution.code, type: institution.type }
   });
   return institution;
+}
+
+export async function updateNcctInstitutionProfile(
+  organizationId: string,
+  institutionId: string,
+  data: TUpdateNcctInstitution,
+  actorProfileId?: string,
+  orgRole?: number
+) {
+  const institution = (await listNcctInstitutions(organizationId)).find((item) => item.id === institutionId);
+  if (!institution)
+    throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
+  await assertNcctInstitutionAccess(organizationId, institutionId, actorProfileId, orgRole);
+  const updated = await updateNcctInstitution(institutionId, data);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId,
+    action: 'INSTITUTION_UPDATED',
+    entityType: 'institution',
+    entityId: institutionId,
+    metadata: { changedFields: Object.keys(data) }
+  });
+  return updated;
 }
 
 export async function getNcctInstitutionMembers(organizationId: string) {

@@ -87,6 +87,20 @@ export async function createNcctInstitution(
   return institution;
 }
 
+export async function updateNcctInstitution(
+  institutionId: string,
+  data: Partial<typeof schema.ncctInstitution.$inferInsert>,
+  client: DbOrTxClient = db
+): Promise<TNcctInstitution> {
+  const [institution] = await client
+    .update(schema.ncctInstitution)
+    .set({ ...data, updatedAt: new Date().toISOString() })
+    .where(eq(schema.ncctInstitution.id, institutionId))
+    .returning();
+  if (!institution) throw new Error('Institution not found');
+  return institution;
+}
+
 export async function listNcctInstitutionMembers(organizationId: string) {
   return db
     .select({ member: schema.ncctInstitutionMember, institution: schema.ncctInstitution, profile: schema.profile })
