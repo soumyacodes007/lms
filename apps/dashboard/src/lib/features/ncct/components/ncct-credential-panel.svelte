@@ -17,6 +17,7 @@
   let traineeId = $state('');
   let programmeId = $state('');
   let batchId = $state('');
+  let verificationUrl = $state('');
 
   const availableBatches = $derived(batches.filter((batch) => !programmeId || batch.programmeId === programmeId));
 
@@ -35,6 +36,10 @@
       if (!response.ok) {
         message = 'A passed evaluator result is required before issuing this credential.';
         return;
+      }
+      const result = (await response.json()) as { data?: { verificationToken?: string } };
+      if (result.data?.verificationToken) {
+        verificationUrl = `${window.location.origin}/verify/${result.data.verificationToken}`;
       }
       open = false;
       reset();
@@ -68,6 +73,14 @@
     <Badge variant="secondary">Public verification enabled</Badge>
     <span>Issuance is blocked until an assessment is passed.</span>
   </div>
+  {#if verificationUrl}
+    <div class="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
+      <p class="font-medium">Credential verification link ready</p>
+      <a class="ui:text-primary mt-1 block break-all underline" href={verificationUrl} target="_blank" rel="noreferrer">
+        {verificationUrl}
+      </a>
+    </div>
+  {/if}
 </section>
 
 <Dialog.Root bind:open>
