@@ -15,6 +15,7 @@ import WidgetsIcon from '@cio/ui/custom/moving-icons/widgets.svelte';
 
 import type { AccountOrg } from '$features/app/types';
 import BotIcon from '@lucide/svelte/icons/bot';
+import GraduationCapIcon from '@lucide/svelte/icons/graduation-cap';
 import type { Component } from 'svelte';
 import { isActive } from '$lib/utils/functions/app';
 import { IS_AI_ENABLED } from '$lib/utils/constants/ai';
@@ -184,6 +185,13 @@ export const baseNavConfig: NavItemConfig[] = [
     icon: PeopleIcon,
     upgradeResource: 'students',
     matchPattern: '^/org/[^/]+/audience(/.*)?$' // Matches nested routes
+  },
+  {
+    group: 'people',
+    titleKey: 'org_navigation.ncct',
+    path: '/ncct',
+    icon: GraduationCapIcon,
+    matchPattern: '^/org/[^/]+/ncct(/.*)?$'
   },
   {
     group: 'people',
