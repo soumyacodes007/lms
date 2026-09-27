@@ -22,9 +22,24 @@
     job: { title: string; employerName: string; location: string };
     trainee: { traineeNumber: string };
   };
-  type Props = { jobs: Job[]; trainees: Trainee[]; applications: Application[] };
+  type ApplicationEvent = {
+    event: {
+      id: string;
+      applicationId: string;
+      fromStatus: string | null;
+      toStatus: string;
+      note: string | null;
+      createdAt: string;
+    };
+  };
+  type Props = {
+    jobs: Job[];
+    trainees: Trainee[];
+    applications: Application[];
+    applicationEvents: ApplicationEvent[];
+  };
 
-  let { jobs, trainees, applications }: Props = $props();
+  let { jobs, trainees, applications, applicationEvents }: Props = $props();
   let postOpen = $state(false);
   let applyOpen = $state(false);
   let busy = $state(false);
@@ -199,6 +214,14 @@
             {/if}
           </div>
         </div>
+        {@const history = applicationEvents.filter((item) => item.event.applicationId === row.application.id)}
+        {#if history.length > 0}
+          <div class="ui:text-muted-foreground ml-3 border-l pl-3 text-xs">
+            {#each history.slice(0, 3) as item}
+              <p>{item.event.fromStatus ? `${item.event.fromStatus} → ` : ''}{item.event.toStatus} · {new Date(item.event.createdAt).toLocaleString()}</p>
+            {/each}
+          </div>
+        {/if}
       {/each}
     </div>
   {/if}

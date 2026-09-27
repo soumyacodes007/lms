@@ -396,6 +396,10 @@ export async function createNcctJob(
 export async function applyToNcctJob(data: typeof schema.ncctJobApplication.$inferInsert, client: DbOrTxClient = db) {
   const [application] = await client.insert(schema.ncctJobApplication).values(data).returning();
   if (!application) throw new Error('Failed to apply for job');
+  await client.insert(schema.ncctJobApplicationEvent).values({
+    applicationId: application.id,
+    toStatus: 'APPLIED'
+  });
   return application;
 }
 
@@ -412,15 +416,46 @@ export async function listNcctJobApplications(organizationId: string) {
 export async function updateNcctJobApplication(
   applicationId: string,
   status: 'APPLIED' | 'SHORTLISTED' | 'SELECTED' | 'REJECTED' | 'WITHDRAWN',
+  changedByProfileId?: string,
+  note?: string,
   client: DbOrTxClient = db
 ) {
+  const [existing] = await client
+    .select({ status: schema.ncctJobApplication.status })
+    .from(schema.ncctJobApplication)
+    .where(eq(schema.ncctJobApplication.id, applicationId))
+    .limit(1);
+  if (!existing) throw new Error('Job application not found');
+  if (existing.status === status) return (await client
+    .select()
+    .from(schema.ncctJobApplication)
+    .where(eq(schema.ncctJobApplication.id, applicationId))
+    .limit(1))[0]!;
+
   const [application] = await client
     .update(schema.ncctJobApplication)
     .set({ status, updatedAt: new Date().toISOString() })
     .where(eq(schema.ncctJobApplication.id, applicationId))
     .returning();
   if (!application) throw new Error('Job application not found');
+  await client.insert(schema.ncctJobApplicationEvent).values({
+    applicationId,
+    fromStatus: existing.status,
+    toStatus: status,
+    changedByProfileId,
+    note
+  });
   return application;
+}
+
+export async function listNcctJobApplicationEvents(organizationId: string) {
+  return db
+    .select({ event: schema.ncctJobApplicationEvent, application: schema.ncctJobApplication })
+    .from(schema.ncctJobApplicationEvent)
+    .innerJoin(schema.ncctJobApplication, eq(schema.ncctJobApplicationEvent.applicationId, schema.ncctJobApplication.id))
+    .innerJoin(schema.ncctJob, eq(schema.ncctJobApplication.jobId, schema.ncctJob.id))
+    .where(eq(schema.ncctJob.organizationId, organizationId))
+    .orderBy(desc(schema.ncctJobApplicationEvent.createdAt));
 }
 
 export async function listNcctCareerMessages(traineeId: string) {

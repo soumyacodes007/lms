@@ -635,7 +635,12 @@ export const ncctRouter = new Hono()
         return c.json(
           {
             success: true,
-            data: await updateJobApplication(c.get('orgId')!, c.req.valid('param').applicationId, c.req.valid('json'))
+            data: await updateJobApplication(
+              c.get('orgId')!,
+              c.req.valid('param').applicationId,
+              c.req.valid('json'),
+              c.get('user')!.id
+            )
           },
           200
         );

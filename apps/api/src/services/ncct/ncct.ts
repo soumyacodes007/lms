@@ -24,6 +24,7 @@ import {
   listNcctInstitutions,
   listNcctJobs,
   listNcctJobApplications,
+  listNcctJobApplicationEvents,
   listNcctProgrammeSteps,
   listNcctProgrammes,
   listNcctNominations,
@@ -104,6 +105,7 @@ export async function getNcctOverview(organizationId: string) {
     nominations,
     credentials,
     applications,
+    applicationEvents,
     assessments,
     enrollments,
     auditEvents
@@ -119,6 +121,7 @@ export async function getNcctOverview(organizationId: string) {
     listNcctNominations(organizationId),
     listNcctCredentials(organizationId),
     listNcctJobApplications(organizationId),
+    listNcctJobApplicationEvents(organizationId),
     listNcctAssessments(organizationId),
     listNcctEnrollments(organizationId),
     listNcctAuditEvents(organizationId)
@@ -136,6 +139,7 @@ export async function getNcctOverview(organizationId: string) {
     nominations,
     credentials,
     applications,
+    applicationEvents,
     assessments: assessments.map(({ assessment }) => assessment),
     enrollments,
     auditEvents,
@@ -321,7 +325,8 @@ export async function submitJobApplication(organizationId: string, jobId: string
 export async function updateJobApplication(
   organizationId: string,
   applicationId: string,
-  data: TUpdateNcctJobApplication
+  data: TUpdateNcctJobApplication,
+  actorProfileId?: string
 ) {
   const application = (await listNcctJobApplications(organizationId)).find(
     ({ application: item }) => item.id === applicationId
@@ -329,9 +334,10 @@ export async function updateJobApplication(
   if (!application) {
     throw new AppError('Job application does not belong to this organization', 'NCCT_APPLICATION_NOT_FOUND', 404);
   }
-  const updated = await updateNcctJobApplication(applicationId, data.status);
+  const updated = await updateNcctJobApplication(applicationId, data.status, actorProfileId, data.note);
   await recordNcctAudit({
     organizationId,
+    actorProfileId,
     action: `APPLICATION_${data.status}`,
     entityType: 'job_application',
     entityId: applicationId,

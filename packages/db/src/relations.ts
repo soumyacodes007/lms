@@ -26,6 +26,7 @@ import {
   ncctInstitution,
   ncctJob,
   ncctJobApplication,
+  ncctJobApplicationEvent,
   ncctNomination,
   ncctProgramme,
   ncctProgrammeStep,
@@ -249,7 +250,7 @@ export const ncctJobRelations = relations(ncctJob, ({ one, many }) => ({
   applications: many(ncctJobApplication)
 }));
 
-export const ncctJobApplicationRelations = relations(ncctJobApplication, ({ one }) => ({
+export const ncctJobApplicationRelations = relations(ncctJobApplication, ({ one, many }) => ({
   job: one(ncctJob, {
     fields: [ncctJobApplication.jobId],
     references: [ncctJob.id]
@@ -257,6 +258,18 @@ export const ncctJobApplicationRelations = relations(ncctJobApplication, ({ one 
   trainee: one(ncctTrainee, {
     fields: [ncctJobApplication.traineeId],
     references: [ncctTrainee.id]
+  }),
+  events: many(ncctJobApplicationEvent)
+}));
+
+export const ncctJobApplicationEventRelations = relations(ncctJobApplicationEvent, ({ one }) => ({
+  application: one(ncctJobApplication, {
+    fields: [ncctJobApplicationEvent.applicationId],
+    references: [ncctJobApplication.id]
+  }),
+  changedBy: one(profile, {
+    fields: [ncctJobApplicationEvent.changedByProfileId],
+    references: [profile.id]
   })
 }));
 

@@ -230,7 +230,12 @@
             batches={overview.batches}
             credentials={overview.credentials}
           />
-          <NcctEmploymentPanel jobs={overview.jobs} trainees={overview.trainees} applications={overview.applications} />
+          <NcctEmploymentPanel
+            jobs={overview.jobs}
+            trainees={overview.trainees}
+            applications={overview.applications}
+            applicationEvents={overview.applicationEvents}
+          />
           <NcctCareerPanel trainees={overview.trainees} />
           <NcctReportPanel report={overview.reports} />
           <NcctOperationsPanel

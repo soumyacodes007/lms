@@ -4717,6 +4717,35 @@ export const ncctJobApplication = pgTable(
   ]
 );
 
+export const ncctJobApplicationEvent = pgTable(
+  'ncct_job_application_event',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    applicationId: uuid('application_id').notNull(),
+    fromStatus: ncctApplicationStatus('from_status'),
+    toStatus: ncctApplicationStatus('to_status').notNull(),
+    note: text(),
+    changedByProfileId: uuid('changed_by_profile_id'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.applicationId],
+      foreignColumns: [ncctJobApplication.id],
+      name: 'ncct_job_application_event_application_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.changedByProfileId],
+      foreignColumns: [profile.id],
+      name: 'ncct_job_application_event_changed_by_fkey'
+    }).onDelete('set null'),
+    index('idx_ncct_job_application_event_application').on(table.applicationId, table.createdAt)
+  ]
+);
+
 export const ncctCareerMessage = pgTable(
   'ncct_career_message',
   {

@@ -85,7 +85,8 @@ export const ZApplyToNcctJob = z.object({
 });
 
 export const ZUpdateNcctJobApplication = z.object({
-  status: z.enum(['APPLIED', 'SHORTLISTED', 'SELECTED', 'REJECTED', 'WITHDRAWN'])
+  status: z.enum(['APPLIED', 'SHORTLISTED', 'SELECTED', 'REJECTED', 'WITHDRAWN']),
+  note: z.string().trim().max(1000).optional()
 });
 
 export const ZNcctCareerChat = z.object({
