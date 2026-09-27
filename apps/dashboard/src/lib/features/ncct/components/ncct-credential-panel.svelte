@@ -5,9 +5,9 @@
   import { Badge } from '@cio/ui/base/badge';
   import { classroomio } from '$lib/utils/services/api';
 
-  type Trainee = { id: string; traineeNumber: string; district: string; state: string };
+  type Trainee = { id: string; institutionId: string; traineeNumber: string; district: string; state: string };
   type Programme = { id: string; title: string };
-  type Batch = { id: string; name: string; programmeId: string };
+  type Batch = { id: string; name: string; programmeId: string; institutionId: string };
   type Credential = {
     credential: { id: string; certificateNumber: string; issuedAt: string; revokedAt: string | null };
     trainee: { traineeNumber: string };
