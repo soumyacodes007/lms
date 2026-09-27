@@ -8,7 +8,7 @@ This matrix ties the SIH requirements to the current demonstration surface.
 | Trainee and institution profiles | NCCT setup | `/ncct/institutions`, `/ncct/trainees`, institution members | Implemented |
 | Ordered learning programmes | Programmes and batches; ordered progress | Programme steps, prerequisites, progress records | Implemented |
 | Scheduled training batches | Programmes and batches | Batch lifecycle, seats, dates, instructors | Implemented |
-| Timetables and logistics | Centre timetable and logistics | Sessions, resources, bookings, trainee logistics | Implemented |
+| Timetables and logistics | Centre timetable and logistics | Sessions, active resource inventory, bookings, trainee logistics | Implemented |
 | Evaluator workflow | Evaluator workflow | Assessment scheduling, scores, feedback, audit events | Implemented |
 | Certificates and verification | Credential issuance; public verification page | Credential registry, revocation, verification token | Implemented |
 | Certified trainee directory | Directory filters and incremental loading | Institution, state, district, skill, text filters, centre contact details, and bounded pagination | Implemented |
