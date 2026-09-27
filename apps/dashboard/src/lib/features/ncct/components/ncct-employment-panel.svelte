@@ -54,6 +54,7 @@
   let applicationTraineeId = $state('');
   let coverNote = $state('');
   let updatingApplicationId = $state<string | null>(null);
+  let applicationNotes = $state<Record<string, string>>({});
   let updatingJobId = $state<string | null>(null);
   let openJobs = $derived(jobs.filter((job) => job.status === 'OPEN'));
 
@@ -151,7 +152,7 @@
     try {
       const response = await classroomio.ncct.applications[':applicationId'].status.$post({
         param: { applicationId },
-        json: { status }
+        json: { status, note: applicationNotes[applicationId]?.trim() || undefined }
       });
       if (!response.ok) {
         message = 'The application status could not be updated.';
@@ -242,6 +243,13 @@
           <div class="flex items-center gap-2">
             <Badge variant="outline">{row.application.status}</Badge>
             {#if row.application.status === 'APPLIED'}
+              <textarea
+                class="ui:bg-background min-h-9 rounded-md border px-3 py-2 text-sm sm:w-52"
+                rows="1"
+                maxlength="1000"
+                placeholder="Review note (optional)"
+                bind:value={applicationNotes[row.application.id]}
+              ></textarea>
               <Button
                 size="sm"
                 variant="outline"
@@ -255,6 +263,13 @@
                 onclick={() => void updateApplication(row.application.id, 'REJECTED')}>Reject</Button
               >
             {:else if row.application.status === 'SHORTLISTED'}
+              <textarea
+                class="ui:bg-background min-h-9 rounded-md border px-3 py-2 text-sm sm:w-52"
+                rows="1"
+                maxlength="1000"
+                placeholder="Review note (optional)"
+                bind:value={applicationNotes[row.application.id]}
+              ></textarea>
               <Button
                 size="sm"
                 disabled={updatingApplicationId === row.application.id}
@@ -277,6 +292,8 @@
                 {item.event.fromStatus ? `${item.event.fromStatus} → ` : ''}{item.event.toStatus} · {new Date(
                   item.event.createdAt
                 ).toLocaleString()}
+                {#if item.event.note}
+                  · {item.event.note}{/if}
               </p>
             {/each}
           </div>
