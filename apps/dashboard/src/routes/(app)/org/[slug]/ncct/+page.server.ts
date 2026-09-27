@@ -112,7 +112,7 @@ type NcctOverview = {
     }>;
     credentials: Array<{
       credential: { id: string; certificateNumber: string; issuedAt: string; revokedAt: string | null };
-      trainee: { traineeNumber: string; district: string; state: string };
+      trainee: { id: string; institutionId: string; traineeNumber: string; district: string; state: string };
       programme: { title: string };
     }>;
     applications: Array<{
