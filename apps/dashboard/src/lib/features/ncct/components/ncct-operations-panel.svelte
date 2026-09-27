@@ -19,7 +19,15 @@
     room: string | null;
     instructorProfileId: string | null;
   };
-  type Resource = { id: string; institutionId: string; name: string; type: string; capacity: number; active: boolean };
+  type ResourceType = 'ROOM' | 'HOSTEL' | 'MEAL' | 'TRANSPORT' | 'EQUIPMENT';
+  type Resource = {
+    id: string;
+    institutionId: string;
+    name: string;
+    type: ResourceType;
+    capacity: number;
+    active: boolean;
+  };
   type Logistics = {
     logistics: {
       mealRequired: boolean;
@@ -87,6 +95,10 @@
   let resourceType = $state('ROOM');
   let resourceName = $state('');
   let resourceCapacity = $state('30');
+  let resourceFilter = $state<'ALL' | ResourceType>('ALL');
+  let visibleResources = $derived(
+    resourceFilter === 'ALL' ? resources : resources.filter((resource) => resource.type === resourceFilter)
+  );
 
   let logisticsBatchId = $state('');
   let logisticsTraineeId = $state('');
@@ -371,10 +383,20 @@
   <div class="mt-5 space-y-2">
     <div class="flex items-center justify-between gap-3">
       <h3 class="font-medium">Resource inventory</h3>
-      <Badge variant="secondary">{resources.length}</Badge>
+      <div class="flex items-center gap-2">
+        <select class="ui:bg-background h-8 rounded-md border px-2 text-xs" bind:value={resourceFilter}>
+          <option value="ALL">All types</option>
+          <option value="ROOM">Rooms</option>
+          <option value="HOSTEL">Hostels</option>
+          <option value="MEAL">Meals</option>
+          <option value="TRANSPORT">Transport</option>
+          <option value="EQUIPMENT">Equipment</option>
+        </select>
+        <Badge variant="secondary">{visibleResources.length}</Badge>
+      </div>
     </div>
     <div class="grid gap-2 sm:grid-cols-2">
-      {#each resources.slice(0, 8) as resource}
+      {#each visibleResources.slice(0, 8) as resource}
         <div class="flex items-center justify-between rounded-lg border p-3 text-sm">
           <div>
             <p class="font-medium">{resource.name}</p>
