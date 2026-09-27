@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from '@cio/ui/base/button';
   import { Badge } from '@cio/ui/base/badge';
-  import { cacheNcctMedia, readNcctOfflineSnapshot } from '$lib/features/ncct/offline-cache';
+  import { cacheNcctMedia, clearNcctMediaCache, readNcctOfflineSnapshot } from '$lib/features/ncct/offline-cache';
 
   type Programme = { id: string; title: string };
   type OfflinePack = {
@@ -66,6 +66,10 @@
     }
   }
 
+  async function clearMedia() {
+    mediaMessage = (await clearNcctMediaCache()) ? 'Cached media cleared from this PC.' : 'Media cache is unavailable.';
+  }
+
   async function loadPacks() {
     loaded = false;
     const entries = await Promise.all(
@@ -118,6 +122,7 @@
             >
               {cachingMediaId === pack.programme.id ? 'Caching…' : `Cache media (${mediaUrls(pack).length})`}
             </Button>
+            <Button size="sm" variant="ghost" onclick={() => void clearMedia()}>Clear media cache</Button>
             {#if cachingMediaId === null && mediaMessage}<span class="ui:text-muted-foreground text-xs"
                 >{mediaMessage}</span
               >{/if}
