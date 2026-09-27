@@ -1235,6 +1235,24 @@ export async function scheduleSession(
   }
   await assertNcctInstitutionAccess(organizationId, batch.institutionId, actorProfileId, orgRole);
 
+  if (data.instructorProfileId) {
+    const members = await listNcctInstitutionMembers(organizationId);
+    const instructor = members.find(
+      ({ member }) =>
+        member.institutionId === batch.institutionId &&
+        member.profileId === data.instructorProfileId &&
+        member.active &&
+        member.role === 'INSTRUCTOR'
+    );
+    if (!instructor) {
+      throw new AppError(
+        'The session instructor must be an active instructor at the batch institution',
+        'NCCT_INSTRUCTOR_ACCESS_REQUIRED',
+        422
+      );
+    }
+  }
+
   const startsOn = new Date(`${batch.startsOn}T00:00:00.000Z`);
   const endsOn = new Date(`${batch.endsOn}T23:59:59.999Z`);
   const startsAt = new Date(data.startsAt);
