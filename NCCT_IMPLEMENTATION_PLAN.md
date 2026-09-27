@@ -17,11 +17,11 @@ The first working version is English only. Digital attendance is deferred. One c
 
 ## Feature slices
 
-Current delivery status: the end-to-end English SIH demo path is implemented and pushed in small feature commits. The remaining work is centre membership permissions, encrypted offline caching, richer analytics, multilingual content, and the deferred attendance hardware flow.
+Current delivery status: the end-to-end English SIH demo path is implemented and pushed in small feature commits. Centre membership permissions and role-scoped reads and writes are implemented. The remaining work is encrypted offline caching, richer analytics, multilingual content, and the deferred attendance hardware flow.
 
 | Slice | Data and backend | User interface and acceptance target |
 | --- | --- | --- |
-| 1. Institution and trainee foundation | **In progress:** institutions, trainee affiliations, profile fields, directory visibility, and audit events are implemented. Centre membership permissions remain. | Central admin can manage and edit the multi-centre directory; centre-scoped roles are the next foundation slice. |
+| 1. Institution and trainee foundation | **Implemented:** institutions, trainee affiliations, profile fields, directory visibility, audit events, centre memberships, and tutor/student access scopes. | Central admins assign centre access; tutors see and write only assigned centres; students see their own trainee workspace. |
 | 2. Programmes and nominations | **Implemented:** programmes, ordered steps, prerequisites, nominations, approval decisions, capacity checks, and enrolment. | The nomination-to-enrolment flow works in the dashboard. |
 | 3. Scheduled batches | **Implemented:** programme batches, dates, capacity, instructors, enrolments, and progress dashboard. | Batch creation and ordered progress are available. |
 | 4. Timetable and logistics | **Implemented:** sessions, centre resources, hostel/logistics records, collision checks, and capacity-aware bookings. | Conflicting schedules and exhausted resource capacity return visible errors. |
@@ -29,12 +29,12 @@ Current delivery status: the end-to-end English SIH demo path is implemented and
 | 6. Skills and credential registry | **Implemented:** trainee skills, public verification token/page, revocation, and directory visibility controls. | Employers can search visible certified trainees. |
 | 7. Employment exchange | **Implemented:** vacancies, applications, shortlist/select/reject actions, and application status history. Separate employer accounts can follow. | The dashboard shows the employment pipeline and recent transitions. |
 | 8. Career counselling | **Implemented for the demo:** profile-aware job matching, conversation history, and explainable suggestions. | Guidance is tied to the trainee’s skills and open jobs. |
-| 9. Offline centre PC | **In progress:** device identity, idempotent nomination/progress queue, conflict policy, and visible sync status are implemented. Encrypted cache and full offline course content remain. | Centres can queue permitted actions and retain conflicts for retry/review. |
+| 9. Offline centre PC | **In progress:** device identity, centre-scoped idempotent nomination/progress queue, conflict policy, and visible sync status are implemented. Encrypted cache and full offline course content remain. | Centres can queue permitted actions and retain conflicts for retry/review without bypassing centre permissions. |
 | 10. NCCT analytics | **Implemented for the demo:** central summary metrics, region/status breakdowns, placement metrics, audit history, and CSV export. | Central operators can review and export the current NCCT operating picture. |
 
 ## Delivery order
 
-1. **Baseline and mapping:** import the complete upstream application into a fresh repository history, install pinned dependencies, run the baseline build, and record existing behaviour. Retain the existing license and notices.
+1. **Baseline and mapping:** establish the repository baseline, install pinned dependencies, run the baseline build, and record existing behaviour. Retain the existing license and notices.
 2. **NCCT foundation:** institution/trainee data model, scoped roles, profile pages, and seed data for a small multi-centre demo.
 3. **End-to-end training flow:** ordered programme, nomination and approval, scheduled batch, assessment, certificate, and progress dashboard. This is the first SIH demonstration milestone.
 4. **Operations:** timetable, room/hostel/logistics allocations, evaluator scheduling, certificate verification, and certified trainee directory.
