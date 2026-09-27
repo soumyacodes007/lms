@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { Button } from '@cio/ui/base/button';
   import { Badge } from '@cio/ui/base/badge';
-  import { readNcctOfflineSnapshot } from '$lib/features/ncct/offline-cache';
+  import { cacheNcctMedia, readNcctOfflineSnapshot } from '$lib/features/ncct/offline-cache';
 
   type Programme = { id: string; title: string };
   type OfflinePack = {
@@ -15,6 +16,11 @@
         title: string;
         note: string | null;
         languages: Array<{ locale: string; content: string }>;
+        media: {
+          videos: Array<{ type: string; url: string; title: string }>;
+          documents: Array<{ type: string; url: string; title: string }>;
+          slides: Array<{ platform: string; url: string; title: string }>;
+        };
       }>;
       exercises: Array<{
         id: string;
@@ -29,6 +35,36 @@
   let { orgName, programmes, refreshToken }: Props = $props();
   let packs = $state<Record<string, OfflinePack>>({});
   let loaded = $state(false);
+  let mediaMessage = $state('');
+  let cachingMediaId = $state<string | null>(null);
+
+  function mediaUrls(pack: OfflinePack) {
+    return pack.steps.flatMap((step) =>
+      step.lessons.flatMap((lesson) => [
+        ...lesson.media.videos.map((media) => media.url),
+        ...lesson.media.documents.map((media) => media.url),
+        ...lesson.media.slides.map((media) => media.url)
+      ])
+    );
+  }
+
+  async function cacheMedia(pack: OfflinePack) {
+    cachingMediaId = pack.programme.id;
+    mediaMessage = 'Caching media…';
+    try {
+      const result = await cacheNcctMedia(mediaUrls(pack));
+      mediaMessage =
+        result.attempted === 0
+          ? 'No downloadable media is attached.'
+          : `${result.cached} of ${result.attempted} media item${result.attempted === 1 ? '' : 's'} cached${
+              result.failed ? ` · ${result.failed} failed` : ''
+            }.`;
+    } catch {
+      mediaMessage = 'Media caching could not be completed on this device.';
+    } finally {
+      cachingMediaId = null;
+    }
+  }
 
   async function loadPacks() {
     loaded = false;
@@ -73,6 +109,19 @@
           <p class="ui:text-muted-foreground mt-2 text-xs">
             Cached {new Date(pack.generatedAt).toLocaleString()} · media requires a connection
           </p>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={cachingMediaId !== null}
+              onclick={() => void cacheMedia(pack)}
+            >
+              {cachingMediaId === pack.programme.id ? 'Caching…' : `Cache media (${mediaUrls(pack).length})`}
+            </Button>
+            {#if cachingMediaId === null && mediaMessage}<span class="ui:text-muted-foreground text-xs"
+                >{mediaMessage}</span
+              >{/if}
+          </div>
           <div class="mt-3 space-y-2">
             {#each pack.steps as step}
               <div class="ui:bg-muted/40 rounded-md px-3 py-2 text-sm">
