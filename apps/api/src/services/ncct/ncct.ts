@@ -509,13 +509,23 @@ export async function createEmploymentJob(organizationId: string, profileId: str
   return createNcctJob({ ...data, organizationId, createdByProfileId: profileId, status: 'OPEN' });
 }
 
-export async function submitJobApplication(organizationId: string, jobId: string, data: TApplyToNcctJob) {
+export async function submitJobApplication(
+  organizationId: string,
+  jobId: string,
+  data: TApplyToNcctJob,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const [job, trainee] = await Promise.all([
     listNcctJobs(organizationId).then((jobs) => jobs.find((item) => item.id === jobId)),
     listNcctTrainees(organizationId).then((trainees) => trainees.find((item) => item.id === data.traineeId))
   ]);
   if (!job) throw new AppError('Job does not belong to this organization', 'NCCT_JOB_NOT_FOUND', 404);
   if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+  if (orgRole === ROLE.STUDENT && trainee.profileId !== actorProfileId) {
+    throw new AppError('Students can only apply for themselves', 'NCCT_TRAINEE_ACCESS_REQUIRED', 403);
+  }
+  await assertNcctInstitutionAccess(organizationId, trainee.institutionId, actorProfileId, orgRole);
 
   return applyToNcctJob({ ...data, jobId });
 }
@@ -524,7 +534,8 @@ export async function updateJobApplication(
   organizationId: string,
   applicationId: string,
   data: TUpdateNcctJobApplication,
-  actorProfileId?: string
+  actorProfileId?: string,
+  orgRole?: number
 ) {
   const application = (await listNcctJobApplications(organizationId)).find(
     ({ application: item }) => item.id === applicationId
@@ -532,6 +543,7 @@ export async function updateJobApplication(
   if (!application) {
     throw new AppError('Job application does not belong to this organization', 'NCCT_APPLICATION_NOT_FOUND', 404);
   }
+  await assertNcctInstitutionAccess(organizationId, application.trainee.institutionId, actorProfileId, orgRole);
   const updated = await updateNcctJobApplication(applicationId, data.status, actorProfileId, data.note);
   await recordNcctAudit({
     organizationId,
@@ -544,14 +556,28 @@ export async function updateJobApplication(
   return updated;
 }
 
-async function getNcctCareerTrainee(organizationId: string, traineeId: string) {
+async function getNcctCareerTrainee(
+  organizationId: string,
+  traineeId: string,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const trainee = (await listNcctTrainees(organizationId)).find((item) => item.id === traineeId);
   if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+  if (orgRole === ROLE.STUDENT && trainee.profileId !== actorProfileId) {
+    throw new AppError('Students can only access their own career profile', 'NCCT_TRAINEE_ACCESS_REQUIRED', 403);
+  }
+  await assertNcctInstitutionAccess(organizationId, trainee.institutionId, actorProfileId, orgRole);
   return trainee;
 }
 
-export async function getCareerSnapshot(organizationId: string, traineeId: string) {
-  const trainee = await getNcctCareerTrainee(organizationId, traineeId);
+export async function getCareerSnapshot(
+  organizationId: string,
+  traineeId: string,
+  actorProfileId?: string,
+  orgRole?: number
+) {
+  const trainee = await getNcctCareerTrainee(organizationId, traineeId, actorProfileId, orgRole);
   const [jobs, credentials, messages] = await Promise.all([
     listNcctJobs(organizationId),
     listNcctCredentials(organizationId),
@@ -575,10 +601,16 @@ export async function getCareerSnapshot(organizationId: string, traineeId: strin
   };
 }
 
-export async function chatCareer(organizationId: string, traineeId: string, data: TNcctCareerChat) {
-  const trainee = await getNcctCareerTrainee(organizationId, traineeId);
+export async function chatCareer(
+  organizationId: string,
+  traineeId: string,
+  data: TNcctCareerChat,
+  actorProfileId?: string,
+  orgRole?: number
+) {
+  const trainee = await getNcctCareerTrainee(organizationId, traineeId, actorProfileId, orgRole);
   await createNcctCareerMessage({ traineeId, role: 'USER', message: data.message });
-  const snapshot = await getCareerSnapshot(organizationId, traineeId);
+  const snapshot = await getCareerSnapshot(organizationId, traineeId, actorProfileId, orgRole);
   const assistantMessage =
     snapshot.matchedJobs.length > 0
       ? `You have ${snapshot.matchedJobs.length} matching open ${snapshot.matchedJobs.length === 1 ? 'role' : 'roles'}. Start with ${snapshot.matchedJobs[0]!.job.title}; your matching skills are ${snapshot.matchedJobs[0]!.matchedSkills.join(', ')}.`
@@ -586,7 +618,7 @@ export async function chatCareer(organizationId: string, traineeId: string, data
         ? `Your current skills are ${trainee.skills.join(', ')}. No open role matches them yet. Add more verified skills through your training programme and check the exchange again.`
         : 'Add your skills to your trainee profile to get personalised job matches.';
   await createNcctCareerMessage({ traineeId, role: 'ASSISTANT', message: assistantMessage });
-  return getCareerSnapshot(organizationId, traineeId);
+  return getCareerSnapshot(organizationId, traineeId, actorProfileId, orgRole);
 }
 
 async function getNcctEnrollment(organizationId: string, enrollmentId: string) {

@@ -845,7 +845,8 @@ export const ncctRouter = new Hono()
               c.get('orgId')!,
               c.req.valid('param').applicationId,
               c.req.valid('json'),
-              c.get('user')!.id
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
             )
           },
           200
@@ -883,7 +884,13 @@ export const ncctRouter = new Hono()
         return c.json(
           {
             success: true,
-            data: await submitJobApplication(c.get('orgId')!, c.req.valid('param').jobId, c.req.valid('json'))
+            data: await submitJobApplication(
+              c.get('orgId')!,
+              c.req.valid('param').jobId,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
           },
           201
         );
@@ -895,7 +902,15 @@ export const ncctRouter = new Hono()
   .get('/career/:traineeId', authMiddleware, orgMemberMiddleware, zValidator('param', careerParam), async (c) => {
     try {
       return c.json(
-        { success: true, data: await getCareerSnapshot(c.get('orgId')!, c.req.valid('param').traineeId) },
+        {
+          success: true,
+          data: await getCareerSnapshot(
+            c.get('orgId')!,
+            c.req.valid('param').traineeId,
+            c.get('user')!.id,
+            c.get('userRole') ?? undefined
+          )
+        },
         200
       );
     } catch (error) {
@@ -913,7 +928,13 @@ export const ncctRouter = new Hono()
         return c.json(
           {
             success: true,
-            data: await chatCareer(c.get('orgId')!, c.req.valid('param').traineeId, c.req.valid('json'))
+            data: await chatCareer(
+              c.get('orgId')!,
+              c.req.valid('param').traineeId,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
           },
           200
         );
