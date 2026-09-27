@@ -37,6 +37,17 @@ type NcctOverview = {
       job: { title: string; employerName: string; location: string };
       trainee: { traineeNumber: string; district: string; state: string };
     }>;
+    assessments: Array<{
+      id: string;
+      batchId: string;
+      traineeId: string;
+      evaluatorProfileId: string | null;
+      title: string;
+      scheduledAt: string;
+      score: number | null;
+      status: string;
+      feedback: string | null;
+    }>;
   };
 };
 

@@ -69,7 +69,8 @@ export async function getNcctOverview(organizationId: string) {
     resources,
     nominations,
     credentials,
-    applications
+    applications,
+    assessments
   ] = await Promise.all([
     getNcctDashboardSummary(organizationId),
     listNcctInstitutions(organizationId),
@@ -81,7 +82,8 @@ export async function getNcctOverview(organizationId: string) {
     listNcctResources(organizationId),
     listNcctNominations(organizationId),
     listNcctCredentials(organizationId),
-    listNcctJobApplications(organizationId)
+    listNcctJobApplications(organizationId),
+    listNcctAssessments(organizationId)
   ]);
 
   return {
@@ -95,7 +97,8 @@ export async function getNcctOverview(organizationId: string) {
     resources: resources.map(({ resource }) => resource),
     nominations,
     credentials,
-    applications
+    applications,
+    assessments: assessments.map(({ assessment }) => assessment)
   };
 }
 
