@@ -636,6 +636,16 @@ export async function verifyNcctCredential(verificationToken: string) {
   };
 }
 
+export async function revokeNcctCredential(credentialId: string, client: DbOrTxClient = db) {
+  const [credential] = await client
+    .update(schema.ncctCredential)
+    .set({ revokedAt: new Date().toISOString() })
+    .where(and(eq(schema.ncctCredential.id, credentialId), sql`${schema.ncctCredential.revokedAt} IS NULL`))
+    .returning();
+  if (!credential) throw new Error('Credential not found or already revoked');
+  return credential;
+}
+
 export async function getNcctDashboardSummary(organizationId: string) {
   const [institutions, trainees, programmes, batches, pendingNominations, credentials, jobs] = await Promise.all([
     db

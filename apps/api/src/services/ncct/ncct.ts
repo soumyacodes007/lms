@@ -39,6 +39,7 @@ import {
   upsertNcctEnrollmentProgress,
   bookNcctResource,
   recordNcctSyncEvents,
+  revokeNcctCredential,
   saveNcctTraineeLogistics,
   submitNcctAssessment as submitNcctAssessmentQuery,
   updateNcctJobApplication
@@ -487,6 +488,28 @@ export async function issueCredential(organizationId: string, data: TIssueNcctCr
     metadata: { traineeId: data.traineeId, programmeId: data.programmeId, batchId: data.batchId }
   });
   return credential;
+}
+
+export async function revokeCredential(organizationId: string, credentialId: string, actorProfileId?: string) {
+  const credential = (await listNcctCredentials(organizationId)).find(
+    ({ credential: item }) => item.id === credentialId
+  );
+  if (!credential)
+    throw new AppError('Credential does not belong to this organization', 'NCCT_CREDENTIAL_NOT_FOUND', 404);
+  if (credential.credential.revokedAt) {
+    throw new AppError('Credential is already revoked', 'NCCT_CREDENTIAL_ALREADY_REVOKED', 409);
+  }
+  const revoked = await revokeNcctCredential(credentialId);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: credential.trainee.institutionId,
+    action: 'CREDENTIAL_REVOKED',
+    entityType: 'credential',
+    entityId: credentialId,
+    metadata: { traineeId: credential.trainee.id, certificateNumber: credential.credential.certificateNumber }
+  });
+  return revoked;
 }
 
 export async function scheduleSession(organizationId: string, data: TCreateNcctSession) {

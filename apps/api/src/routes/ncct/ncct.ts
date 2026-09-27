@@ -41,6 +41,7 @@ import {
   getProgrammeProgress,
   bookResource,
   issueCredential,
+  revokeCredential,
   listNcctAssessments,
   listNcctProgrammeSteps,
   publishNcctProgramme,
@@ -84,6 +85,7 @@ const syncDeviceParam = z.object({ deviceId: z.string().uuid() });
 const careerParam = z.object({ traineeId: z.string().uuid() });
 const enrollmentParam = z.object({ enrollmentId: z.string().uuid() });
 const verificationParam = z.object({ verificationToken: z.string().min(16).max(128) });
+const credentialParam = z.object({ credentialId: z.string().uuid() });
 const directoryQuery = ZSearchNcctDirectory;
 
 export const ncctRouter = new Hono()
@@ -407,6 +409,26 @@ export const ncctRouter = new Hono()
       return handleError(c, error, 'Failed to load credentials');
     }
   })
+  .post(
+    '/credentials/:credentialId/revoke',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', credentialParam),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await revokeCredential(c.get('orgId')!, c.req.valid('param').credentialId, c.get('user')!.id)
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to revoke credential');
+      }
+    }
+  )
   .get('/directory', authMiddleware, orgMemberMiddleware, zValidator('query', directoryQuery), async (c) => {
     try {
       return c.json(
