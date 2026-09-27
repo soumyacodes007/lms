@@ -292,6 +292,19 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     enrollments: visibleEnrollments,
     auditEvents: visibleAuditEvents,
     reports: {
+      institutionsByActivity: visibleInstitutions
+        .map((institution) => ({
+          institutionId: institution.id,
+          code: institution.code,
+          name: institution.name,
+          trainees: visibleTrainees.filter((trainee) => trainee.institutionId === institution.id).length,
+          batches: visibleBatches.filter((batch) => batch.institutionId === institution.id).length,
+          activeBatches: visibleBatches.filter(
+            (batch) => batch.institutionId === institution.id && ['OPEN', 'RUNNING'].includes(batch.status)
+          ).length,
+          credentials: visibleCredentials.filter(({ trainee }) => trainee.institutionId === institution.id).length
+        }))
+        .sort((a, b) => b.trainees - a.trainees || a.name.localeCompare(b.name)),
       traineesByState: Object.entries(
         visibleTrainees.reduce<Record<string, number>>((counts, trainee) => {
           counts[trainee.state] = (counts[trainee.state] ?? 0) + 1;

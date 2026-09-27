@@ -162,7 +162,13 @@ export const ncctRouter = new Hono()
         ['placements', 'applications', overview.reports.placements.applications, ''],
         ['placements', 'shortlisted', overview.reports.placements.shortlisted, ''],
         ['placements', 'selected', overview.reports.placements.selected, ''],
-        ['placements', 'open_jobs', overview.reports.placements.openJobs, '']
+        ['placements', 'open_jobs', overview.reports.placements.openJobs, ''],
+        ...overview.reports.institutionsByActivity.map((item) => [
+          'institution_activity',
+          item.code,
+          item.trainees,
+          `${item.name} · ${item.batches} batches · ${item.activeBatches} active · ${item.credentials} credentials`
+        ])
       ];
       const csv = rows.map((row) => row.map(escape).join(',')).join('\r\n');
       return new Response(`${csv}\r\n`, {
