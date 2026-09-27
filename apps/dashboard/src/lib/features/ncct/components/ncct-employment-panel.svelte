@@ -59,6 +59,12 @@
   let openJobs = $derived(jobs.filter((job) => job.status === 'OPEN'));
   let jobFilter = $state<'ALL' | 'OPEN' | 'CLOSED'>('OPEN');
   let visibleJobs = $derived(jobFilter === 'ALL' ? jobs : jobs.filter((job) => job.status === jobFilter));
+  let applicationFilter = $state('ALL');
+  let visibleApplications = $derived(
+    applicationFilter === 'ALL'
+      ? applications
+      : applications.filter((row) => row.application.status === applicationFilter)
+  );
 
   function resetPost() {
     employerName = '';
@@ -250,8 +256,19 @@
     <span>Applications remain visible to centre coordinators.</span>
   </div>
   {#if applications.length > 0}
-    <div class="mt-4 space-y-2">
-      {#each applications.slice(0, 5) as row}
+    <div class="mt-4 flex flex-wrap items-center gap-2">
+      <span class="ui:text-muted-foreground text-sm">Show applications</span>
+      <select class="ui:bg-background h-9 rounded-md border px-3 text-sm" bind:value={applicationFilter}>
+        <option value="ALL">All</option>
+        <option value="APPLIED">Applied</option>
+        <option value="SHORTLISTED">Shortlisted</option>
+        <option value="SELECTED">Selected</option>
+        <option value="REJECTED">Rejected</option>
+      </select>
+      <Badge variant="secondary">{visibleApplications.length} shown</Badge>
+    </div>
+    <div class="mt-3 space-y-2">
+      {#each visibleApplications.slice(0, 5) as row}
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
           <div>
             <p class="font-medium">{row.job.title} · {row.trainee.traineeNumber}</p>
