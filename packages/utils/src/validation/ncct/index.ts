@@ -76,6 +76,10 @@ export const ZCreateNcctBatch = z
     path: ['endsOn']
   });
 
+export const ZUpdateNcctBatchStatus = z.object({
+  status: z.enum(['OPEN', 'RUNNING', 'COMPLETED', 'CANCELLED'])
+});
+
 export const ZCreateNcctNomination = z.object({
   batchId: z.string().uuid(),
   traineeId: z.string().uuid()
@@ -210,6 +214,7 @@ export type TCreateNcctProgramme = z.infer<typeof ZCreateNcctProgramme>;
 export type TAddNcctProgrammeStep = z.infer<typeof ZAddNcctProgrammeStep>;
 export type TReorderNcctProgrammeStep = z.infer<typeof ZReorderNcctProgrammeStep>;
 export type TCreateNcctBatch = z.infer<typeof ZCreateNcctBatch>;
+export type TUpdateNcctBatchStatus = z.infer<typeof ZUpdateNcctBatchStatus>;
 export type TCreateNcctNomination = z.infer<typeof ZCreateNcctNomination>;
 export type TDecideNcctNomination = z.infer<typeof ZDecideNcctNomination>;
 export type TCreateNcctJob = z.infer<typeof ZCreateNcctJob>;

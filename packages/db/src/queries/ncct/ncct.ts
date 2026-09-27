@@ -286,6 +286,20 @@ export async function listNcctBatches(organizationId: string): Promise<TNcctBatc
     .then((rows) => rows.map(({ batch }) => batch));
 }
 
+export async function updateNcctBatchStatus(
+  batchId: string,
+  status: (typeof schema.ncctBatchStatus.enumValues)[number],
+  client: DbOrTxClient = db
+) {
+  const [batch] = await client
+    .update(schema.ncctBatch)
+    .set({ status, updatedAt: new Date().toISOString() })
+    .where(eq(schema.ncctBatch.id, batchId))
+    .returning();
+  if (!batch) throw new Error('Batch not found');
+  return batch;
+}
+
 export async function createNcctBatch(
   data: typeof schema.ncctBatch.$inferInsert,
   client: DbOrTxClient = db

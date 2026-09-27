@@ -50,13 +50,15 @@ import {
   saveNcctTraineeLogistics,
   submitNcctAssessment as submitNcctAssessmentQuery,
   updateNcctSyncEventStatus,
-  updateNcctJobApplication
+  updateNcctJobApplication,
+  updateNcctBatchStatus
 } from '@cio/db/queries/ncct';
 import type {
   TAddNcctProgrammeStep,
   TReorderNcctProgrammeStep,
   TApplyToNcctJob,
   TCreateNcctBatch,
+  TUpdateNcctBatchStatus,
   TCreateNcctAssessment,
   TNcctCareerChat,
   TCreateNcctInstitution,
@@ -732,6 +734,45 @@ export async function scheduleNcctBatch(
     metadata: { programmeId: batch.programmeId, name: batch.name, instructorProfileId: batch.instructorProfileId }
   });
   return batch;
+}
+
+export async function updateNcctBatchLifecycle(
+  organizationId: string,
+  batchId: string,
+  data: TUpdateNcctBatchStatus,
+  actorProfileId?: string,
+  orgRole?: number
+) {
+  const batch = (await listNcctBatches(organizationId)).find((item) => item.id === batchId);
+  if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
+  await assertNcctInstitutionAccess(organizationId, batch.institutionId, actorProfileId, orgRole);
+
+  const transitions: Record<string, string[]> = {
+    DRAFT: ['OPEN', 'CANCELLED'],
+    OPEN: ['RUNNING', 'CANCELLED'],
+    RUNNING: ['COMPLETED', 'CANCELLED'],
+    COMPLETED: [],
+    CANCELLED: []
+  };
+  if (!transitions[batch.status]?.includes(data.status)) {
+    throw new AppError(
+      `A ${batch.status.toLowerCase()} batch cannot move to ${data.status.toLowerCase()}`,
+      'NCCT_BATCH_STATUS_INVALID',
+      409
+    );
+  }
+
+  const updated = await updateNcctBatchStatus(batch.id, data.status);
+  await recordNcctAudit({
+    organizationId,
+    institutionId: batch.institutionId,
+    actorProfileId,
+    action: 'BATCH_STATUS_CHANGED',
+    entityType: 'batch',
+    entityId: batch.id,
+    metadata: { from: batch.status, to: updated.status }
+  });
+  return updated;
 }
 
 export async function submitNcctNomination(

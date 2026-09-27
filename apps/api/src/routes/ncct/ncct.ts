@@ -9,6 +9,7 @@ import {
   ZAddNcctProgrammeStep,
   ZApplyToNcctJob,
   ZCreateNcctBatch,
+  ZUpdateNcctBatchStatus,
   ZCreateNcctAssessment,
   ZCreateNcctInstitution,
   ZCreateNcctJob,
@@ -72,7 +73,8 @@ import {
   submitNcctNomination,
   updateNcctTrainee,
   updateJobApplication,
-  updateEnrollmentProgress
+  updateEnrollmentProgress,
+  updateNcctBatchLifecycle
 } from '@api/services/ncct/ncct';
 import {
   listNcctBatches,
@@ -569,6 +571,33 @@ export const ncctRouter = new Hono()
         );
       } catch (error) {
         return handleError(c, error, 'Failed to create batch');
+      }
+    }
+  )
+  .patch(
+    '/batches/:batchId/status',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', z.object({ batchId: z.string().uuid() })),
+    zValidator('json', ZUpdateNcctBatchStatus),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await updateNcctBatchLifecycle(
+              c.get('orgId')!,
+              c.req.valid('param').batchId,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to update batch status');
       }
     }
   )
