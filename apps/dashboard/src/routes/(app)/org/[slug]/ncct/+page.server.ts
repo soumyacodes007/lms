@@ -67,7 +67,14 @@ type NcctOverview = {
       status: string;
       skills: string[];
     }>;
-    sessions: Array<{ id: string; title: string; startsAt: string; endsAt: string; room: string | null }>;
+    sessions: Array<{
+      id: string;
+      title: string;
+      startsAt: string;
+      endsAt: string;
+      room: string | null;
+      instructorProfileId: string | null;
+    }>;
     resources: Array<{ id: string; type: string; name: string; capacity: number; active: boolean }>;
     nominations: Array<{
       nomination: { id: string; status: string; decisionNote: string | null; createdAt: string };

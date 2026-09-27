@@ -9,18 +9,30 @@
 
   type Institution = { id: string; name: string; code: string };
   type Trainee = { id: string; traineeNumber: string; district: string; state: string };
-  type Batch = { id: string; name: string; startsOn: string; endsOn: string; capacity: number };
-  type Session = { id: string; title: string; startsAt: string; endsAt: string; room: string | null };
+  type Batch = { id: string; institutionId: string; name: string; startsOn: string; endsOn: string; capacity: number };
+  type Session = {
+    id: string;
+    title: string;
+    startsAt: string;
+    endsAt: string;
+    room: string | null;
+    instructorProfileId: string | null;
+  };
   type Resource = { id: string; name: string; type: string; capacity: number };
+  type InstitutionMember = {
+    member: { institutionId: string; profileId: string; role: string; active: boolean };
+    profile: { fullname: string };
+  };
   type Props = {
     institutions: Institution[];
     trainees: Trainee[];
     batches: Batch[];
     sessions: Session[];
     resources: Resource[];
+    institutionMembers: InstitutionMember[];
   };
 
-  let { institutions, trainees, batches, sessions, resources }: Props = $props();
+  let { institutions, trainees, batches, sessions, resources, institutionMembers }: Props = $props();
   let sessionOpen = $state(false);
   let bookingOpen = $state(false);
   let resourceOpen = $state(false);
@@ -34,6 +46,7 @@
   let sessionEndsAt = $state('');
   let sessionRoom = $state('');
   let sessionNotes = $state('');
+  let sessionInstructorProfileId = $state('');
 
   let bookingSessionId = $state('');
   let bookingResourceId = $state('');
@@ -56,12 +69,29 @@
 
   function resetSession() {
     sessionBatchId = batches[0]?.id ?? '';
+    sessionInstructorProfileId = instructorsForBatch(sessionBatchId)[0]?.member.profileId ?? '';
     sessionTitle = '';
     sessionStartsAt = '';
     sessionEndsAt = '';
     sessionRoom = '';
     sessionNotes = '';
     message = '';
+  }
+
+  function instructorsForBatch(batchId: string) {
+    const institutionId = batches.find((batch) => batch.id === batchId)?.institutionId;
+    return institutionMembers.filter(
+      ({ member }) => member.institutionId === institutionId && member.active && member.role === 'INSTRUCTOR'
+    );
+  }
+
+  function updateSessionBatch(batchId: string) {
+    sessionBatchId = batchId;
+    sessionInstructorProfileId = instructorsForBatch(batchId)[0]?.member.profileId ?? '';
+  }
+
+  function instructorLabel(profileId: string | null) {
+    return institutionMembers.find(({ member }) => member.profileId === profileId)?.profile.fullname ?? 'Unassigned';
   }
 
   function resetResource() {
@@ -140,6 +170,7 @@
             startsAt: new Date(sessionStartsAt).toISOString(),
             endsAt: new Date(sessionEndsAt).toISOString(),
             room: sessionRoom.trim() || undefined,
+            instructorProfileId: sessionInstructorProfileId || null,
             notes: sessionNotes.trim() || undefined
           }
         }),
@@ -257,19 +288,29 @@
   <Dialog.Content>
     <Dialog.Header>
       <Dialog.Title>Book centre resource</Dialog.Title>
-      <Dialog.Description>Allocate a room, hostel, vehicle, meal service, or equipment to a scheduled session.</Dialog.Description>
+      <Dialog.Description
+        >Allocate a room, hostel, vehicle, meal service, or equipment to a scheduled session.</Dialog.Description
+      >
     </Dialog.Header>
     <div class="grid gap-4 sm:grid-cols-2">
       <label class="grid gap-2 text-sm font-medium sm:col-span-2">
         Session
-        <select class="ui:bg-background h-9 rounded-md border px-3" value={bookingSessionId} onchange={(event) => updateBookingSession(event.currentTarget.value)}>
-          {#each sessions as session}<option value={session.id}>{session.title} · {new Date(session.startsAt).toLocaleString()}</option>{/each}
+        <select
+          class="ui:bg-background h-9 rounded-md border px-3"
+          value={bookingSessionId}
+          onchange={(event) => updateBookingSession(event.currentTarget.value)}
+        >
+          {#each sessions as session}<option value={session.id}
+              >{session.title} · {new Date(session.startsAt).toLocaleString()}</option
+            >{/each}
         </select>
       </label>
       <label class="grid gap-2 text-sm font-medium">
         Resource
         <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={bookingResourceId}>
-          {#each resources as resource}<option value={resource.id}>{resource.name} · capacity {resource.capacity}</option>{/each}
+          {#each resources as resource}<option value={resource.id}
+              >{resource.name} · capacity {resource.capacity}</option
+            >{/each}
         </select>
       </label>
       <InputField label="Quantity" type="number" min="1" bind:value={bookingQuantity} />
@@ -284,7 +325,12 @@
     <Dialog.Footer>
       <Button variant="outline" onclick={() => (bookingOpen = false)}>Cancel</Button>
       <Button
-        disabled={busy || !bookingSessionId || !bookingResourceId || !bookingStartsAt || !bookingEndsAt || Number(bookingQuantity) < 1}
+        disabled={busy ||
+          !bookingSessionId ||
+          !bookingResourceId ||
+          !bookingStartsAt ||
+          !bookingEndsAt ||
+          Number(bookingQuantity) < 1}
         onclick={() => void bookResource()}>Book resource</Button
       >
     </Dialog.Footer>
@@ -300,10 +346,24 @@
     <div class="grid gap-4 sm:grid-cols-2">
       <label class="grid gap-2 text-sm font-medium sm:col-span-2">
         Batch
-        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={sessionBatchId}>
+        <select
+          class="ui:bg-background h-9 rounded-md border px-3"
+          value={sessionBatchId}
+          onchange={(event) => updateSessionBatch(event.currentTarget.value)}
+        >
           {#each batches as batch}<option value={batch.id}>{batch.name} · {batch.startsOn} to {batch.endsOn}</option
             >{/each}
         </select>
+      </label>
+      <label class="grid gap-2 text-sm font-medium sm:col-span-2">
+        Instructor
+        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={sessionInstructorProfileId}>
+          <option value="">No instructor assigned</option>
+          {#each instructorsForBatch(sessionBatchId) as instructor}
+            <option value={instructor.member.profileId}>{instructor.profile.fullname}</option>
+          {/each}
+        </select>
+        <span class="ui:text-muted-foreground text-xs">Only active instructors at the batch centre are listed.</span>
       </label>
       <InputField label="Session title" bind:value={sessionTitle} />
       <InputField label="Room" bind:value={sessionRoom} />

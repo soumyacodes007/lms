@@ -335,6 +335,7 @@
             batches={overview.batches}
             sessions={overview.sessions}
             resources={overview.resources}
+            institutionMembers={overview.institutionMembers}
           />
           <NcctProgressPanel enrollments={overview.enrollments} offline={!isOnline} onQueueEvent={queueOfflineEvent} />
           <NcctDirectoryPanel />
