@@ -872,7 +872,12 @@ export async function decideNomination(
       action: `NOMINATION_${data.status}`,
       entityType: 'nomination',
       entityId: nominationId,
-      metadata: { batchId: row.batch.id, traineeId: row.trainee.id, enrolled: Boolean(result.enrollment) }
+      metadata: {
+        batchId: row.batch.id,
+        traineeId: row.trainee.id,
+        enrolled: Boolean(result.enrollment),
+        decisionNote: data.decisionNote ?? null
+      }
     });
     return result;
   } catch (error) {
