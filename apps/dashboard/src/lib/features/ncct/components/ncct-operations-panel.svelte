@@ -301,6 +301,25 @@
       <p class="ui:text-muted-foreground text-sm">No sessions have been scheduled yet.</p>
     {/each}
   </div>
+  <div class="mt-5 space-y-2">
+    <div class="flex items-center justify-between gap-3">
+      <h3 class="font-medium">Resource inventory</h3>
+      <Badge variant="secondary">{resources.length}</Badge>
+    </div>
+    <div class="grid gap-2 sm:grid-cols-2">
+      {#each resources.slice(0, 8) as resource}
+        <div class="flex items-center justify-between rounded-lg border p-3 text-sm">
+          <div>
+            <p class="font-medium">{resource.name}</p>
+            <p class="ui:text-muted-foreground mt-1 text-xs">{resource.type}</p>
+          </div>
+          <Badge variant="outline">Capacity {resource.capacity}</Badge>
+        </div>
+      {:else}
+        <p class="ui:text-muted-foreground text-sm">No centre resources have been registered yet.</p>
+      {/each}
+    </div>
+  </div>
 </section>
 
 <Dialog.Root bind:open={bookingOpen}>
