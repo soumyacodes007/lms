@@ -6,6 +6,7 @@
   import { Textarea } from '@cio/ui/base/textarea';
   import { Badge } from '@cio/ui/base/badge';
   import { classroomio } from '$lib/utils/services/api';
+  import { summarizeNcctApplications } from '../application-summary';
 
   type Job = {
     id: string;
@@ -65,6 +66,7 @@
       ? applications
       : applications.filter((row) => row.application.status === applicationFilter)
   );
+  let applicationSummaries = $derived(summarizeNcctApplications(applications));
 
   function resetPost() {
     employerName = '';
@@ -258,6 +260,13 @@
     <Badge variant="secondary">{applications.length} applications</Badge>
     <span>Applications remain visible to centre coordinators.</span>
   </div>
+  {#if applicationSummaries.length > 0}
+    <div class="mt-3 flex flex-wrap gap-2">
+      {#each applicationSummaries as item}
+        <Badge variant={item.status === 'SELECTED' ? 'default' : 'outline'}>{item.status}: {item.total}</Badge>
+      {/each}
+    </div>
+  {/if}
   {#if applications.length > 0}
     <div class="mt-4 flex flex-wrap items-center gap-2">
       <span class="ui:text-muted-foreground text-sm">Show applications</span>
