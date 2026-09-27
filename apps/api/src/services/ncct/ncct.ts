@@ -90,6 +90,7 @@ import type {
 } from '@cio/utils/validation/ncct';
 import { ZCreateNcctNomination, ZUpdateNcctProgress } from '@cio/utils/validation/ncct';
 import { ROLE } from '@cio/utils/constants';
+import { assertNcctJobApplicationAllowed } from './employment';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -1012,6 +1013,10 @@ export async function submitJobApplication(
   ]);
   if (!job) throw new AppError('Job does not belong to this organization', 'NCCT_JOB_NOT_FOUND', 404);
   if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+  const existingApplication = (await listNcctJobApplications(organizationId)).some(
+    ({ application }) => application.jobId === jobId && application.traineeId === data.traineeId
+  );
+  assertNcctJobApplicationAllowed(job.status, existingApplication);
   if (orgRole === ROLE.STUDENT && trainee.profileId !== actorProfileId) {
     throw new AppError('Students can only apply for themselves', 'NCCT_TRAINEE_ACCESS_REQUIRED', 403);
   }
