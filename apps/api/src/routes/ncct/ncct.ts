@@ -1095,7 +1095,6 @@ export const ncctRouter = new Hono()
     '/applications/:applicationId/status',
     authMiddleware,
     orgMemberMiddleware,
-    orgTeamMemberMiddleware,
     zValidator('param', applicationParam),
     zValidator('json', ZUpdateNcctJobApplication),
     async (c) => {

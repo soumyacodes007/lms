@@ -154,7 +154,10 @@
     }
   }
 
-  async function updateApplication(applicationId: string, status: 'SHORTLISTED' | 'SELECTED' | 'REJECTED') {
+  async function updateApplication(
+    applicationId: string,
+    status: 'SHORTLISTED' | 'SELECTED' | 'REJECTED' | 'WITHDRAWN'
+  ) {
     updatingApplicationId = applicationId;
     message = '';
     try {
@@ -264,6 +267,7 @@
         <option value="SHORTLISTED">Shortlisted</option>
         <option value="SELECTED">Selected</option>
         <option value="REJECTED">Rejected</option>
+        <option value="WITHDRAWN">Withdrawn</option>
       </select>
       <Badge variant="secondary">{visibleApplications.length} shown</Badge>
     </div>
@@ -299,6 +303,12 @@
                 disabled={updatingApplicationId === row.application.id}
                 onclick={() => void updateApplication(row.application.id, 'REJECTED')}>Reject</Button
               >
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={updatingApplicationId === row.application.id}
+                onclick={() => void updateApplication(row.application.id, 'WITHDRAWN')}>Withdraw</Button
+              >
             {:else if row.application.status === 'SHORTLISTED'}
               <textarea
                 class="ui:bg-background min-h-9 rounded-md border px-3 py-2 text-sm sm:w-52"
@@ -317,6 +327,12 @@
                 variant="ghost"
                 disabled={updatingApplicationId === row.application.id}
                 onclick={() => void updateApplication(row.application.id, 'REJECTED')}>Reject</Button
+              >
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={updatingApplicationId === row.application.id}
+                onclick={() => void updateApplication(row.application.id, 'WITHDRAWN')}>Withdraw</Button
               >
             {/if}
           </div>

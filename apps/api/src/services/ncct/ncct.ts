@@ -90,7 +90,7 @@ import type {
 } from '@cio/utils/validation/ncct';
 import { ZCreateNcctNomination, ZUpdateNcctProgress } from '@cio/utils/validation/ncct';
 import { ROLE } from '@cio/utils/constants';
-import { assertNcctJobApplicationAllowed } from './employment';
+import { assertNcctApplicationTransition, assertNcctJobApplicationAllowed } from './employment';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -1038,6 +1038,12 @@ export async function updateJobApplication(
   if (!application) {
     throw new AppError('Job application does not belong to this organization', 'NCCT_APPLICATION_NOT_FOUND', 404);
   }
+  assertNcctApplicationTransition(
+    application.application.status,
+    data.status,
+    orgRole,
+    application.trainee.profileId === actorProfileId
+  );
   await assertNcctInstitutionAccess(organizationId, application.trainee.institutionId, actorProfileId, orgRole);
   const updated = await updateNcctJobApplication(applicationId, data.status, actorProfileId, data.note);
   await recordNcctAudit({
