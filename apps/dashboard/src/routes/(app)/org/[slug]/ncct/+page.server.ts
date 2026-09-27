@@ -43,6 +43,12 @@ type NcctOverview = {
       programme: { title: string };
       institution: { name: string; code: string };
     }>;
+    enrollments: Array<{
+      enrollment: { id: string; status: string; enrolledAt: string; completedAt: string | null };
+      batch: { name: string };
+      trainee: { traineeNumber: string; district: string; state: string };
+      programme: { title: string };
+    }>;
     credentials: Array<{
       credential: { id: string; certificateNumber: string; issuedAt: string; revokedAt: string | null };
       trainee: { traineeNumber: string; district: string; state: string };

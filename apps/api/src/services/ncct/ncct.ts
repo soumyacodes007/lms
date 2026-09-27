@@ -12,8 +12,7 @@ import {
   createNcctSession,
   createNcctSyncDevice,
   createNcctTrainee,
-  countNcctApprovedNominations,
-  decideNcctNomination,
+  decideNcctNominationAndEnroll,
   getNcctDashboardSummary,
   getNcctNomination,
   getNcctProgrammeProgress,
@@ -30,6 +29,7 @@ import {
   listNcctSessions,
   listNcctTrainees,
   listNcctCredentials,
+  listNcctEnrollments,
   listNcctCareerMessages,
   bookNcctResource,
   recordNcctSyncEvents,
@@ -73,7 +73,8 @@ export async function getNcctOverview(organizationId: string) {
     nominations,
     credentials,
     applications,
-    assessments
+    assessments,
+    enrollments
   ] = await Promise.all([
     getNcctDashboardSummary(organizationId),
     listNcctInstitutions(organizationId),
@@ -86,7 +87,8 @@ export async function getNcctOverview(organizationId: string) {
     listNcctNominations(organizationId),
     listNcctCredentials(organizationId),
     listNcctJobApplications(organizationId),
-    listNcctAssessments(organizationId)
+    listNcctAssessments(organizationId),
+    listNcctEnrollments(organizationId)
   ]);
 
   return {
@@ -102,6 +104,7 @@ export async function getNcctOverview(organizationId: string) {
     credentials,
     applications,
     assessments: assessments.map(({ assessment }) => assessment),
+    enrollments,
     reports: {
       traineesByState: Object.entries(
         trainees.reduce<Record<string, number>>((counts, trainee) => {
@@ -196,14 +199,17 @@ export async function decideNomination(
     throw new AppError('Only pending nominations can be decided', 'NCCT_NOMINATION_ALREADY_DECIDED', 409);
   }
 
-  if (data.status === 'APPROVED') {
-    const approved = await countNcctApprovedNominations(row.batch.id);
-    if (approved >= row.batch.capacity) {
+  try {
+    return await decideNcctNominationAndEnroll(nominationId, data.status, profileId, data.decisionNote);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'BATCH_CAPACITY_REACHED') {
       throw new AppError('This batch has no available seats', 'NCCT_BATCH_CAPACITY_REACHED', 409);
     }
+    if (error instanceof Error && error.message === 'NOMINATION_ALREADY_DECIDED') {
+      throw new AppError('Only pending nominations can be decided', 'NCCT_NOMINATION_ALREADY_DECIDED', 409);
+    }
+    throw error;
   }
-
-  return decideNcctNomination(nominationId, data.status, profileId, data.decisionNote);
 }
 
 export async function createEmploymentJob(organizationId: string, profileId: string, data: TCreateNcctJob) {

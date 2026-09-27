@@ -4229,6 +4229,8 @@ export const ncctNominationStatus = pgEnum('NCCT_NOMINATION_STATUS', [
   'WITHDRAWN'
 ]);
 
+export const ncctEnrollmentStatus = pgEnum('NCCT_ENROLLMENT_STATUS', ['ENROLLED', 'COMPLETED', 'WITHDRAWN']);
+
 export const ncctBatchStatus = pgEnum('NCCT_BATCH_STATUS', ['DRAFT', 'OPEN', 'RUNNING', 'COMPLETED', 'CANCELLED']);
 
 export const ncctAssessmentStatus = pgEnum('NCCT_ASSESSMENT_STATUS', ['SCHEDULED', 'SUBMITTED', 'PASSED', 'FAILED']);
@@ -4469,6 +4471,38 @@ export const ncctNomination = pgTable(
     }).onDelete('set null'),
     unique('ncct_nomination_batch_trainee_key').on(table.batchId, table.traineeId),
     index('idx_ncct_nomination_status').on(table.status)
+  ]
+);
+
+export const ncctEnrollment = pgTable(
+  'ncct_enrollment',
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey()
+      .notNull(),
+    batchId: uuid('batch_id').notNull(),
+    traineeId: uuid('trainee_id').notNull(),
+    status: ncctEnrollmentStatus().default('ENROLLED').notNull(),
+    enrolledAt: timestamp('enrolled_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true, mode: 'string' }),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.batchId],
+      foreignColumns: [ncctBatch.id],
+      name: 'ncct_enrollment_batch_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.traineeId],
+      foreignColumns: [ncctTrainee.id],
+      name: 'ncct_enrollment_trainee_id_fkey'
+    }).onDelete('cascade'),
+    unique('ncct_enrollment_batch_trainee_key').on(table.batchId, table.traineeId),
+    index('idx_ncct_enrollment_batch_status').on(table.batchId, table.status),
+    index('idx_ncct_enrollment_trainee').on(table.traineeId)
   ]
 );
 

@@ -20,6 +20,7 @@ import {
   ncctBatch,
   ncctCareerMessage,
   ncctCredential,
+  ncctEnrollment,
   ncctInstitution,
   ncctJob,
   ncctJobApplication,
@@ -95,7 +96,8 @@ export const ncctTraineeRelations = relations(ncctTrainee, ({ one, many }) => ({
   assessments: many(ncctAssessment),
   credentials: many(ncctCredential),
   applications: many(ncctJobApplication),
-  careerMessages: many(ncctCareerMessage)
+  careerMessages: many(ncctCareerMessage),
+  enrollments: many(ncctEnrollment)
 }));
 
 export const ncctProgrammeRelations = relations(ncctProgramme, ({ one, many }) => ({
@@ -138,6 +140,7 @@ export const ncctBatchRelations = relations(ncctBatch, ({ one, many }) => ({
     references: [profile.id]
   }),
   nominations: many(ncctNomination),
+  enrollments: many(ncctEnrollment),
   assessments: many(ncctAssessment),
   credentials: many(ncctCredential)
 }));
@@ -160,6 +163,17 @@ export const ncctNominationRelations = relations(ncctNomination, ({ one }) => ({
     fields: [ncctNomination.decisionByProfileId],
     references: [profile.id],
     relationName: 'nominationDecisionBy'
+  })
+}));
+
+export const ncctEnrollmentRelations = relations(ncctEnrollment, ({ one }) => ({
+  batch: one(ncctBatch, {
+    fields: [ncctEnrollment.batchId],
+    references: [ncctBatch.id]
+  }),
+  trainee: one(ncctTrainee, {
+    fields: [ncctEnrollment.traineeId],
+    references: [ncctTrainee.id]
   })
 }));
 

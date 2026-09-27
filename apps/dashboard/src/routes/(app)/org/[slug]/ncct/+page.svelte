@@ -244,6 +244,34 @@
               </div>
             </section>
 
+            <section class="ui:bg-card rounded-xl border p-5 xl:col-span-2">
+              <div class="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 class="font-semibold">Batch enrolment roster</h2>
+                  <p class="ui:text-muted-foreground mt-1 text-sm">
+                    Approved nominations become enrolled trainees automatically.
+                  </p>
+                </div>
+                <Badge variant="secondary">{overview.enrollments.length}</Badge>
+              </div>
+              <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {#each overview.enrollments.slice(0, 9) as row}
+                  <div class="rounded-lg border p-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <p class="font-medium">{row.trainee.traineeNumber}</p>
+                      <Badge variant={row.enrollment.status === 'COMPLETED' ? 'default' : 'outline'}>
+                        {row.enrollment.status}
+                      </Badge>
+                    </div>
+                    <p class="ui:text-muted-foreground mt-1 text-sm">{row.programme.title} · {row.batch.name}</p>
+                    <p class="ui:text-muted-foreground mt-1 text-xs">{row.trainee.district}, {row.trainee.state}</p>
+                  </div>
+                {:else}
+                  <p class="ui:text-muted-foreground text-sm">No trainees have been enrolled yet.</p>
+                {/each}
+              </div>
+            </section>
+
             <section class="ui:bg-card rounded-xl border p-5">
               <div class="mb-4 flex items-center justify-between">
                 <h2 class="font-semibold">Programmes</h2>

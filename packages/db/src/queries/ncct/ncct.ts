@@ -227,6 +227,75 @@ export async function decideNcctNomination(
   return nomination;
 }
 
+export async function decideNcctNominationAndEnroll(
+  nominationId: string,
+  status: 'APPROVED' | 'REJECTED' | 'WAITLISTED',
+  decisionByProfileId: string,
+  decisionNote?: string
+) {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ nomination: schema.ncctNomination, batch: schema.ncctBatch })
+      .from(schema.ncctNomination)
+      .innerJoin(schema.ncctBatch, eq(schema.ncctNomination.batchId, schema.ncctBatch.id))
+      .where(eq(schema.ncctNomination.id, nominationId))
+      .limit(1);
+
+    if (!row) throw new Error('NOMINATION_NOT_FOUND');
+    if (row.nomination.status !== 'PENDING') throw new Error('NOMINATION_ALREADY_DECIDED');
+
+    if (status === 'APPROVED') {
+      const [seatCount] = await tx
+        .select({ value: count() })
+        .from(schema.ncctEnrollment)
+        .where(and(eq(schema.ncctEnrollment.batchId, row.batch.id), eq(schema.ncctEnrollment.status, 'ENROLLED')));
+      if (Number(seatCount?.value ?? 0) >= row.batch.capacity) throw new Error('BATCH_CAPACITY_REACHED');
+    }
+
+    const [nomination] = await tx
+      .update(schema.ncctNomination)
+      .set({
+        status,
+        decisionByProfileId,
+        decisionAt: new Date().toISOString(),
+        decisionNote,
+        updatedAt: new Date().toISOString()
+      })
+      .where(and(eq(schema.ncctNomination.id, nominationId), eq(schema.ncctNomination.status, 'PENDING')))
+      .returning();
+    if (!nomination) throw new Error('NOMINATION_ALREADY_DECIDED');
+
+    let enrollment: typeof schema.ncctEnrollment.$inferSelect | null = null;
+    if (status === 'APPROVED') {
+      const [created] = await tx
+        .insert(schema.ncctEnrollment)
+        .values({ batchId: row.batch.id, traineeId: row.nomination.traineeId })
+        .onConflictDoNothing()
+        .returning();
+      enrollment = created ?? null;
+    }
+
+    return { nomination, enrollment };
+  });
+}
+
+export async function listNcctEnrollments(organizationId: string) {
+  return db
+    .select({
+      enrollment: schema.ncctEnrollment,
+      batch: schema.ncctBatch,
+      trainee: schema.ncctTrainee,
+      programme: schema.ncctProgramme
+    })
+    .from(schema.ncctEnrollment)
+    .innerJoin(schema.ncctBatch, eq(schema.ncctEnrollment.batchId, schema.ncctBatch.id))
+    .innerJoin(schema.ncctInstitution, eq(schema.ncctBatch.institutionId, schema.ncctInstitution.id))
+    .innerJoin(schema.ncctTrainee, eq(schema.ncctEnrollment.traineeId, schema.ncctTrainee.id))
+    .innerJoin(schema.ncctProgramme, eq(schema.ncctBatch.programmeId, schema.ncctProgramme.id))
+    .where(eq(schema.ncctInstitution.organizationId, organizationId))
+    .orderBy(desc(schema.ncctEnrollment.enrolledAt));
+}
+
 export async function listNcctJobs(organizationId: string): Promise<TNcctJob[]> {
   return db
     .select()
