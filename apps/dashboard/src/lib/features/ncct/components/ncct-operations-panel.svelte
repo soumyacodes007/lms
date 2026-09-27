@@ -10,11 +10,19 @@
   type Institution = { id: string; name: string; code: string };
   type Trainee = { id: string; traineeNumber: string; district: string; state: string };
   type Batch = { id: string; name: string; startsOn: string; endsOn: string; capacity: number };
+  type Session = { id: string; title: string; startsAt: string; endsAt: string; room: string | null };
   type Resource = { id: string; name: string; type: string; capacity: number };
-  type Props = { institutions: Institution[]; trainees: Trainee[]; batches: Batch[]; resources: Resource[] };
+  type Props = {
+    institutions: Institution[];
+    trainees: Trainee[];
+    batches: Batch[];
+    sessions: Session[];
+    resources: Resource[];
+  };
 
-  let { institutions, trainees, batches, resources }: Props = $props();
+  let { institutions, trainees, batches, sessions, resources }: Props = $props();
   let sessionOpen = $state(false);
+  let bookingOpen = $state(false);
   let resourceOpen = $state(false);
   let logisticsOpen = $state(false);
   let busy = $state(false);
@@ -26,6 +34,13 @@
   let sessionEndsAt = $state('');
   let sessionRoom = $state('');
   let sessionNotes = $state('');
+
+  let bookingSessionId = $state('');
+  let bookingResourceId = $state('');
+  let bookingStartsAt = $state('');
+  let bookingEndsAt = $state('');
+  let bookingQuantity = $state('1');
+  let bookingNotes = $state('');
 
   let resourceInstitutionId = $state('');
   let resourceType = $state('ROOM');
@@ -55,6 +70,33 @@
     resourceName = '';
     resourceCapacity = '30';
     message = '';
+  }
+
+  function toDatetimeLocal(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const offset = date.getTimezoneOffset();
+    return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
+  }
+
+  function resetBooking() {
+    const session = sessions[0];
+    bookingSessionId = session?.id ?? '';
+    bookingResourceId = resources[0]?.id ?? '';
+    bookingStartsAt = session ? toDatetimeLocal(session.startsAt) : '';
+    bookingEndsAt = session ? toDatetimeLocal(session.endsAt) : '';
+    bookingQuantity = '1';
+    bookingNotes = '';
+    message = '';
+  }
+
+  function updateBookingSession(sessionId: string) {
+    bookingSessionId = sessionId;
+    const session = sessions.find((item) => item.id === sessionId);
+    if (session) {
+      bookingStartsAt = toDatetimeLocal(session.startsAt);
+      bookingEndsAt = toDatetimeLocal(session.endsAt);
+    }
   }
 
   function resetLogistics() {
@@ -122,6 +164,24 @@
     if (saved) resourceOpen = false;
   }
 
+  async function bookResource() {
+    const saved = await save(
+      () =>
+        classroomio.ncct['resource-bookings'].$post({
+          json: {
+            sessionId: bookingSessionId,
+            resourceId: bookingResourceId,
+            startsAt: new Date(bookingStartsAt).toISOString(),
+            endsAt: new Date(bookingEndsAt).toISOString(),
+            quantity: Number(bookingQuantity),
+            notes: bookingNotes.trim() || undefined
+          }
+        }),
+      'Resource booked.'
+    );
+    if (saved) bookingOpen = false;
+  }
+
   async function saveLogistics() {
     const saved = await save(
       () =>
@@ -162,6 +222,15 @@
       <Button
         variant="outline"
         size="sm"
+        disabled={sessions.length === 0 || resources.length === 0}
+        onclick={() => {
+          resetBooking();
+          bookingOpen = true;
+        }}>Book resource</Button
+      >
+      <Button
+        variant="outline"
+        size="sm"
         disabled={institutions.length === 0}
         onclick={() => {
           resetResource();
@@ -183,6 +252,44 @@
     <span>Centre operations remain linked to the batch and trainee records.</span>
   </div>
 </section>
+
+<Dialog.Root bind:open={bookingOpen}>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>Book centre resource</Dialog.Title>
+      <Dialog.Description>Allocate a room, hostel, vehicle, meal service, or equipment to a scheduled session.</Dialog.Description>
+    </Dialog.Header>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <label class="grid gap-2 text-sm font-medium sm:col-span-2">
+        Session
+        <select class="ui:bg-background h-9 rounded-md border px-3" value={bookingSessionId} onchange={(event) => updateBookingSession(event.currentTarget.value)}>
+          {#each sessions as session}<option value={session.id}>{session.title} · {new Date(session.startsAt).toLocaleString()}</option>{/each}
+        </select>
+      </label>
+      <label class="grid gap-2 text-sm font-medium">
+        Resource
+        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={bookingResourceId}>
+          {#each resources as resource}<option value={resource.id}>{resource.name} · capacity {resource.capacity}</option>{/each}
+        </select>
+      </label>
+      <InputField label="Quantity" type="number" min="1" bind:value={bookingQuantity} />
+      <InputField label="Starts" type="datetime-local" bind:value={bookingStartsAt} />
+      <InputField label="Ends" type="datetime-local" bind:value={bookingEndsAt} />
+      <label class="grid gap-2 text-sm font-medium sm:col-span-2">
+        Notes
+        <Textarea rows={3} bind:value={bookingNotes} />
+      </label>
+    </div>
+    {#if message}<p class="ui:text-destructive text-sm">{message}</p>{/if}
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (bookingOpen = false)}>Cancel</Button>
+      <Button
+        disabled={busy || !bookingSessionId || !bookingResourceId || !bookingStartsAt || !bookingEndsAt || Number(bookingQuantity) < 1}
+        onclick={() => void bookResource()}>Book resource</Button
+      >
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
 <Dialog.Root bind:open={sessionOpen}>
   <Dialog.Content>

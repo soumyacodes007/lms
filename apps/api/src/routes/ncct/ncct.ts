@@ -498,7 +498,7 @@ export const ncctRouter = new Hono()
     zValidator('json', ZBookNcctResource),
     async (c) => {
       try {
-        return c.json({ success: true, data: await bookResource(c.req.valid('json')) }, 201);
+        return c.json({ success: true, data: await bookResource(c.get('orgId')!, c.req.valid('json')) }, 201);
       } catch (error) {
         return handleError(c, error, 'Failed to book resource');
       }

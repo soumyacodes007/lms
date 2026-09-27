@@ -537,8 +537,33 @@ export async function bookNcctResource(
   data: typeof schema.ncctResourceBooking.$inferInsert,
   client: DbOrTxClient = db
 ) {
-  const [conflict] = await client
-    .select({ id: schema.ncctResourceBooking.id })
+  const [session] = await client
+    .select({
+      startsAt: schema.ncctSession.startsAt,
+      endsAt: schema.ncctSession.endsAt,
+      institutionId: schema.ncctBatch.institutionId
+    })
+    .from(schema.ncctSession)
+    .innerJoin(schema.ncctBatch, eq(schema.ncctSession.batchId, schema.ncctBatch.id))
+    .where(eq(schema.ncctSession.id, data.sessionId))
+    .limit(1);
+  if (!session) throw new Error('RESOURCE_SESSION_NOT_FOUND');
+
+  const [resource] = await client
+    .select({ institutionId: schema.ncctResource.institutionId, capacity: schema.ncctResource.capacity, active: schema.ncctResource.active })
+    .from(schema.ncctResource)
+    .where(eq(schema.ncctResource.id, data.resourceId))
+    .limit(1);
+  if (!resource) throw new Error('RESOURCE_NOT_FOUND');
+  if (!resource.active) throw new Error('RESOURCE_INACTIVE');
+  if (resource.institutionId !== session.institutionId) throw new Error('RESOURCE_INSTITUTION_CONFLICT');
+  if (data.startsAt < session.startsAt || data.endsAt > session.endsAt) {
+    throw new Error('RESOURCE_OUTSIDE_SESSION');
+  }
+  const quantity = data.quantity ?? 1;
+
+  const overlapping = await client
+    .select({ quantity: schema.ncctResourceBooking.quantity })
     .from(schema.ncctResourceBooking)
     .where(
       and(
@@ -546,9 +571,9 @@ export async function bookNcctResource(
         lt(schema.ncctResourceBooking.startsAt, data.endsAt),
         gt(schema.ncctResourceBooking.endsAt, data.startsAt)
       )
-    )
-    .limit(1);
-  if (conflict) throw new Error('Resource is already booked for this time');
+    );
+  const bookedQuantity = overlapping.reduce((total, booking) => total + booking.quantity, 0);
+  if (bookedQuantity + quantity > resource.capacity) throw new Error('RESOURCE_CAPACITY_REACHED');
 
   const [booking] = await client.insert(schema.ncctResourceBooking).values(data).returning();
   if (!booking) throw new Error('Failed to book resource');

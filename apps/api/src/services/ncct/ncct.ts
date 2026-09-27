@@ -562,8 +562,32 @@ export async function registerResource(organizationId: string, data: TCreateNcct
   return createNcctResource(data);
 }
 
-export async function bookResource(data: TBookNcctResource) {
-  return bookNcctResource(data);
+export async function bookResource(organizationId: string, data: TBookNcctResource) {
+  const [sessions, resources] = await Promise.all([listNcctSessions(organizationId), listNcctResources(organizationId)]);
+  if (!sessions.some(({ session }) => session.id === data.sessionId)) {
+    throw new AppError('Session does not belong to this organization', 'NCCT_SESSION_NOT_FOUND', 404);
+  }
+  if (!resources.some(({ resource }) => resource.id === data.resourceId)) {
+    throw new AppError('Resource does not belong to this organization', 'NCCT_RESOURCE_NOT_FOUND', 404);
+  }
+
+  try {
+    return await bookNcctResource(data);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'RESOURCE_INSTITUTION_CONFLICT') {
+      throw new AppError('The resource belongs to a different training centre', 'NCCT_RESOURCE_INSTITUTION_CONFLICT', 409);
+    }
+    if (error instanceof Error && error.message === 'RESOURCE_OUTSIDE_SESSION') {
+      throw new AppError('Resource booking must stay within the session time', 'NCCT_RESOURCE_OUTSIDE_SESSION', 409);
+    }
+    if (error instanceof Error && error.message === 'RESOURCE_CAPACITY_REACHED') {
+      throw new AppError('The resource has no remaining capacity for this time', 'NCCT_RESOURCE_CAPACITY_REACHED', 409);
+    }
+    if (error instanceof Error && error.message === 'RESOURCE_INACTIVE') {
+      throw new AppError('The resource is inactive', 'NCCT_RESOURCE_INACTIVE', 409);
+    }
+    throw error;
+  }
 }
 
 export async function saveTraineeLogistics(data: TSaveNcctTraineeLogistics) {

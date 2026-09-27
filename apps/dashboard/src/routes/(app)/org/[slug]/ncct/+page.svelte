@@ -237,6 +237,7 @@
             institutions={overview.institutions}
             trainees={overview.trainees}
             batches={overview.batches}
+            sessions={overview.sessions}
             resources={overview.resources}
           />
           <NcctProgressPanel enrollments={overview.enrollments} />
