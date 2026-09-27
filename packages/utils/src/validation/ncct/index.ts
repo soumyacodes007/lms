@@ -215,7 +215,10 @@ export const ZUpdateNcctProgress = z.object({
 });
 
 export const ZSearchNcctDirectory = z.object({
-  q: z.string().trim().max(80).optional()
+  q: z.string().trim().max(80).optional(),
+  state: z.string().trim().max(80).optional(),
+  skill: z.string().trim().max(80).optional(),
+  institutionId: z.string().uuid().optional()
 });
 
 export type TCreateNcctInstitution = z.infer<typeof ZCreateNcctInstitution>;
