@@ -173,7 +173,10 @@ export const ncctRouter = new Hono()
     async (c) => {
       try {
         return c.json(
-          { success: true, data: await registerNcctInstitution(c.get('orgId')!, c.req.valid('json')) },
+          {
+            success: true,
+            data: await registerNcctInstitution(c.get('orgId')!, c.req.valid('json'), c.get('user')!.id)
+          },
           201
         );
       } catch (error) {

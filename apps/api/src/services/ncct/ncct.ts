@@ -306,8 +306,22 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
   };
 }
 
-export async function registerNcctInstitution(organizationId: string, data: TCreateNcctInstitution) {
-  return createNcctInstitution({ ...data, organizationId });
+export async function registerNcctInstitution(
+  organizationId: string,
+  data: TCreateNcctInstitution,
+  actorProfileId?: string
+) {
+  const institution = await createNcctInstitution({ ...data, organizationId });
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: institution.id,
+    action: 'INSTITUTION_CREATED',
+    entityType: 'institution',
+    entityId: institution.id,
+    metadata: { code: institution.code, type: institution.type }
+  });
+  return institution;
 }
 
 export async function getNcctInstitutionMembers(organizationId: string) {
@@ -374,7 +388,17 @@ export async function registerNcctTrainee(
   }
   await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
-  return createNcctTrainee({ ...data, organizationId });
+  const trainee = await createNcctTrainee({ ...data, organizationId });
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: trainee.institutionId,
+    action: 'TRAINEE_CREATED',
+    entityType: 'trainee',
+    entityId: trainee.id,
+    metadata: { traineeNumber: trainee.traineeNumber }
+  });
+  return trainee;
 }
 
 export async function updateNcctTrainee(
@@ -450,7 +474,17 @@ export async function scheduleNcctBatch(
   }
   await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
-  return createNcctBatch({ ...data, status: 'OPEN' });
+  const batch = await createNcctBatch({ ...data, status: 'OPEN' });
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: batch.institutionId,
+    action: 'BATCH_CREATED',
+    entityType: 'batch',
+    entityId: batch.id,
+    metadata: { programmeId: batch.programmeId, name: batch.name }
+  });
+  return batch;
 }
 
 export async function submitNcctNomination(
@@ -905,7 +939,17 @@ export async function scheduleSession(
   }
 
   try {
-    return await createNcctSession(data);
+    const session = await createNcctSession(data);
+    await recordNcctAudit({
+      organizationId,
+      actorProfileId,
+      institutionId: batch.institutionId,
+      action: 'SESSION_CREATED',
+      entityType: 'session',
+      entityId: session.id,
+      metadata: { batchId: batch.id, startsAt: data.startsAt, endsAt: data.endsAt }
+    });
+    return session;
   } catch (error) {
     if (error instanceof Error && error.message === 'SESSION_BATCH_CONFLICT') {
       throw new AppError('This batch already has a session during that time', 'NCCT_SESSION_BATCH_CONFLICT', 409);
@@ -933,7 +977,17 @@ export async function registerResource(
   }
   await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
-  return createNcctResource(data);
+  const resource = await createNcctResource(data);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: resource.institutionId,
+    action: 'RESOURCE_CREATED',
+    entityType: 'resource',
+    entityId: resource.id,
+    metadata: { type: resource.type, name: resource.name, capacity: resource.capacity }
+  });
+  return resource;
 }
 
 export async function bookResource(
@@ -956,7 +1010,17 @@ export async function bookResource(
   await assertNcctInstitutionAccess(organizationId, resource.institutionId, actorProfileId, orgRole);
 
   try {
-    return await bookNcctResource(data);
+    const booking = await bookNcctResource(data);
+    await recordNcctAudit({
+      organizationId,
+      actorProfileId,
+      institutionId: resource.institutionId,
+      action: 'RESOURCE_BOOKED',
+      entityType: 'resource_booking',
+      entityId: booking.id,
+      metadata: { resourceId: resource.id, sessionId: data.sessionId, quantity: data.quantity }
+    });
+    return booking;
   } catch (error) {
     if (error instanceof Error && error.message === 'RESOURCE_INSTITUTION_CONFLICT') {
       throw new AppError(
@@ -993,7 +1057,22 @@ export async function saveTraineeLogistics(
     throw new AppError('Trainee and batch must belong to the same institution', 'NCCT_INSTITUTION_MISMATCH', 409);
   }
   await assertNcctInstitutionAccess(organizationId, batch.institutionId, actorProfileId, orgRole);
-  return saveNcctTraineeLogistics(data);
+  const logistics = await saveNcctTraineeLogistics(data);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: batch.institutionId,
+    action: 'TRAINEE_LOGISTICS_UPDATED',
+    entityType: 'trainee_logistics',
+    entityId: logistics.id,
+    metadata: {
+      batchId: batch.id,
+      traineeId: trainee.id,
+      mealRequired: data.mealRequired,
+      transportRequired: data.transportRequired
+    }
+  });
+  return logistics;
 }
 
 export async function registerSyncDevice(
@@ -1008,7 +1087,17 @@ export async function registerSyncDevice(
   }
   await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
-  return createNcctSyncDevice({ ...data, organizationId });
+  const device = await createNcctSyncDevice({ ...data, organizationId });
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: device.institutionId,
+    action: 'SYNC_DEVICE_REGISTERED',
+    entityType: 'sync_device',
+    entityId: device.id,
+    metadata: { name: device.name }
+  });
+  return device;
 }
 
 export async function receiveSyncEvents(
