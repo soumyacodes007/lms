@@ -34,6 +34,10 @@
   let message = $state('');
   let completedSteps = $derived(snapshot?.steps.filter((item) => item.status === 'COMPLETED').length ?? 0);
   let totalSteps = $derived(snapshot?.steps.length ?? 0);
+  let requiredSteps = $derived(snapshot?.steps.filter((item) => item.step.required).length ?? 0);
+  let completedRequiredSteps = $derived(
+    snapshot?.steps.filter((item) => item.step.required && item.status === 'COMPLETED').length ?? 0
+  );
 
   $effect(() => {
     if (!enrollments.some((row) => row.enrollment.id === selectedId)) {
@@ -171,6 +175,7 @@
         <div class="space-y-3">
           <div class="flex flex-wrap gap-2">
             <Badge variant="secondary">{completedSteps}/{totalSteps} steps completed</Badge>
+            <Badge variant="outline">{completedRequiredSteps}/{requiredSteps} required complete</Badge>
             {#if completedSteps === totalSteps && totalSteps > 0}<Badge>Programme step sequence complete</Badge>{/if}
           </div>
           {#each snapshot.steps as item}
