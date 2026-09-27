@@ -22,6 +22,16 @@ export const ZCreateNcctTrainee = z.object({
   directoryVisible: z.boolean().default(true)
 });
 
+export const ZUpdateNcctTrainee = z.object({
+  institutionId: z.string().uuid().optional(),
+  cooperativeName: z.string().trim().max(160).nullable().optional(),
+  district: z.string().trim().min(2).max(80).optional(),
+  state: z.string().trim().min(2).max(80).optional(),
+  phone: z.string().trim().max(30).nullable().optional(),
+  skills: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
+  directoryVisible: z.boolean().optional()
+});
+
 export const ZCreateNcctProgramme = z.object({
   title: z.string().trim().min(3).max(160),
   description: z.string().trim().min(10).max(5000),
@@ -177,6 +187,7 @@ export const ZSearchNcctDirectory = z.object({
 
 export type TCreateNcctInstitution = z.infer<typeof ZCreateNcctInstitution>;
 export type TCreateNcctTrainee = z.infer<typeof ZCreateNcctTrainee>;
+export type TUpdateNcctTrainee = z.infer<typeof ZUpdateNcctTrainee>;
 export type TCreateNcctProgramme = z.infer<typeof ZCreateNcctProgramme>;
 export type TAddNcctProgrammeStep = z.infer<typeof ZAddNcctProgrammeStep>;
 export type TCreateNcctBatch = z.infer<typeof ZCreateNcctBatch>;

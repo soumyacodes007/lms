@@ -25,6 +25,7 @@ import {
   ZSaveNcctTraineeLogistics,
   ZSearchNcctDirectory,
   ZUpdateNcctJobApplication,
+  ZUpdateNcctTrainee,
   ZUpdateNcctProgress
 } from '@cio/utils/validation/ncct';
 import { zValidator } from '@hono/zod-validator';
@@ -58,6 +59,7 @@ import {
   submitAssessment,
   submitJobApplication,
   submitNcctNomination,
+  updateNcctTrainee,
   updateJobApplication,
   updateEnrollmentProgress
 } from '@api/services/ncct/ncct';
@@ -83,6 +85,7 @@ const applicationParam = z.object({ applicationId: z.string().uuid() });
 const assessmentParam = z.object({ assessmentId: z.string().uuid() });
 const syncDeviceParam = z.object({ deviceId: z.string().uuid() });
 const careerParam = z.object({ traineeId: z.string().uuid() });
+const traineeParam = z.object({ traineeId: z.string().uuid() });
 const enrollmentParam = z.object({ enrollmentId: z.string().uuid() });
 const verificationParam = z.object({ verificationToken: z.string().min(16).max(128) });
 const credentialParam = z.object({ credentialId: z.string().uuid() });
@@ -176,6 +179,32 @@ export const ncctRouter = new Hono()
         return c.json({ success: true, data: await registerNcctTrainee(c.get('orgId')!, c.req.valid('json')) }, 201);
       } catch (error) {
         return handleError(c, error, 'Failed to create trainee');
+      }
+    }
+  )
+  .patch(
+    '/trainees/:traineeId',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', traineeParam),
+    zValidator('json', ZUpdateNcctTrainee),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await updateNcctTrainee(
+              c.get('orgId')!,
+              c.req.valid('param').traineeId,
+              c.req.valid('json'),
+              c.get('user')!.id
+            )
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to update trainee');
       }
     }
   )

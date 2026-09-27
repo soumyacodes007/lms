@@ -106,6 +106,20 @@ export async function createNcctTrainee(
   return trainee;
 }
 
+export async function updateNcctTrainee(
+  traineeId: string,
+  data: Partial<typeof schema.ncctTrainee.$inferInsert>,
+  client: DbOrTxClient = db
+): Promise<TNcctTrainee> {
+  const [trainee] = await client
+    .update(schema.ncctTrainee)
+    .set({ ...data, updatedAt: new Date().toISOString() })
+    .where(eq(schema.ncctTrainee.id, traineeId))
+    .returning();
+  if (!trainee) throw new Error('Trainee not found');
+  return trainee;
+}
+
 export async function listNcctProgrammes(organizationId: string): Promise<TNcctProgramme[]> {
   return db
     .select()

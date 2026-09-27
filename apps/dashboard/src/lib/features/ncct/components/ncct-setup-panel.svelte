@@ -17,10 +17,14 @@
 
   type Trainee = {
     id: string;
+    institutionId: string;
     traineeNumber: string;
+    cooperativeName: string | null;
     district: string;
     state: string;
+    phone: string | null;
     skills: string[];
+    directoryVisible: boolean;
   };
 
   type Props = {
@@ -31,6 +35,7 @@
   let { institutions, trainees }: Props = $props();
   let institutionOpen = $state(false);
   let traineeOpen = $state(false);
+  let traineeEditOpen = $state(false);
   let institutionBusy = $state(false);
   let traineeBusy = $state(false);
   let formMessage = $state('');
@@ -49,6 +54,8 @@
   let traineeState = $state('');
   let traineePhone = $state('');
   let traineeSkills = $state('');
+  let traineeDirectoryVisible = $state(true);
+  let editingTraineeId = $state<string | null>(null);
 
   function resetInstitution() {
     institutionCode = '';
@@ -68,7 +75,22 @@
     traineeState = '';
     traineePhone = '';
     traineeSkills = '';
+    traineeDirectoryVisible = true;
     formMessage = '';
+  }
+
+  function editTrainee(trainee: Trainee) {
+    editingTraineeId = trainee.id;
+    traineeInstitutionId = trainee.institutionId;
+    traineeNumber = trainee.traineeNumber;
+    traineeCooperative = trainee.cooperativeName ?? '';
+    traineeDistrict = trainee.district;
+    traineeState = trainee.state;
+    traineePhone = trainee.phone ?? '';
+    traineeSkills = trainee.skills.join(', ');
+    traineeDirectoryVisible = trainee.directoryVisible;
+    formMessage = '';
+    traineeEditOpen = true;
   }
 
   async function createInstitution() {
@@ -114,7 +136,8 @@
           skills: traineeSkills
             .split(',')
             .map((skill) => skill.trim())
-            .filter(Boolean)
+            .filter(Boolean),
+          directoryVisible: traineeDirectoryVisible
         }
       });
       if (!response.ok) {
@@ -126,6 +149,40 @@
       await invalidateAll();
     } catch {
       formMessage = 'The trainee could not be registered.';
+    } finally {
+      traineeBusy = false;
+    }
+  }
+
+  async function updateTrainee() {
+    if (!editingTraineeId) return;
+    traineeBusy = true;
+    formMessage = '';
+    try {
+      const response = await classroomio.ncct.trainees[':traineeId'].$patch({
+        param: { traineeId: editingTraineeId },
+        json: {
+          institutionId: traineeInstitutionId,
+          cooperativeName: traineeCooperative.trim() || null,
+          district: traineeDistrict.trim(),
+          state: traineeState.trim(),
+          phone: traineePhone.trim() || null,
+          skills: traineeSkills
+            .split(',')
+            .map((skill) => skill.trim())
+            .filter(Boolean),
+          directoryVisible: traineeDirectoryVisible
+        }
+      });
+      if (!response.ok) {
+        formMessage = 'The trainee profile could not be updated.';
+        return;
+      }
+      traineeEditOpen = false;
+      editingTraineeId = null;
+      await invalidateAll();
+    } catch {
+      formMessage = 'The trainee profile could not be updated.';
     } finally {
       traineeBusy = false;
     }
@@ -163,6 +220,24 @@
     <Badge variant="secondary">{institutions.length} institutions</Badge>
     <Badge variant="secondary">{trainees.length} trainees</Badge>
   </div>
+  {#if trainees.length > 0}
+    <div class="mt-4 space-y-2">
+      {#each trainees.slice(0, 5) as trainee}
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+          <div>
+            <p class="font-medium">{trainee.traineeNumber}{trainee.cooperativeName ? ` · ${trainee.cooperativeName}` : ''}</p>
+            <p class="ui:text-muted-foreground">{trainee.district}, {trainee.state} · {trainee.skills.join(', ') || 'No skills recorded'}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <Badge variant={trainee.directoryVisible ? 'secondary' : 'outline'}>
+              {trainee.directoryVisible ? 'Directory visible' : 'Private'}
+            </Badge>
+            <Button size="sm" variant="outline" onclick={() => editTrainee(trainee)}>Edit profile</Button>
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/if}
 </section>
 
 <Dialog.Root bind:open={institutionOpen}>
@@ -200,6 +275,41 @@
           !institutionDistrict.trim() ||
           !institutionState.trim()}
         onclick={() => void createInstitution()}>Save institution</Button
+      >
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={traineeEditOpen}>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>Edit trainee profile</Dialog.Title>
+      <Dialog.Description>Keep the cooperative profile and employer directory visibility up to date.</Dialog.Description>
+    </Dialog.Header>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <InputField label="Trainee number" value={traineeNumber} disabled />
+      <label class="grid gap-2 text-sm font-medium sm:col-span-2">
+        Institution
+        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={traineeInstitutionId}>
+          {#each institutions as institution}<option value={institution.id}>{institution.name} ({institution.code})</option>{/each}
+        </select>
+      </label>
+      <InputField label="Cooperative name" bind:value={traineeCooperative} />
+      <InputField label="Phone" bind:value={traineePhone} />
+      <InputField label="District" bind:value={traineeDistrict} />
+      <InputField label="State" bind:value={traineeState} />
+      <InputField label="Skills (comma separated)" bind:value={traineeSkills} />
+      <label class="flex items-center gap-2 text-sm sm:col-span-2">
+        <input type="checkbox" bind:checked={traineeDirectoryVisible} />
+        Let employers and administrators find this trainee in the certified directory
+      </label>
+    </div>
+    {#if formMessage}<p class="ui:text-destructive text-sm">{formMessage}</p>{/if}
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (traineeEditOpen = false)}>Cancel</Button>
+      <Button
+        disabled={traineeBusy || !traineeInstitutionId || !traineeDistrict.trim() || !traineeState.trim()}
+        onclick={() => void updateTrainee()}>Save profile</Button
       >
     </Dialog.Footer>
   </Dialog.Content>
