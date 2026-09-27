@@ -246,6 +246,9 @@
           <div>
             <p class="font-medium">{row.job.title} · {row.trainee.traineeNumber}</p>
             <p class="ui:text-muted-foreground">{row.job.employerName} · {row.job.location}</p>
+            {#if row.application.coverNote}
+              <p class="ui:text-muted-foreground mt-2 max-w-xl text-xs">{row.application.coverNote}</p>
+            {/if}
           </div>
           <div class="flex items-center gap-2">
             <Badge variant="outline">{row.application.status}</Badge>
