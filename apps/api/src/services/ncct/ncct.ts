@@ -152,51 +152,92 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     listNcctAuditEvents(organizationId)
   ]);
 
-  const hasCentreScope = orgRole === ROLE.TUTOR && Boolean(actorProfileId);
-  const assignedInstitutionIds = hasCentreScope
+  const hasTutorScope = orgRole === ROLE.TUTOR && Boolean(actorProfileId);
+  const hasStudentScope = orgRole === ROLE.STUDENT && Boolean(actorProfileId);
+  const assignedInstitutionIds = hasTutorScope
     ? new Set(
         institutionMembers
           .filter(({ member }) => member.profileId === actorProfileId && member.active)
           .map(({ member }) => member.institutionId)
       )
     : null;
-  const centreIds = assignedInstitutionIds ?? new Set<string>();
-  const visibleInstitutions = hasCentreScope
-    ? institutions.filter((institution) => centreIds.has(institution.id))
-    : institutions;
-  const visibleTrainees = hasCentreScope
-    ? trainees.filter((trainee) => centreIds.has(trainee.institutionId))
-    : trainees;
-  const visibleBatches = hasCentreScope ? batches.filter((batch) => centreIds.has(batch.institutionId)) : batches;
-  const visibleNominations = hasCentreScope
-    ? nominations.filter(({ institution }) => centreIds.has(institution.id))
-    : nominations;
-  const visibleSessions = hasCentreScope
+  const tutorCentreIds = assignedInstitutionIds ?? new Set<string>();
+  const studentTraineeIds = new Set(
+    hasStudentScope
+      ? trainees.filter((trainee) => trainee.profileId === actorProfileId).map((trainee) => trainee.id)
+      : []
+  );
+  const studentInstitutionIds = new Set(
+    hasStudentScope
+      ? trainees.filter((trainee) => studentTraineeIds.has(trainee.id)).map((trainee) => trainee.institutionId)
+      : []
+  );
+  const studentBatchIds = new Set(
+    hasStudentScope
+      ? enrollments
+          .filter(({ enrollment }) => studentTraineeIds.has(enrollment.traineeId))
+          .map(({ enrollment }) => enrollment.batchId)
+      : []
+  );
+  const hasScopedView = hasTutorScope || hasStudentScope;
+  const visibleInstitutions = hasTutorScope
+    ? institutions.filter((institution) => tutorCentreIds.has(institution.id))
+    : hasStudentScope
+      ? institutions.filter((institution) => studentInstitutionIds.has(institution.id))
+      : institutions;
+  const visibleTrainees = hasTutorScope
+    ? trainees.filter((trainee) => tutorCentreIds.has(trainee.institutionId))
+    : hasStudentScope
+      ? trainees.filter((trainee) => studentTraineeIds.has(trainee.id))
+      : trainees;
+  const visibleBatches = hasTutorScope
+    ? batches.filter((batch) => tutorCentreIds.has(batch.institutionId))
+    : hasStudentScope
+      ? batches.filter((batch) => studentBatchIds.has(batch.id))
+      : batches;
+  const visibleNominations = hasTutorScope
+    ? nominations.filter(({ institution }) => tutorCentreIds.has(institution.id))
+    : hasStudentScope
+      ? nominations.filter(({ trainee }) => studentTraineeIds.has(trainee.id))
+      : nominations;
+  const visibleSessions = hasScopedView
     ? sessions.filter(({ session }) => visibleBatches.some((batch) => batch.id === session.batchId))
     : sessions;
-  const visibleResources = hasCentreScope
-    ? resources.filter(({ resource }) => centreIds.has(resource.institutionId))
-    : resources;
-  const visibleAssessments = hasCentreScope
+  const visibleResources = hasTutorScope
+    ? resources.filter(({ resource }) => tutorCentreIds.has(resource.institutionId))
+    : hasStudentScope
+      ? resources.filter(({ resource }) => studentInstitutionIds.has(resource.institutionId))
+      : resources;
+  const visibleAssessments = hasTutorScope
     ? assessments.filter(({ assessment }) => visibleTrainees.some((trainee) => trainee.id === assessment.traineeId))
-    : assessments;
-  const visibleEnrollments = hasCentreScope
-    ? enrollments.filter(({ batch }) => centreIds.has(batch.institutionId))
-    : enrollments;
-  const visibleCredentials = hasCentreScope
-    ? credentials.filter(({ trainee }) => centreIds.has(trainee.institutionId))
-    : credentials;
-  const visibleApplications = hasCentreScope
+    : hasStudentScope
+      ? assessments.filter(({ assessment }) => studentTraineeIds.has(assessment.traineeId))
+      : assessments;
+  const visibleEnrollments = hasTutorScope
+    ? enrollments.filter(({ batch }) => tutorCentreIds.has(batch.institutionId))
+    : hasStudentScope
+      ? enrollments.filter(({ enrollment }) => studentTraineeIds.has(enrollment.traineeId))
+      : enrollments;
+  const visibleCredentials = hasTutorScope
+    ? credentials.filter(({ trainee }) => tutorCentreIds.has(trainee.institutionId))
+    : hasStudentScope
+      ? credentials.filter(({ trainee }) => studentTraineeIds.has(trainee.id))
+      : credentials;
+  const visibleApplications = hasTutorScope
     ? applications.filter(({ trainee }) => visibleTrainees.some((item) => item.id === trainee.id))
-    : applications;
+    : hasStudentScope
+      ? applications.filter(({ trainee }) => studentTraineeIds.has(trainee.id))
+      : applications;
   const visibleApplicationIds = new Set(visibleApplications.map(({ application }) => application.id));
-  const visibleApplicationEvents = hasCentreScope
+  const visibleApplicationEvents = hasScopedView
     ? applicationEvents.filter(({ application }) => visibleApplicationIds.has(application.id))
     : applicationEvents;
-  const visibleAuditEvents = hasCentreScope
-    ? auditEvents.filter((event) => event.institutionId && centreIds.has(event.institutionId))
-    : auditEvents;
-  const visibleSummary = hasCentreScope
+  const visibleAuditEvents = hasTutorScope
+    ? auditEvents.filter((event) => event.institutionId && tutorCentreIds.has(event.institutionId))
+    : hasStudentScope
+      ? []
+      : auditEvents;
+  const visibleSummary = hasScopedView
     ? {
         institutions: visibleInstitutions.length,
         trainees: visibleTrainees.length,
@@ -211,9 +252,11 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
   return {
     summary: visibleSummary,
     institutions: visibleInstitutions,
-    institutionMembers: hasCentreScope
-      ? institutionMembers.filter(({ member }) => centreIds.has(member.institutionId))
-      : institutionMembers,
+    institutionMembers: hasTutorScope
+      ? institutionMembers.filter(({ member }) => tutorCentreIds.has(member.institutionId))
+      : hasStudentScope
+        ? []
+        : institutionMembers,
     trainees: visibleTrainees,
     programmes,
     batches: visibleBatches,
