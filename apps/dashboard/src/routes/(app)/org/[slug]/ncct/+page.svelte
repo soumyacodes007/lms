@@ -19,6 +19,7 @@
   import NcctEmploymentPanel from '$lib/features/ncct/components/ncct-employment-panel.svelte';
   import NcctCareerPanel from '$lib/features/ncct/components/ncct-career-panel.svelte';
   import NcctReportPanel from '$lib/features/ncct/components/ncct-report-panel.svelte';
+  import NcctOperationsPanel from '$lib/features/ncct/components/ncct-operations-panel.svelte';
   import GraduationCapIcon from '@lucide/svelte/icons/graduation-cap';
   import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
   import UsersIcon from '@lucide/svelte/icons/users';
@@ -204,6 +205,12 @@
           <NcctEmploymentPanel jobs={overview.jobs} trainees={overview.trainees} />
           <NcctCareerPanel trainees={overview.trainees} />
           <NcctReportPanel report={overview.reports} />
+          <NcctOperationsPanel
+            institutions={overview.institutions}
+            trainees={overview.trainees}
+            batches={overview.batches}
+            resources={overview.resources}
+          />
 
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <section class="ui:bg-card rounded-xl border p-5 xl:col-span-2">
