@@ -627,8 +627,26 @@ export async function updateNcctTrainee(
   return updated;
 }
 
-export async function publishNcctProgramme(organizationId: string, data: TCreateNcctProgramme) {
-  return createNcctProgramme({ ...data, organizationId, status: 'PUBLISHED', publishedAt: new Date().toISOString() });
+export async function publishNcctProgramme(
+  organizationId: string,
+  data: TCreateNcctProgramme,
+  actorProfileId?: string
+) {
+  const programme = await createNcctProgramme({
+    ...data,
+    organizationId,
+    status: 'PUBLISHED',
+    publishedAt: new Date().toISOString()
+  });
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    action: 'PROGRAMME_PUBLISHED',
+    entityType: 'programme',
+    entityId: programme.id,
+    metadata: { title: programme.title, language: programme.language }
+  });
+  return programme;
 }
 
 export async function addProgrammeStep(organizationId: string, data: TAddNcctProgrammeStep, actorProfileId?: string) {

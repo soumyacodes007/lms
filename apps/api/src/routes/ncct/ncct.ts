@@ -392,7 +392,13 @@ export const ncctRouter = new Hono()
     zValidator('json', ZCreateNcctProgramme),
     async (c) => {
       try {
-        return c.json({ success: true, data: await publishNcctProgramme(c.get('orgId')!, c.req.valid('json')) }, 201);
+        return c.json(
+          {
+            success: true,
+            data: await publishNcctProgramme(c.get('orgId')!, c.req.valid('json'), c.get('user')!.id)
+          },
+          201
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to create programme');
       }
