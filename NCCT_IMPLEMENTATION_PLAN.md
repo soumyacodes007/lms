@@ -17,7 +17,7 @@ The first working version is English only. Digital attendance is deferred. One c
 
 ## Feature slices
 
-Current delivery status: the end-to-end English SIH demo path is implemented and pushed in small feature commits. Centre membership permissions and role-scoped reads and writes are implemented. The remaining work is encrypted offline caching, richer analytics, multilingual content, and the deferred attendance hardware flow.
+Current delivery status: the end-to-end English SIH demo path is implemented and pushed in small feature commits. Centre membership permissions, role-scoped reads and writes, and encrypted offline learning packs are implemented. The remaining work is richer analytics, multilingual content, downloadable media synchronization, and the deferred attendance hardware flow.
 
 | Slice | Data and backend | User interface and acceptance target |
 | --- | --- | --- |
@@ -29,7 +29,7 @@ Current delivery status: the end-to-end English SIH demo path is implemented and
 | 6. Skills and credential registry | **Implemented:** trainee skills, public verification token/page, revocation, and directory visibility controls. | Employers can search visible certified trainees. |
 | 7. Employment exchange | **Implemented:** vacancies, applications, shortlist/select/reject actions, and application status history. Separate employer accounts can follow. | The dashboard shows the employment pipeline and recent transitions. |
 | 8. Career counselling | **Implemented for the demo:** profile-aware job matching, conversation history, and explainable suggestions. | Guidance is tied to the trainee’s skills and open jobs. |
-| 9. Offline centre PC | **In progress:** device identity, centre-scoped idempotent nomination/progress queue, conflict policy, and visible sync status are implemented. Encrypted cache and full offline course content remain. | Centres can queue permitted actions and retain conflicts for retry/review without bypassing centre permissions. |
+| 9. Offline centre PC | **Implemented for text learning:** device identity, centre-scoped idempotent nomination/progress queue, conflict policy, encrypted programme packs, and visible sync status are implemented. Cached packs include lesson text, translation content, exercise prompts, and question metadata; media synchronization remains. | Centres can queue permitted actions and review cached programme learning content without connectivity. |
 | 10. NCCT analytics | **Implemented for the demo:** central summary metrics, region/status breakdowns, placement metrics, audit history, and CSV export. | Central operators can review and export the current NCCT operating picture. |
 
 ## Delivery order
@@ -39,7 +39,7 @@ Current delivery status: the end-to-end English SIH demo path is implemented and
 3. **End-to-end training flow:** ordered programme, nomination and approval, scheduled batch, assessment, certificate, and progress dashboard. This is the first SIH demonstration milestone.
 4. **Operations:** timetable, room/hostel/logistics allocations, evaluator scheduling, certificate verification, and certified trainee directory.
 5. **Employment:** employer portal, job board, applications, placement tracking, and career guidance.
-6. **Offline and reporting:** centre PC cache/queue/sync, central dashboards, exports, and recovery testing for interrupted sync.
+6. **Offline and reporting:** centre PC text-pack cache/queue/sync, central dashboards, exports, and recovery testing for interrupted sync.
 7. **Later scope:** Indian-language UI/content and QR/NFC or face-based attendance after the English-only core is stable.
 
 ## First demonstration path
