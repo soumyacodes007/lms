@@ -1221,6 +1221,9 @@ export async function scheduleAssessment(
   await assertNcctInstitutionAccess(organizationId, trainee.institutionId, actorProfileId, orgRole);
   const batch = batches.find((item) => item.id === data.batchId);
   if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
+  if (batch.institutionId !== trainee.institutionId) {
+    throw new AppError('Trainee and batch must belong to the same institution', 'NCCT_INSTITUTION_MISMATCH', 409);
+  }
   if (!enrollments.some(({ enrollment }) => enrollment.batchId === batch.id && enrollment.traineeId === trainee.id)) {
     throw new AppError('The trainee must be enrolled in this batch first', 'NCCT_ENROLLMENT_REQUIRED', 409);
   }
@@ -1314,6 +1317,9 @@ export async function issueCredential(
   if (!programme) throw new AppError('Programme does not belong to this organization', 'NCCT_PROGRAMME_NOT_FOUND', 404);
   const batch = batches.find((item) => item.id === data.batchId);
   if (!batch) throw new AppError('Batch does not belong to this organization', 'NCCT_BATCH_NOT_FOUND', 404);
+  if (batch.institutionId !== trainee.institutionId) {
+    throw new AppError('Trainee and batch must belong to the same institution', 'NCCT_INSTITUTION_MISMATCH', 409);
+  }
   if (batch.programmeId !== data.programmeId) {
     throw new AppError('Batch does not belong to the selected programme', 'NCCT_BATCH_PROGRAMME_MISMATCH', 409);
   }
