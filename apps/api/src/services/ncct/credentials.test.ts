@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertNcctCredentialIssuanceAllowed } from './credentials';
+import { assertNcctCredentialIssuanceAllowed, assertNcctCredentialPrerequisites } from './credentials';
 
 const candidate = { traineeId: 'trainee-1', programmeId: 'programme-1', batchId: 'batch-1' };
 
@@ -15,5 +15,15 @@ describe('NCCT credentials', () => {
     expect(() => assertNcctCredentialIssuanceAllowed([{ ...candidate, revokedAt: null }], candidate)).toThrowError(
       'An active credential already exists for this trainee and batch'
     );
+  });
+
+  it('requires programme completion and a passed assessment', () => {
+    expect(() => assertNcctCredentialPrerequisites('ENROLLED', true)).toThrowError(
+      'Complete the required programme steps before issuing a credential'
+    );
+    expect(() => assertNcctCredentialPrerequisites('COMPLETED', false)).toThrowError(
+      'A passed assessment is required before issuing a credential'
+    );
+    expect(() => assertNcctCredentialPrerequisites('COMPLETED', true)).not.toThrow();
   });
 });

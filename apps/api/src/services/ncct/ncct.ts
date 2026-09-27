@@ -94,7 +94,7 @@ import { ROLE } from '@cio/utils/constants';
 import { assertNcctApplicationTransition, assertNcctJobApplicationAllowed } from './employment';
 import { assertNcctAssessmentResultAllowed, assertNcctAssessmentSlotAvailable } from './assessments';
 import { assertNcctSyncDeviceActive } from './sync';
-import { assertNcctCredentialIssuanceAllowed } from './credentials';
+import { assertNcctCredentialIssuanceAllowed, assertNcctCredentialPrerequisites } from './credentials';
 import { getOrgCourses } from '@cio/db/queries/course';
 import { getExercisesByCourseId, getQuestionsByExerciseIds } from '@cio/db/queries/exercise';
 import { getLessonById, getLessonsByCourseId } from '@cio/db/queries/lesson';
@@ -1371,17 +1371,17 @@ export async function issueCredential(
   if (batch.programmeId !== data.programmeId) {
     throw new AppError('Batch does not belong to the selected programme', 'NCCT_BATCH_PROGRAMME_MISMATCH', 409);
   }
-  if (
-    !enrollments.some(({ enrollment }) => enrollment.batchId === batch.id && enrollment.traineeId === data.traineeId)
-  ) {
+  const enrollment = enrollments.find(
+    ({ enrollment }) => enrollment.batchId === batch.id && enrollment.traineeId === data.traineeId
+  )?.enrollment;
+  if (!enrollment) {
     throw new AppError('The trainee must be enrolled in this batch first', 'NCCT_ENROLLMENT_REQUIRED', 409);
   }
   const passed = assessments.some(
     ({ assessment }) =>
       assessment.traineeId === data.traineeId && assessment.batchId === data.batchId && assessment.status === 'PASSED'
   );
-  if (!passed)
-    throw new AppError('A passed assessment is required before issuing a credential', 'NCCT_ASSESSMENT_REQUIRED', 409);
+  assertNcctCredentialPrerequisites(enrollment.status, passed);
 
   assertNcctCredentialIssuanceAllowed(
     credentials.map(({ credential }) => credential),

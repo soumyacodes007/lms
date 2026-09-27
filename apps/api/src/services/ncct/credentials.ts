@@ -19,3 +19,16 @@ export function assertNcctCredentialIssuanceAllowed(
     );
   }
 }
+
+export function assertNcctCredentialPrerequisites(enrollmentStatus: string, passedAssessment: boolean) {
+  if (enrollmentStatus !== 'COMPLETED') {
+    throw new AppError(
+      'Complete the required programme steps before issuing a credential',
+      'NCCT_COMPLETION_REQUIRED',
+      409
+    );
+  }
+  if (!passedAssessment) {
+    throw new AppError('A passed assessment is required before issuing a credential', 'NCCT_ASSESSMENT_REQUIRED', 409);
+  }
+}
