@@ -20,6 +20,8 @@ import {
   listNcctJobs,
   listNcctProgrammeSteps,
   listNcctProgrammes,
+  listNcctResources,
+  listNcctSessions,
   listNcctTrainees,
   bookNcctResource,
   recordNcctSyncEvents,
@@ -50,16 +52,27 @@ import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
 
 export async function getNcctOverview(organizationId: string) {
-  const [summary, institutions, trainees, programmes, batches, jobs] = await Promise.all([
+  const [summary, institutions, trainees, programmes, batches, jobs, sessions, resources] = await Promise.all([
     getNcctDashboardSummary(organizationId),
     listNcctInstitutions(organizationId),
     listNcctTrainees(organizationId),
     listNcctProgrammes(organizationId),
     listNcctBatches(organizationId),
-    listNcctJobs(organizationId)
+    listNcctJobs(organizationId),
+    listNcctSessions(organizationId),
+    listNcctResources(organizationId)
   ]);
 
-  return { summary, institutions, trainees, programmes, batches, jobs };
+  return {
+    summary,
+    institutions,
+    trainees,
+    programmes,
+    batches,
+    jobs,
+    sessions: sessions.map(({ session }) => session),
+    resources: resources.map(({ resource }) => resource)
+  };
 }
 
 export async function registerNcctInstitution(organizationId: string, data: TCreateNcctInstitution) {

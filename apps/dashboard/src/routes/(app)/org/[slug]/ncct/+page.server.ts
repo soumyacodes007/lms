@@ -18,6 +18,8 @@ type NcctOverview = {
     programmes: Array<{ id: string; title: string; description: string; status: string }>;
     batches: Array<{ id: string; name: string; startsOn: string; endsOn: string; status: string; capacity: number }>;
     jobs: Array<{ id: string; employerName: string; title: string; location: string; status: string }>;
+    sessions: Array<{ id: string; title: string; startsAt: string; endsAt: string; room: string | null }>;
+    resources: Array<{ id: string; type: string; name: string; capacity: number; active: boolean }>;
   };
 };
 

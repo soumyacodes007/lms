@@ -2,6 +2,8 @@
   import Building2Icon from '@lucide/svelte/icons/building-2';
   import BriefcaseBusinessIcon from '@lucide/svelte/icons/briefcase-business';
   import CalendarDaysIcon from '@lucide/svelte/icons/calendar-days';
+  import ClipboardListIcon from '@lucide/svelte/icons/clipboard-list';
+  import PackageOpenIcon from '@lucide/svelte/icons/package-open';
   import GraduationCapIcon from '@lucide/svelte/icons/graduation-cap';
   import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
   import UsersIcon from '@lucide/svelte/icons/users';
@@ -116,6 +118,56 @@
                   </div>
                 {:else}
                   <p class="ui:text-muted-foreground text-sm">No institutions have been registered.</p>
+                {/each}
+              </div>
+            </section>
+
+            <section class="ui:bg-card rounded-xl border p-5">
+              <div class="mb-4 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <ClipboardListIcon class="ui:text-muted-foreground size-4" />
+                  <h2 class="font-semibold">Upcoming sessions</h2>
+                </div>
+                <Badge variant="secondary">{overview.sessions.length}</Badge>
+              </div>
+              <div class="space-y-3">
+                {#each overview.sessions.slice(0, 5) as session}
+                  <div class="rounded-lg border p-3">
+                    <div class="flex items-start justify-between gap-4">
+                      <p class="font-medium">{session.title}</p>
+                      {#if session.room}
+                        <Badge variant="outline">{session.room}</Badge>
+                      {/if}
+                    </div>
+                    <p class="ui:text-muted-foreground mt-1 text-sm">
+                      {new Date(session.startsAt).toLocaleString()} to {new Date(session.endsAt).toLocaleTimeString()}
+                    </p>
+                  </div>
+                {:else}
+                  <p class="ui:text-muted-foreground text-sm">No sessions have been scheduled.</p>
+                {/each}
+              </div>
+            </section>
+
+            <section class="ui:bg-card rounded-xl border p-5">
+              <div class="mb-4 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <PackageOpenIcon class="ui:text-muted-foreground size-4" />
+                  <h2 class="font-semibold">Centre resources</h2>
+                </div>
+                <Badge variant="secondary">{overview.resources.length}</Badge>
+              </div>
+              <div class="grid gap-3 sm:grid-cols-2">
+                {#each overview.resources.slice(0, 6) as resource}
+                  <div class="rounded-lg border p-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <p class="font-medium">{resource.name}</p>
+                      <Badge variant={resource.active ? 'default' : 'outline'}>{resource.type}</Badge>
+                    </div>
+                    <p class="ui:text-muted-foreground mt-1 text-sm">Capacity {resource.capacity}</p>
+                  </div>
+                {:else}
+                  <p class="ui:text-muted-foreground text-sm">No centre resources have been registered.</p>
                 {/each}
               </div>
             </section>
