@@ -258,7 +258,11 @@
             institutionMembers={overview.institutionMembers}
             institutionMemberCandidates={overview.institutionMemberCandidates}
           />
-          <NcctProgrammePanel institutions={overview.institutions} programmes={overview.programmes} />
+          <NcctProgrammePanel
+            institutions={overview.institutions}
+            programmes={overview.programmes}
+            programmeSteps={overview.programmeSteps}
+          />
           <NcctNominationPanel
             trainees={overview.trainees}
             batches={overview.batches}

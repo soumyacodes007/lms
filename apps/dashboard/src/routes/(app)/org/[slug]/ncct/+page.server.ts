@@ -37,6 +37,17 @@ type NcctOverview = {
       directoryVisible: boolean;
     }>;
     programmes: Array<{ id: string; title: string; description: string; status: string }>;
+    programmeSteps: Array<{
+      programmeId: string;
+      steps: Array<{
+        id: string;
+        programmeId: string;
+        courseId: string;
+        position: number;
+        prerequisiteStepId: string | null;
+        required: boolean;
+      }>;
+    }>;
     batches: Array<{
       id: string;
       programmeId: string;

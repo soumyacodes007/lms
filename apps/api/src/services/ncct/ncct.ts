@@ -156,6 +156,12 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     listNcctEnrollments(organizationId),
     listNcctAuditEvents(organizationId)
   ]);
+  const programmeSteps = await Promise.all(
+    programmes.map(async (programme) => ({
+      programmeId: programme.id,
+      steps: await listNcctProgrammeSteps(programme.id)
+    }))
+  );
 
   const hasTutorScope = orgRole === ROLE.TUTOR && Boolean(actorProfileId);
   const hasStudentScope = orgRole === ROLE.STUDENT && Boolean(actorProfileId);
@@ -264,6 +270,7 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
         : institutionMembers,
     trainees: visibleTrainees,
     programmes,
+    programmeSteps,
     batches: visibleBatches,
     jobs,
     sessions: visibleSessions.map(({ session }) => session),
@@ -436,8 +443,19 @@ export async function publishNcctProgramme(organizationId: string, data: TCreate
   return createNcctProgramme({ ...data, organizationId, status: 'PUBLISHED', publishedAt: new Date().toISOString() });
 }
 
-export async function addProgrammeStep(data: TAddNcctProgrammeStep) {
-  return addNcctProgrammeStep(data);
+export async function addProgrammeStep(organizationId: string, data: TAddNcctProgrammeStep, actorProfileId?: string) {
+  const programme = (await listNcctProgrammes(organizationId)).find((item) => item.id === data.programmeId);
+  if (!programme) throw new AppError('Programme does not belong to this organization', 'NCCT_PROGRAMME_NOT_FOUND', 404);
+  const step = await addNcctProgrammeStep(data);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    action: 'PROGRAMME_STEP_ADDED',
+    entityType: 'programme_step',
+    entityId: step.id,
+    metadata: { programmeId: programme.id, courseId: data.courseId, position: data.position }
+  });
+  return step;
 }
 
 export async function getProgrammeProgress(

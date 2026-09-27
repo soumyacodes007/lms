@@ -9,13 +9,27 @@
 
   type Institution = { id: string; code: string; name: string };
   type Programme = { id: string; title: string; description: string; status: string };
-  type Props = { institutions: Institution[]; programmes: Programme[] };
+  type ProgrammeStep = {
+    id: string;
+    programmeId: string;
+    courseId: string;
+    position: number;
+    prerequisiteStepId: string | null;
+    required: boolean;
+  };
+  type Props = {
+    institutions: Institution[];
+    programmes: Programme[];
+    programmeSteps: Array<{ programmeId: string; steps: ProgrammeStep[] }>;
+  };
 
-  let { institutions, programmes }: Props = $props();
+  let { institutions, programmes, programmeSteps }: Props = $props();
   let programmeOpen = $state(false);
   let batchOpen = $state(false);
   let programmeBusy = $state(false);
   let batchBusy = $state(false);
+  let stepOpen = $state(false);
+  let stepBusy = $state(false);
   let formMessage = $state('');
 
   let programmeTitle = $state('');
@@ -26,6 +40,11 @@
   let batchStartsOn = $state('');
   let batchEndsOn = $state('');
   let batchCapacity = $state('30');
+  let stepProgrammeId = $state('');
+  let stepCourseId = $state('');
+  let stepPosition = $state('1');
+  let stepPrerequisiteId = $state('');
+  let stepRequired = $state(true);
 
   function resetProgramme() {
     programmeTitle = '';
@@ -41,6 +60,27 @@
     batchEndsOn = '';
     batchCapacity = '30';
     formMessage = '';
+  }
+
+  function stepsFor(programmeId: string) {
+    return programmeSteps.find((item) => item.programmeId === programmeId)?.steps ?? [];
+  }
+
+  function resetStep() {
+    stepProgrammeId = programmes[0]?.id ?? '';
+    const steps = stepsFor(stepProgrammeId);
+    stepCourseId = '';
+    stepPosition = String(steps.length + 1);
+    stepPrerequisiteId = '';
+    stepRequired = true;
+    formMessage = '';
+  }
+
+  function updateStepProgramme(programmeId: string) {
+    stepProgrammeId = programmeId;
+    const steps = stepsFor(programmeId);
+    stepPosition = String(steps.length + 1);
+    stepPrerequisiteId = '';
   }
 
   async function createProgramme() {
@@ -91,6 +131,35 @@
       batchBusy = false;
     }
   }
+
+  async function addStep() {
+    stepBusy = true;
+    formMessage = '';
+    try {
+      const response = await classroomio.ncct.programmes[':programmeId'].steps.$post({
+        param: { programmeId: stepProgrammeId },
+        json: {
+          programmeId: stepProgrammeId,
+          courseId: stepCourseId.trim(),
+          position: Number(stepPosition),
+          prerequisiteStepId: stepPrerequisiteId || null,
+          required: stepRequired
+        }
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        formMessage = body.error ?? 'The programme step could not be added.';
+        return;
+      }
+      stepOpen = false;
+      resetStep();
+      await invalidateAll();
+    } catch {
+      formMessage = 'The programme step could not be added.';
+    } finally {
+      stepBusy = false;
+    }
+  }
 </script>
 
 <section class="ui:bg-card rounded-xl border p-5">
@@ -118,11 +187,42 @@
           batchOpen = true;
         }}>Schedule batch</Button
       >
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={programmes.length === 0}
+        onclick={() => {
+          resetStep();
+          stepOpen = true;
+        }}>Add course step</Button
+      >
     </div>
   </div>
   <div class="ui:text-muted-foreground mt-4 flex flex-wrap gap-2 text-sm">
     <Badge variant="secondary">{programmes.length} programmes</Badge>
     <span>English delivery is enabled for the first SIH version.</span>
+  </div>
+  <div class="mt-5 grid gap-3 md:grid-cols-2">
+    {#each programmes as programme}
+      {@const steps = stepsFor(programme.id)}
+      <div class="rounded-lg border p-3">
+        <div class="flex items-center justify-between gap-3">
+          <p class="font-medium">{programme.title}</p>
+          <Badge variant="secondary">{steps.length} steps</Badge>
+        </div>
+        <div class="mt-3 space-y-2">
+          {#each steps as step}
+            <div class="ui:bg-muted/40 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs">
+              <Badge variant="outline">{step.position}</Badge>
+              <span class="truncate">Course {step.courseId}</span>
+              {#if step.required}<span class="ui:text-muted-foreground ml-auto">Required</span>{/if}
+            </div>
+          {:else}
+            <p class="ui:text-muted-foreground text-xs">No ordered course steps yet.</p>
+          {/each}
+        </div>
+      </div>
+    {/each}
   </div>
 </section>
 
@@ -145,6 +245,51 @@
       <Button
         disabled={programmeBusy || programmeTitle.trim().length < 3 || programmeDescription.trim().length < 10}
         onclick={() => void createProgramme()}>Publish programme</Button
+      >
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={stepOpen}>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>Add ordered course step</Dialog.Title>
+      <Dialog.Description>Build the sequence trainees must complete for a programme.</Dialog.Description>
+    </Dialog.Header>
+    <div class="grid gap-4">
+      <label class="grid gap-2 text-sm font-medium">
+        Programme
+        <select
+          class="ui:bg-background h-9 rounded-md border px-3"
+          value={stepProgrammeId}
+          onchange={(event) => updateStepProgramme(event.currentTarget.value)}
+        >
+          {#each programmes as programme}<option value={programme.id}>{programme.title}</option>{/each}
+        </select>
+      </label>
+      <InputField label="Course ID" bind:value={stepCourseId} />
+      <div class="grid gap-4 sm:grid-cols-2">
+        <InputField label="Position" type="number" min="1" bind:value={stepPosition} />
+        <label class="grid gap-2 text-sm font-medium">
+          Prerequisite
+          <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={stepPrerequisiteId}>
+            <option value="">None</option>
+            {#each stepsFor(stepProgrammeId) as step}<option value={step.id}
+                >Step {step.position} · {step.courseId}</option
+              >{/each}
+          </select>
+        </label>
+      </div>
+      <label class="flex items-center gap-2 text-sm font-medium">
+        <input type="checkbox" bind:checked={stepRequired} /> Required for completion
+      </label>
+    </div>
+    {#if formMessage}<p class="ui:text-destructive text-sm">{formMessage}</p>{/if}
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (stepOpen = false)}>Cancel</Button>
+      <Button
+        disabled={stepBusy || !stepProgrammeId || !stepCourseId.trim() || Number(stepPosition) < 1}
+        onclick={() => void addStep()}>Add step</Button
       >
     </Dialog.Footer>
   </Dialog.Content>
