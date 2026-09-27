@@ -154,6 +154,70 @@ export async function applyToNcctJob(data: typeof schema.ncctJobApplication.$inf
   return application;
 }
 
+export async function listNcctAssessments(organizationId: string) {
+  return db
+    .select({ assessment: schema.ncctAssessment })
+    .from(schema.ncctAssessment)
+    .innerJoin(schema.ncctTrainee, eq(schema.ncctAssessment.traineeId, schema.ncctTrainee.id))
+    .where(eq(schema.ncctTrainee.organizationId, organizationId))
+    .orderBy(desc(schema.ncctAssessment.scheduledAt));
+}
+
+export async function createNcctAssessment(data: typeof schema.ncctAssessment.$inferInsert, client: DbOrTxClient = db) {
+  const [assessment] = await client.insert(schema.ncctAssessment).values(data).returning();
+  if (!assessment) throw new Error('Failed to create assessment');
+  return assessment;
+}
+
+export async function submitNcctAssessment(
+  assessmentId: string,
+  data: Pick<typeof schema.ncctAssessment.$inferInsert, 'status' | 'score' | 'feedback'>,
+  client: DbOrTxClient = db
+) {
+  const [assessment] = await client
+    .update(schema.ncctAssessment)
+    .set({ ...data, decidedAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+    .where(eq(schema.ncctAssessment.id, assessmentId))
+    .returning();
+  if (!assessment) throw new Error('Assessment not found');
+  return assessment;
+}
+
+export async function issueNcctCredential(data: typeof schema.ncctCredential.$inferInsert, client: DbOrTxClient = db) {
+  const [credential] = await client.insert(schema.ncctCredential).values(data).returning();
+  if (!credential) throw new Error('Failed to issue credential');
+  return credential;
+}
+
+export async function verifyNcctCredential(verificationToken: string) {
+  const [row] = await db
+    .select({
+      credential: schema.ncctCredential,
+      trainee: schema.ncctTrainee,
+      programme: schema.ncctProgramme,
+      institution: schema.ncctInstitution
+    })
+    .from(schema.ncctCredential)
+    .innerJoin(schema.ncctTrainee, eq(schema.ncctCredential.traineeId, schema.ncctTrainee.id))
+    .innerJoin(schema.ncctProgramme, eq(schema.ncctCredential.programmeId, schema.ncctProgramme.id))
+    .innerJoin(schema.ncctInstitution, eq(schema.ncctTrainee.institutionId, schema.ncctInstitution.id))
+    .where(eq(schema.ncctCredential.verificationToken, verificationToken))
+    .limit(1);
+
+  if (!row || row.credential.revokedAt) return null;
+
+  return {
+    certificateNumber: row.credential.certificateNumber,
+    issuedAt: row.credential.issuedAt,
+    traineeNumber: row.trainee.traineeNumber,
+    traineeDistrict: row.trainee.district,
+    traineeState: row.trainee.state,
+    programmeTitle: row.programme.title,
+    institutionName: row.institution.name,
+    institutionCode: row.institution.code
+  };
+}
+
 export async function getNcctDashboardSummary(organizationId: string) {
   const [institutions, trainees, programmes, batches, pendingNominations, credentials, jobs] = await Promise.all([
     db

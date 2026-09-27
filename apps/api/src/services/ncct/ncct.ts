@@ -2,6 +2,7 @@ import {
   addNcctProgrammeStep,
   applyToNcctJob,
   createNcctBatch,
+  createNcctAssessment,
   createNcctInstitution,
   createNcctJob,
   createNcctNomination,
@@ -9,25 +10,32 @@ import {
   createNcctTrainee,
   decideNcctNomination,
   getNcctDashboardSummary,
+  issueNcctCredential,
+  listNcctAssessments,
   listNcctBatches,
   listNcctInstitutions,
   listNcctJobs,
   listNcctProgrammeSteps,
   listNcctProgrammes,
-  listNcctTrainees
+  listNcctTrainees,
+  submitNcctAssessment as submitNcctAssessmentQuery
 } from '@cio/db/queries/ncct';
 import type {
   TAddNcctProgrammeStep,
   TApplyToNcctJob,
   TCreateNcctBatch,
+  TCreateNcctAssessment,
   TCreateNcctInstitution,
   TCreateNcctJob,
   TCreateNcctNomination,
   TCreateNcctProgramme,
   TCreateNcctTrainee,
-  TDecideNcctNomination
+  TDecideNcctNomination,
+  TIssueNcctCredential,
+  TSubmitNcctAssessment
 } from '@cio/utils/validation/ncct';
 import { AppError } from '@api/utils/errors';
+import { randomUUID } from 'node:crypto';
 
 export async function getNcctOverview(organizationId: string) {
   const [summary, institutions, trainees, programmes, batches, jobs] = await Promise.all([
@@ -93,4 +101,25 @@ export async function submitJobApplication(jobId: string, data: TApplyToNcctJob)
   return applyToNcctJob({ ...data, jobId });
 }
 
-export { listNcctProgrammeSteps };
+export async function scheduleAssessment(organizationId: string, data: TCreateNcctAssessment) {
+  const trainees = await listNcctTrainees(organizationId);
+  if (!trainees.some((trainee) => trainee.id === data.traineeId)) {
+    throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+  }
+
+  return createNcctAssessment(data);
+}
+
+export async function submitAssessment(assessmentId: string, data: TSubmitNcctAssessment) {
+  return submitNcctAssessmentQuery(assessmentId, data);
+}
+
+export async function issueCredential(data: TIssueNcctCredential) {
+  const verificationToken = randomUUID().replaceAll('-', '');
+  const certificateNumber =
+    data.certificateNumber ?? `NCCT-${new Date().getUTCFullYear()}-${verificationToken.slice(0, 10).toUpperCase()}`;
+
+  return issueNcctCredential({ ...data, certificateNumber, verificationToken });
+}
+
+export { listNcctAssessments, listNcctProgrammeSteps };

@@ -73,6 +73,27 @@ export const ZApplyToNcctJob = z.object({
   coverNote: z.string().trim().max(2000).optional()
 });
 
+export const ZCreateNcctAssessment = z.object({
+  batchId: z.string().uuid(),
+  traineeId: z.string().uuid(),
+  evaluatorProfileId: z.string().uuid().nullable().optional(),
+  title: z.string().trim().min(2).max(160),
+  scheduledAt: z.string().datetime()
+});
+
+export const ZSubmitNcctAssessment = z.object({
+  status: z.enum(['PASSED', 'FAILED', 'SUBMITTED']),
+  score: z.number().int().min(0).max(100).optional(),
+  feedback: z.string().trim().max(3000).optional()
+});
+
+export const ZIssueNcctCredential = z.object({
+  traineeId: z.string().uuid(),
+  programmeId: z.string().uuid(),
+  batchId: z.string().uuid(),
+  certificateNumber: z.string().trim().min(4).max(80).optional()
+});
+
 export type TCreateNcctInstitution = z.infer<typeof ZCreateNcctInstitution>;
 export type TCreateNcctTrainee = z.infer<typeof ZCreateNcctTrainee>;
 export type TCreateNcctProgramme = z.infer<typeof ZCreateNcctProgramme>;
@@ -82,3 +103,6 @@ export type TCreateNcctNomination = z.infer<typeof ZCreateNcctNomination>;
 export type TDecideNcctNomination = z.infer<typeof ZDecideNcctNomination>;
 export type TCreateNcctJob = z.infer<typeof ZCreateNcctJob>;
 export type TApplyToNcctJob = z.infer<typeof ZApplyToNcctJob>;
+export type TCreateNcctAssessment = z.infer<typeof ZCreateNcctAssessment>;
+export type TSubmitNcctAssessment = z.infer<typeof ZSubmitNcctAssessment>;
+export type TIssueNcctCredential = z.infer<typeof ZIssueNcctCredential>;

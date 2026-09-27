@@ -7,12 +7,15 @@ import {
   ZAddNcctProgrammeStep,
   ZApplyToNcctJob,
   ZCreateNcctBatch,
+  ZCreateNcctAssessment,
   ZCreateNcctInstitution,
   ZCreateNcctJob,
   ZCreateNcctNomination,
   ZCreateNcctProgramme,
   ZCreateNcctTrainee,
-  ZDecideNcctNomination
+  ZDecideNcctNomination,
+  ZIssueNcctCredential,
+  ZSubmitNcctAssessment
 } from '@cio/utils/validation/ncct';
 import { zValidator } from '@hono/zod-validator';
 import * as z from 'zod';
@@ -21,11 +24,15 @@ import {
   createEmploymentJob,
   decideNomination,
   getNcctOverview,
+  issueCredential,
+  listNcctAssessments,
   listNcctProgrammeSteps,
   publishNcctProgramme,
   registerNcctInstitution,
   registerNcctTrainee,
+  scheduleAssessment,
   scheduleNcctBatch,
+  submitAssessment,
   submitJobApplication,
   submitNcctNomination
 } from '@api/services/ncct/ncct';
@@ -34,14 +41,28 @@ import {
   listNcctInstitutions,
   listNcctJobs,
   listNcctProgrammes,
-  listNcctTrainees
+  listNcctTrainees,
+  verifyNcctCredential
 } from '@cio/db/queries/ncct';
 
 const programmeParam = z.object({ programmeId: z.string().uuid() });
 const nominationParam = z.object({ nominationId: z.string().uuid() });
 const jobParam = z.object({ jobId: z.string().uuid() });
+const assessmentParam = z.object({ assessmentId: z.string().uuid() });
+const verificationParam = z.object({ verificationToken: z.string().min(16).max(128) });
 
 export const ncctRouter = new Hono()
+  .get('/credentials/verify/:verificationToken', zValidator('param', verificationParam), async (c) => {
+    try {
+      const credential = await verifyNcctCredential(c.req.valid('param').verificationToken);
+      if (!credential)
+        return c.json({ success: false, error: 'Credential not found', code: 'NCCT_CREDENTIAL_NOT_FOUND' }, 404);
+
+      return c.json({ success: true, data: credential }, 200);
+    } catch (error) {
+      return handleError(c, error, 'Failed to verify credential');
+    }
+  })
   .get('/overview', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
       return c.json({ success: true, data: await getNcctOverview(c.get('orgId')!) }, 200);
@@ -197,6 +218,60 @@ export const ncctRouter = new Hono()
         );
       } catch (error) {
         return handleError(c, error, 'Failed to decide nomination');
+      }
+    }
+  )
+  .get('/assessments', authMiddleware, orgMemberMiddleware, async (c) => {
+    try {
+      const rows = await listNcctAssessments(c.get('orgId')!);
+      return c.json({ success: true, data: rows.map(({ assessment }) => assessment) }, 200);
+    } catch (error) {
+      return handleError(c, error, 'Failed to load assessments');
+    }
+  })
+  .post(
+    '/assessments',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('json', ZCreateNcctAssessment),
+    async (c) => {
+      try {
+        return c.json({ success: true, data: await scheduleAssessment(c.get('orgId')!, c.req.valid('json')) }, 201);
+      } catch (error) {
+        return handleError(c, error, 'Failed to schedule assessment');
+      }
+    }
+  )
+  .post(
+    '/assessments/:assessmentId/result',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', assessmentParam),
+    zValidator('json', ZSubmitNcctAssessment),
+    async (c) => {
+      try {
+        return c.json(
+          { success: true, data: await submitAssessment(c.req.valid('param').assessmentId, c.req.valid('json')) },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to submit assessment result');
+      }
+    }
+  )
+  .post(
+    '/credentials',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('json', ZIssueNcctCredential),
+    async (c) => {
+      try {
+        return c.json({ success: true, data: await issueCredential(c.req.valid('json')) }, 201);
+      } catch (error) {
+        return handleError(c, error, 'Failed to issue credential');
       }
     }
   )
