@@ -180,7 +180,13 @@ export const ncctRouter = new Hono()
   })
   .get('/courses', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
-      return c.json({ success: true, data: await listNcctCourses(c.get('orgId')!) }, 200);
+      return c.json(
+        {
+          success: true,
+          data: await listNcctCourses(c.get('orgId')!, c.get('user')!.id, c.get('userRole') ?? undefined)
+        },
+        200
+      );
     } catch (error) {
       return handleError(c, error, 'Failed to load NCCT course catalogue');
     }

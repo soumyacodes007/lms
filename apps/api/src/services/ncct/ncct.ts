@@ -351,8 +351,38 @@ export async function getNcctInstitutionMembers(organizationId: string) {
   return listNcctInstitutionMembers(organizationId);
 }
 
-export async function listNcctCourses(organizationId: string) {
-  const result = await getOrgCourses({ orgId: organizationId, page: 1, limit: 100 });
+export async function listNcctCourses(organizationId: string, actorProfileId?: string, orgRole?: number) {
+  let courseIds: string[] | undefined;
+
+  if (orgRole === ROLE.STUDENT) {
+    const trainee = actorProfileId
+      ? (await listNcctTrainees(organizationId)).find((item) => item.profileId === actorProfileId)
+      : undefined;
+    const programmeIds = trainee
+      ? (await listNcctEnrollments(organizationId))
+          .filter(({ enrollment }) => enrollment.traineeId === trainee.id)
+          .map(({ batch }) => batch.programmeId)
+      : [];
+    const programmeSteps = await Promise.all(programmeIds.map((programmeId) => listNcctProgrammeSteps(programmeId)));
+    courseIds = [...new Set(programmeSteps.flat().map((step) => step.courseId))];
+  } else if (orgRole === ROLE.TUTOR && actorProfileId) {
+    const [members, batches] = await Promise.all([
+      listNcctInstitutionMembers(organizationId),
+      listNcctBatches(organizationId)
+    ]);
+    const institutionIds = new Set(
+      members
+        .filter(({ member }) => member.profileId === actorProfileId && member.active)
+        .map(({ member }) => member.institutionId)
+    );
+    const programmeIds = batches
+      .filter((batch) => institutionIds.has(batch.institutionId))
+      .map((batch) => batch.programmeId);
+    const programmeSteps = await Promise.all(programmeIds.map((programmeId) => listNcctProgrammeSteps(programmeId)));
+    courseIds = [...new Set(programmeSteps.flat().map((step) => step.courseId))];
+  }
+
+  const result = await getOrgCourses({ orgId: organizationId, courseIds, page: 1, limit: 100 });
   return result.items.map((course) => ({
     id: course.id,
     title: course.title,
