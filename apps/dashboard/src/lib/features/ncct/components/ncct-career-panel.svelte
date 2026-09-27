@@ -172,6 +172,19 @@
               bind:value={input}
               placeholder="Ask about skills, jobs, or the next step"
             />
+            <div class="flex flex-wrap gap-2">
+              {#each ['Which jobs should I apply for?', 'How do I verify my credential?', 'What should I learn next?'] as prompt}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={sending}
+                  onclick={() => {
+                    input = prompt;
+                    void sendMessage();
+                  }}>{prompt}</Button
+                >
+              {/each}
+            </div>
             <div class="flex justify-end">
               <Button disabled={sending || !input.trim()} onclick={() => void sendMessage()}>
                 {sending ? 'Sending…' : 'Ask assistant'}
