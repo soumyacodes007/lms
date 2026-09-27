@@ -11,6 +11,15 @@ export const ZCreateNcctInstitution = z.object({
   contactEmail: z.string().email().optional()
 });
 
+export const ZUpdateNcctInstitution = z.object({
+  code: z.string().trim().min(2).max(30).optional(),
+  name: z.string().trim().min(2).max(160).optional(),
+  type: z.enum(['VAMNICOM', 'RICM', 'ICM', 'PACS', 'SHG', 'DAIRY', 'OTHER']).optional(),
+  district: z.string().trim().min(2).max(80).optional(),
+  state: z.string().trim().min(2).max(80).optional(),
+  contactEmail: z.string().email().nullable().optional()
+});
+
 export const ZUpsertNcctInstitutionMember = z.object({
   institutionId: z.string().uuid(),
   profileId: z.string().uuid(),
@@ -210,6 +219,7 @@ export const ZSearchNcctDirectory = z.object({
 });
 
 export type TCreateNcctInstitution = z.infer<typeof ZCreateNcctInstitution>;
+export type TUpdateNcctInstitution = z.infer<typeof ZUpdateNcctInstitution>;
 export type TUpsertNcctInstitutionMember = z.infer<typeof ZUpsertNcctInstitutionMember>;
 export type TUpdateNcctInstitutionMember = z.infer<typeof ZUpdateNcctInstitutionMember>;
 export type TCreateNcctTrainee = z.infer<typeof ZCreateNcctTrainee>;
