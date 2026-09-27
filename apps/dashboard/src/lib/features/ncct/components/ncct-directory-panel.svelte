@@ -20,6 +20,8 @@
 
   let rows = $state<DirectoryRow[]>([]);
   let query = $state('');
+  let state = $state('');
+  let skill = $state('');
   let loading = $state(false);
   let message = $state('');
 
@@ -27,7 +29,13 @@
     loading = true;
     message = '';
     try {
-      const response = await classroomio.ncct.directory.$get({ query: { q: query.trim() || undefined } });
+      const response = await classroomio.ncct.directory.$get({
+        query: {
+          q: query.trim() || undefined,
+          state: state.trim() || undefined,
+          skill: skill.trim() || undefined
+        }
+      });
       if (!response.ok) {
         message = 'The directory could not be loaded.';
         return;
@@ -62,8 +70,20 @@
       placeholder="Search skill, trainee number, cooperative, or location"
       bind:value={query}
     />
+    <Input class="min-w-40" placeholder="State" bind:value={state} />
+    <Input class="min-w-40" placeholder="Skill" bind:value={skill} />
     <Button variant="outline" disabled={loading} onclick={() => void search()}
       >{loading ? 'Searching…' : 'Search'}</Button
+    >
+    <Button
+      variant="ghost"
+      disabled={loading || (!query && !state && !skill)}
+      onclick={() => {
+        query = '';
+        state = '';
+        skill = '';
+        void search();
+      }}>Clear</Button
     >
   </div>
 
