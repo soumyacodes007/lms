@@ -1,11 +1,11 @@
 import { AppError } from '@api/utils/errors';
 import { ROLE } from '@cio/utils/constants';
 
-export function assertNcctJobApplicationAllowed(jobStatus: string, hasExistingApplication: boolean) {
+export function assertNcctJobApplicationAllowed(jobStatus: string, existingStatus?: string) {
   if (jobStatus !== 'OPEN') {
     throw new AppError('Applications can only be submitted for open vacancies', 'NCCT_JOB_NOT_OPEN', 409);
   }
-  if (hasExistingApplication) {
+  if (existingStatus && existingStatus !== 'WITHDRAWN') {
     throw new AppError('This trainee has already applied for the vacancy', 'NCCT_APPLICATION_ALREADY_EXISTS', 409);
   }
 }

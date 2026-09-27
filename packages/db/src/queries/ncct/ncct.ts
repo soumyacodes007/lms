@@ -564,6 +564,34 @@ export async function updateNcctJobApplication(
   return application;
 }
 
+export async function reapplyNcctJobApplication(
+  applicationId: string,
+  coverNote: string | undefined,
+  changedByProfileId?: string,
+  client: DbOrTxClient = db
+) {
+  const [existing] = await client
+    .select({ status: schema.ncctJobApplication.status })
+    .from(schema.ncctJobApplication)
+    .where(eq(schema.ncctJobApplication.id, applicationId))
+    .limit(1);
+  if (!existing || existing.status !== 'WITHDRAWN') throw new Error('Job application is not withdrawn');
+
+  const [application] = await client
+    .update(schema.ncctJobApplication)
+    .set({ status: 'APPLIED', coverNote: coverNote ?? null, updatedAt: new Date().toISOString() })
+    .where(eq(schema.ncctJobApplication.id, applicationId))
+    .returning();
+  if (!application) throw new Error('Job application not found');
+  await client.insert(schema.ncctJobApplicationEvent).values({
+    applicationId,
+    fromStatus: existing.status,
+    toStatus: 'APPLIED',
+    changedByProfileId
+  });
+  return application;
+}
+
 export async function listNcctJobApplicationEvents(organizationId: string) {
   return db
     .select({ event: schema.ncctJobApplicationEvent, application: schema.ncctJobApplication })

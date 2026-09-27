@@ -54,6 +54,7 @@ import {
   submitNcctAssessment as submitNcctAssessmentQuery,
   updateNcctSyncEventStatus,
   updateNcctJobApplication,
+  reapplyNcctJobApplication,
   updateNcctJobStatus,
   updateNcctBatchStatus
 } from '@cio/db/queries/ncct';
@@ -1014,14 +1015,32 @@ export async function submitJobApplication(
   ]);
   if (!job) throw new AppError('Job does not belong to this organization', 'NCCT_JOB_NOT_FOUND', 404);
   if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
-  const existingApplication = (await listNcctJobApplications(organizationId)).some(
+  const existingApplication = (await listNcctJobApplications(organizationId)).find(
     ({ application }) => application.jobId === jobId && application.traineeId === data.traineeId
   );
-  assertNcctJobApplicationAllowed(job.status, existingApplication);
+  assertNcctJobApplicationAllowed(job.status, existingApplication?.application.status);
   if (orgRole === ROLE.STUDENT && trainee.profileId !== actorProfileId) {
     throw new AppError('Students can only apply for themselves', 'NCCT_TRAINEE_ACCESS_REQUIRED', 403);
   }
   await assertNcctInstitutionAccess(organizationId, trainee.institutionId, actorProfileId, orgRole);
+
+  if (existingApplication?.application.status === 'WITHDRAWN') {
+    const reapplied = await reapplyNcctJobApplication(
+      existingApplication.application.id,
+      data.coverNote,
+      actorProfileId
+    );
+    await recordNcctAudit({
+      organizationId,
+      actorProfileId,
+      institutionId: trainee.institutionId,
+      action: 'APPLICATION_REAPPLIED',
+      entityType: 'job_application',
+      entityId: reapplied.id,
+      metadata: { jobId, traineeId: trainee.id }
+    });
+    return reapplied;
+  }
 
   return applyToNcctJob({ ...data, jobId });
 }

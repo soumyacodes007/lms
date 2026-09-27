@@ -3,16 +3,20 @@ import { assertNcctApplicationTransition, assertNcctJobApplicationAllowed } from
 
 describe('NCCT job applications', () => {
   it('allows a trainee to apply to an open vacancy once', () => {
-    expect(() => assertNcctJobApplicationAllowed('OPEN', false)).not.toThrow();
+    expect(() => assertNcctJobApplicationAllowed('OPEN')).not.toThrow();
   });
 
   it('rejects closed vacancies and duplicate applications', () => {
-    expect(() => assertNcctJobApplicationAllowed('CLOSED', false)).toThrowError(
+    expect(() => assertNcctJobApplicationAllowed('CLOSED')).toThrowError(
       'Applications can only be submitted for open vacancies'
     );
-    expect(() => assertNcctJobApplicationAllowed('OPEN', true)).toThrowError(
+    expect(() => assertNcctJobApplicationAllowed('OPEN', 'APPLIED')).toThrowError(
       'This trainee has already applied for the vacancy'
     );
+  });
+
+  it('allows an application to be submitted again after withdrawal', () => {
+    expect(() => assertNcctJobApplicationAllowed('OPEN', 'WITHDRAWN')).not.toThrow();
   });
 
   it('allows a trainee to withdraw only their active application', () => {
