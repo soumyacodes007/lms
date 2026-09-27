@@ -24,15 +24,20 @@
     lessonCount: number;
     exerciseCount: number;
   };
+  type InstitutionMember = {
+    member: { institutionId: string; profileId: string; role: string; active: boolean };
+    profile: { fullname: string; email: string | null };
+  };
   type Props = {
     institutions: Institution[];
+    institutionMembers: InstitutionMember[];
     programmes: Programme[];
     programmeSteps: Array<{ programmeId: string; steps: ProgrammeStep[] }>;
     courses: Course[];
     onDownloadPack: (programmeId: string) => void;
   };
 
-  let { institutions, programmes, programmeSteps, courses, onDownloadPack }: Props = $props();
+  let { institutions, institutionMembers, programmes, programmeSteps, courses, onDownloadPack }: Props = $props();
   let programmeOpen = $state(false);
   let batchOpen = $state(false);
   let programmeBusy = $state(false);
@@ -49,6 +54,7 @@
   let batchStartsOn = $state('');
   let batchEndsOn = $state('');
   let batchCapacity = $state('30');
+  let batchInstructorProfileId = $state('');
   let stepProgrammeId = $state('');
   let stepCourseId = $state('');
   let stepPosition = $state('1');
@@ -68,8 +74,23 @@
     batchStartsOn = '';
     batchEndsOn = '';
     batchCapacity = '30';
+    batchInstructorProfileId = instructorsFor(batchInstitutionId)[0]?.member.profileId ?? '';
     formMessage = '';
   }
+
+  function instructorsFor(institutionId: string) {
+    return institutionMembers.filter(
+      ({ member }) => member.institutionId === institutionId && member.active && member.role === 'INSTRUCTOR'
+    );
+  }
+
+  function updateBatchInstitution(institutionId: string) {
+    batchInstitutionId = institutionId;
+    const instructors = instructorsFor(institutionId);
+    batchInstructorProfileId = instructors[0]?.member.profileId ?? '';
+  }
+
+  let batchInstructors = $derived(instructorsFor(batchInstitutionId));
 
   function stepsFor(programmeId: string) {
     return programmeSteps.find((item) => item.programmeId === programmeId)?.steps ?? [];
@@ -128,7 +149,8 @@
           name: batchName.trim(),
           startsOn: batchStartsOn,
           endsOn: batchEndsOn,
-          capacity: Number(batchCapacity)
+          capacity: Number(batchCapacity),
+          instructorProfileId: batchInstructorProfileId || null
         }
       });
       if (!response.ok) {
@@ -344,11 +366,33 @@
       </label>
       <label class="grid gap-2 text-sm font-medium sm:col-span-2">
         Institution
-        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={batchInstitutionId}>
+        <select
+          class="ui:bg-background h-9 rounded-md border px-3"
+          value={batchInstitutionId}
+          onchange={(event) => updateBatchInstitution(event.currentTarget.value)}
+        >
           {#each institutions as institution}
             <option value={institution.id}>{institution.name} ({institution.code})</option>
           {/each}
         </select>
+      </label>
+      <label class="grid gap-2 text-sm font-medium sm:col-span-2">
+        Instructor
+        <select
+          class="ui:bg-background h-9 rounded-md border px-3"
+          bind:value={batchInstructorProfileId}
+          onchange={(event) => (batchInstructorProfileId = event.currentTarget.value)}
+        >
+          <option value="">No instructor assigned</option>
+          {#each batchInstructors as instructor}
+            <option value={instructor.member.profileId}>{instructor.profile.fullname}</option>
+          {/each}
+        </select>
+        <span class="ui:text-muted-foreground text-xs">
+          {batchInstructors.length > 0
+            ? 'Only active instructors assigned to this centre are listed.'
+            : 'Assign an instructor from Centre setup first.'}
+        </span>
       </label>
       <InputField label="Batch name" bind:value={batchName} />
       <InputField label="Seat capacity" type="number" min="1" bind:value={batchCapacity} />

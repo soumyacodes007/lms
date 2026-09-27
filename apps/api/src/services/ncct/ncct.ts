@@ -650,6 +650,21 @@ export async function scheduleNcctBatch(
   }
   await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
+  if (data.instructorProfileId) {
+    const members = await listNcctInstitutionMembers(organizationId);
+    const instructor = members.find(
+      ({ member }) =>
+        member.institutionId === data.institutionId && member.profileId === data.instructorProfileId && member.active
+    );
+    if (!instructor) {
+      throw new AppError(
+        'The instructor must be an active member of the selected institution',
+        'NCCT_INSTRUCTOR_ACCESS_REQUIRED',
+        422
+      );
+    }
+  }
+
   const batch = await createNcctBatch({ ...data, status: 'OPEN' });
   await recordNcctAudit({
     organizationId,
@@ -658,7 +673,7 @@ export async function scheduleNcctBatch(
     action: 'BATCH_CREATED',
     entityType: 'batch',
     entityId: batch.id,
-    metadata: { programmeId: batch.programmeId, name: batch.name }
+    metadata: { programmeId: batch.programmeId, name: batch.name, instructorProfileId: batch.instructorProfileId }
   });
   return batch;
 }

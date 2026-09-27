@@ -291,6 +291,7 @@
           />
           <NcctProgrammePanel
             institutions={overview.institutions}
+            institutionMembers={overview.institutionMembers}
             programmes={overview.programmes}
             programmeSteps={overview.programmeSteps}
             courses={data.courses}
