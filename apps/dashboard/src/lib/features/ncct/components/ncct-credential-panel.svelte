@@ -8,9 +8,14 @@
   type Trainee = { id: string; traineeNumber: string; district: string; state: string };
   type Programme = { id: string; title: string };
   type Batch = { id: string; name: string; programmeId: string };
-  type Props = { trainees: Trainee[]; programmes: Programme[]; batches: Batch[] };
+  type Credential = {
+    credential: { id: string; certificateNumber: string; issuedAt: string; revokedAt: string | null };
+    trainee: { traineeNumber: string };
+    programme: { title: string };
+  };
+  type Props = { trainees: Trainee[]; programmes: Programme[]; batches: Batch[]; credentials: Credential[] };
 
-  let { trainees, programmes, batches }: Props = $props();
+  let { trainees, programmes, batches, credentials }: Props = $props();
   let open = $state(false);
   let busy = $state(false);
   let message = $state('');
@@ -18,6 +23,7 @@
   let programmeId = $state('');
   let batchId = $state('');
   let verificationUrl = $state('');
+  let revokingId = $state<string | null>(null);
 
   const availableBatches = $derived(batches.filter((batch) => !programmeId || batch.programmeId === programmeId));
 
@@ -48,6 +54,25 @@
       message = 'The credential could not be issued.';
     } finally {
       busy = false;
+    }
+  }
+
+  async function revokeCredential(credentialId: string) {
+    revokingId = credentialId;
+    message = '';
+    try {
+      const response = await classroomio.ncct.credentials[':credentialId'].revoke.$post({
+        param: { credentialId }
+      });
+      if (!response.ok) {
+        message = 'The credential could not be revoked.';
+        return;
+      }
+      await invalidateAll();
+    } catch {
+      message = 'The credential could not be revoked.';
+    } finally {
+      revokingId = null;
     }
   }
 </script>
@@ -81,6 +106,34 @@
       </a>
     </div>
   {/if}
+  {#if credentials.length > 0}
+    <div class="mt-4 space-y-2">
+      {#each credentials.slice(0, 6) as row}
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+          <div>
+            <p class="font-medium">{row.credential.certificateNumber} · {row.trainee.traineeNumber}</p>
+            <p class="ui:text-muted-foreground">{row.programme.title}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <Badge variant={row.credential.revokedAt ? 'destructive' : 'default'}>
+              {row.credential.revokedAt ? 'REVOKED' : 'VALID'}
+            </Badge>
+            {#if !row.credential.revokedAt}
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={revokingId === row.credential.id}
+                onclick={() => void revokeCredential(row.credential.id)}
+              >
+                Revoke
+              </Button>
+            {/if}
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/if}
+  {#if message}<p class="ui:text-destructive mt-3 text-sm">{message}</p>{/if}
 </section>
 
 <Dialog.Root bind:open>
