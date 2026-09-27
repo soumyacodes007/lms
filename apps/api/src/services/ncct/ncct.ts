@@ -11,8 +11,10 @@ import {
   createNcctSession,
   createNcctSyncDevice,
   createNcctTrainee,
+  countNcctApprovedNominations,
   decideNcctNomination,
   getNcctDashboardSummary,
+  getNcctNomination,
   getNcctProgrammeProgress,
   issueNcctCredential,
   listNcctAssessments,
@@ -118,16 +120,34 @@ export async function scheduleNcctBatch(organizationId: string, data: TCreateNcc
   return createNcctBatch({ ...data, status: 'OPEN' });
 }
 
-export async function submitNcctNomination(organizationId: string, data: TCreateNcctNomination) {
+export async function submitNcctNomination(organizationId: string, profileId: string, data: TCreateNcctNomination) {
   const trainees = await listNcctTrainees(organizationId);
   if (!trainees.some((trainee) => trainee.id === data.traineeId)) {
     throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
   }
 
-  return createNcctNomination(data);
+  return createNcctNomination({ ...data, nominatedByProfileId: profileId });
 }
 
-export async function decideNomination(nominationId: string, profileId: string, data: TDecideNcctNomination) {
+export async function decideNomination(
+  organizationId: string,
+  nominationId: string,
+  profileId: string,
+  data: TDecideNcctNomination
+) {
+  const row = await getNcctNomination(organizationId, nominationId);
+  if (!row) throw new AppError('Nomination does not belong to this organization', 'NCCT_NOMINATION_NOT_FOUND', 404);
+  if (row.nomination.status !== 'PENDING') {
+    throw new AppError('Only pending nominations can be decided', 'NCCT_NOMINATION_ALREADY_DECIDED', 409);
+  }
+
+  if (data.status === 'APPROVED') {
+    const approved = await countNcctApprovedNominations(row.batch.id);
+    if (approved >= row.batch.capacity) {
+      throw new AppError('This batch has no available seats', 'NCCT_BATCH_CAPACITY_REACHED', 409);
+    }
+  }
+
   return decideNcctNomination(nominationId, data.status, profileId, data.decisionNote);
 }
 
@@ -135,7 +155,14 @@ export async function createEmploymentJob(organizationId: string, profileId: str
   return createNcctJob({ ...data, organizationId, createdByProfileId: profileId, status: 'OPEN' });
 }
 
-export async function submitJobApplication(jobId: string, data: TApplyToNcctJob) {
+export async function submitJobApplication(organizationId: string, jobId: string, data: TApplyToNcctJob) {
+  const [job, trainee] = await Promise.all([
+    listNcctJobs(organizationId).then((jobs) => jobs.find((item) => item.id === jobId)),
+    listNcctTrainees(organizationId).then((trainees) => trainees.find((item) => item.id === data.traineeId))
+  ]);
+  if (!job) throw new AppError('Job does not belong to this organization', 'NCCT_JOB_NOT_FOUND', 404);
+  if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+
   return applyToNcctJob({ ...data, jobId });
 }
 

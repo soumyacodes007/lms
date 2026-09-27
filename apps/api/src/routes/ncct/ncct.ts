@@ -51,8 +51,11 @@ import {
 } from '@api/services/ncct/ncct';
 import {
   listNcctBatches,
+  listNcctCredentials,
   listNcctInstitutions,
+  listNcctJobApplications,
   listNcctJobs,
+  listNcctNominations,
   listNcctProgrammes,
   listNcctResources,
   listNcctSessions,
@@ -227,12 +230,25 @@ export const ncctRouter = new Hono()
     zValidator('json', ZCreateNcctNomination),
     async (c) => {
       try {
-        return c.json({ success: true, data: await submitNcctNomination(c.get('orgId')!, c.req.valid('json')) }, 201);
+        return c.json(
+          {
+            success: true,
+            data: await submitNcctNomination(c.get('orgId')!, c.get('user')!.id, c.req.valid('json'))
+          },
+          201
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to submit nomination');
       }
     }
   )
+  .get('/nominations', authMiddleware, orgMemberMiddleware, async (c) => {
+    try {
+      return c.json({ success: true, data: await listNcctNominations(c.get('orgId')!) }, 200);
+    } catch (error) {
+      return handleError(c, error, 'Failed to load nominations');
+    }
+  })
   .post(
     '/nominations/:nominationId/decision',
     authMiddleware,
@@ -246,7 +262,12 @@ export const ncctRouter = new Hono()
         return c.json(
           {
             success: true,
-            data: await decideNomination(c.req.valid('param').nominationId, actorId, c.req.valid('json'))
+            data: await decideNomination(
+              c.get('orgId')!,
+              c.req.valid('param').nominationId,
+              actorId,
+              c.req.valid('json')
+            )
           },
           200
         );
@@ -309,6 +330,13 @@ export const ncctRouter = new Hono()
       }
     }
   )
+  .get('/credentials', authMiddleware, orgMemberMiddleware, async (c) => {
+    try {
+      return c.json({ success: true, data: await listNcctCredentials(c.get('orgId')!) }, 200);
+    } catch (error) {
+      return handleError(c, error, 'Failed to load credentials');
+    }
+  })
   .get('/sessions', authMiddleware, orgMemberMiddleware, async (c) => {
     try {
       const rows = await listNcctSessions(c.get('orgId')!);
@@ -419,6 +447,13 @@ export const ncctRouter = new Hono()
       return handleError(c, error, 'Failed to load jobs');
     }
   })
+  .get('/applications', authMiddleware, orgMemberMiddleware, async (c) => {
+    try {
+      return c.json({ success: true, data: await listNcctJobApplications(c.get('orgId')!) }, 200);
+    } catch (error) {
+      return handleError(c, error, 'Failed to load job applications');
+    }
+  })
   .post(
     '/jobs',
     authMiddleware,
@@ -445,7 +480,10 @@ export const ncctRouter = new Hono()
     async (c) => {
       try {
         return c.json(
-          { success: true, data: await submitJobApplication(c.req.valid('param').jobId, c.req.valid('json')) },
+          {
+            success: true,
+            data: await submitJobApplication(c.get('orgId')!, c.req.valid('param').jobId, c.req.valid('json'))
+          },
           201
         );
       } catch (error) {

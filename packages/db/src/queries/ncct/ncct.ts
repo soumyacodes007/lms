@@ -9,6 +9,51 @@ export type TNcctBatch = typeof schema.ncctBatch.$inferSelect;
 export type TNcctNomination = typeof schema.ncctNomination.$inferSelect;
 export type TNcctJob = typeof schema.ncctJob.$inferSelect;
 
+export async function listNcctNominations(organizationId: string) {
+  return db
+    .select({
+      nomination: schema.ncctNomination,
+      batch: schema.ncctBatch,
+      trainee: schema.ncctTrainee,
+      programme: schema.ncctProgramme,
+      institution: schema.ncctInstitution
+    })
+    .from(schema.ncctNomination)
+    .innerJoin(schema.ncctBatch, eq(schema.ncctNomination.batchId, schema.ncctBatch.id))
+    .innerJoin(schema.ncctInstitution, eq(schema.ncctBatch.institutionId, schema.ncctInstitution.id))
+    .innerJoin(schema.ncctTrainee, eq(schema.ncctNomination.traineeId, schema.ncctTrainee.id))
+    .innerJoin(schema.ncctProgramme, eq(schema.ncctBatch.programmeId, schema.ncctProgramme.id))
+    .where(eq(schema.ncctInstitution.organizationId, organizationId))
+    .orderBy(desc(schema.ncctNomination.createdAt));
+}
+
+export async function getNcctNomination(organizationId: string, nominationId: string) {
+  const [row] = await db
+    .select({
+      nomination: schema.ncctNomination,
+      batch: schema.ncctBatch,
+      trainee: schema.ncctTrainee,
+      institution: schema.ncctInstitution
+    })
+    .from(schema.ncctNomination)
+    .innerJoin(schema.ncctBatch, eq(schema.ncctNomination.batchId, schema.ncctBatch.id))
+    .innerJoin(schema.ncctInstitution, eq(schema.ncctBatch.institutionId, schema.ncctInstitution.id))
+    .innerJoin(schema.ncctTrainee, eq(schema.ncctNomination.traineeId, schema.ncctTrainee.id))
+    .where(and(eq(schema.ncctNomination.id, nominationId), eq(schema.ncctInstitution.organizationId, organizationId)))
+    .limit(1);
+
+  return row ?? null;
+}
+
+export async function countNcctApprovedNominations(batchId: string) {
+  const [row] = await db
+    .select({ value: count() })
+    .from(schema.ncctNomination)
+    .where(and(eq(schema.ncctNomination.batchId, batchId), eq(schema.ncctNomination.status, 'APPROVED')));
+
+  return Number(row?.value ?? 0);
+}
+
 export async function listNcctInstitutions(organizationId: string): Promise<TNcctInstitution[]> {
   return db
     .select()
@@ -203,6 +248,26 @@ export async function applyToNcctJob(data: typeof schema.ncctJobApplication.$inf
   const [application] = await client.insert(schema.ncctJobApplication).values(data).returning();
   if (!application) throw new Error('Failed to apply for job');
   return application;
+}
+
+export async function listNcctJobApplications(organizationId: string) {
+  return db
+    .select({ application: schema.ncctJobApplication, job: schema.ncctJob, trainee: schema.ncctTrainee })
+    .from(schema.ncctJobApplication)
+    .innerJoin(schema.ncctJob, eq(schema.ncctJobApplication.jobId, schema.ncctJob.id))
+    .innerJoin(schema.ncctTrainee, eq(schema.ncctJobApplication.traineeId, schema.ncctTrainee.id))
+    .where(eq(schema.ncctJob.organizationId, organizationId))
+    .orderBy(desc(schema.ncctJobApplication.createdAt));
+}
+
+export async function listNcctCredentials(organizationId: string) {
+  return db
+    .select({ credential: schema.ncctCredential, trainee: schema.ncctTrainee, programme: schema.ncctProgramme })
+    .from(schema.ncctCredential)
+    .innerJoin(schema.ncctTrainee, eq(schema.ncctCredential.traineeId, schema.ncctTrainee.id))
+    .innerJoin(schema.ncctProgramme, eq(schema.ncctCredential.programmeId, schema.ncctProgramme.id))
+    .where(eq(schema.ncctTrainee.organizationId, organizationId))
+    .orderBy(desc(schema.ncctCredential.issuedAt));
 }
 
 export async function listNcctSessions(organizationId: string) {
