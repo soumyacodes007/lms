@@ -256,6 +256,7 @@
             institutions={overview.institutions}
             trainees={overview.trainees}
             institutionMembers={overview.institutionMembers}
+            institutionMemberCandidates={overview.institutionMemberCandidates}
           />
           <NcctProgrammePanel institutions={overview.institutions} programmes={overview.programmes} />
           <NcctNominationPanel

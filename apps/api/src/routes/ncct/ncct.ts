@@ -3,6 +3,7 @@ import { authMiddleware } from '@api/middlewares/auth';
 import { orgAdminMiddleware } from '@api/middlewares/org-admin';
 import { orgMemberMiddleware } from '@api/middlewares/org-member';
 import { orgTeamMemberMiddleware } from '@api/middlewares/org-team-member';
+import { getOrgTeam } from '@api/services/organization';
 import { handleError } from '@api/utils/errors';
 import {
   ZAddNcctProgrammeStep,
@@ -194,6 +195,27 @@ export const ncctRouter = new Hono()
       return c.json({ success: true, data: overview.institutionMembers }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load institution members');
+    }
+  })
+  .get('/institution-members/candidates', authMiddleware, orgMemberMiddleware, orgAdminMiddleware, async (c) => {
+    try {
+      const team = await getOrgTeam(c.get('orgId')!);
+      return c.json(
+        {
+          success: true,
+          data: team
+            .filter((member) => member.profileId)
+            .map((member) => ({
+              profileId: member.profileId!,
+              fullname: member.fullname,
+              email: member.email,
+              roleId: member.roleId
+            }))
+        },
+        200
+      );
+    } catch (error) {
+      return handleError(c, error, 'Failed to load institution member candidates');
     }
   })
   .post(

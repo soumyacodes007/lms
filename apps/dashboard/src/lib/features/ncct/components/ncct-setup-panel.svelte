@@ -31,6 +31,7 @@
     institutions: Institution[];
     trainees: Trainee[];
     institutionMembers: InstitutionMember[];
+    institutionMemberCandidates: InstitutionMemberCandidate[];
   };
 
   type InstitutionMember = {
@@ -39,7 +40,14 @@
     profile: { id: string; fullname: string; email: string | null };
   };
 
-  let { institutions, trainees, institutionMembers }: Props = $props();
+  type InstitutionMemberCandidate = {
+    profileId: string;
+    fullname: string;
+    email: string;
+    roleId: number;
+  };
+
+  let { institutions, trainees, institutionMembers, institutionMemberCandidates }: Props = $props();
   let institutionOpen = $state(false);
   let traineeOpen = $state(false);
   let traineeEditOpen = $state(false);
@@ -420,9 +428,7 @@
   <Dialog.Content>
     <Dialog.Header>
       <Dialog.Title>Assign centre access</Dialog.Title>
-      <Dialog.Description
-        >Use the profile ID of an organization team member to assign their NCCT centre role.</Dialog.Description
-      >
+      <Dialog.Description>Choose an organization team member and assign their NCCT centre role.</Dialog.Description>
     </Dialog.Header>
     <div class="grid gap-4">
       <label class="grid gap-2 text-sm font-medium">
@@ -433,7 +439,17 @@
             >{/each}
         </select>
       </label>
-      <InputField label="Profile ID" bind:value={memberProfileId} />
+      <label class="grid gap-2 text-sm font-medium">
+        Team member
+        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={memberProfileId}>
+          <option value="">Select a team member</option>
+          {#each institutionMemberCandidates as candidate}
+            <option value={candidate.profileId}>
+              {candidate.fullname || candidate.email} · {candidate.email}
+            </option>
+          {/each}
+        </select>
+      </label>
       <label class="grid gap-2 text-sm font-medium">
         Role
         <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={memberRole}>

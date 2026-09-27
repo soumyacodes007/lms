@@ -19,6 +19,12 @@ type NcctOverview = {
       institution: { id: string; name: string; code: string };
       profile: { id: string; fullname: string; email: string | null };
     }>;
+    institutionMemberCandidates: Array<{
+      profileId: string;
+      fullname: string;
+      email: string;
+      roleId: number;
+    }>;
     trainees: Array<{
       id: string;
       institutionId: string;
@@ -118,13 +124,16 @@ export const load = async ({ params, parent, cookies }) => {
   const siteName = params.slug;
   if (!orgId) return { orgName: siteName, overview: null };
 
-  const result: Promise<ServerApiResult<NcctOverview>> = safeServerApi(() =>
-    classroomio.ncct.overview.$get({}, getApiHeaders(cookies, orgId))
-  );
-  const response = await result;
+  const headers = getApiHeaders(cookies, orgId);
+  const [result, candidatesResult] = await Promise.all([
+    safeServerApi(() => classroomio.ncct.overview.$get({}, headers)),
+    safeServerApi(() => classroomio.ncct['institution-members'].candidates.$get({}, headers))
+  ]);
 
   return {
     orgName: siteName,
-    overview: response.ok ? response.body.data : null
+    overview: result.ok
+      ? { ...result.body.data, institutionMemberCandidates: candidatesResult.ok ? candidatesResult.body.data : [] }
+      : null
   };
 };
