@@ -204,6 +204,13 @@
           </div>
           <Badge variant={job.status === 'OPEN' ? 'default' : 'outline'}>{job.status}</Badge>
         </div>
+        <details class="mt-3">
+          <summary class="ui:text-primary cursor-pointer text-xs">View role details</summary>
+          <p class="ui:text-muted-foreground mt-2 text-sm">{job.description}</p>
+          <div class="mt-2 flex flex-wrap gap-1">
+            {#each job.skills as skill}<Badge variant="secondary">{skill}</Badge>{/each}
+          </div>
+        </details>
         <div class="mt-3 flex items-center justify-between gap-2">
           <span class="ui:text-muted-foreground text-xs">{job.skills.length} requested skills</span>
           {#if job.status === 'OPEN'}
