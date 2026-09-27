@@ -1077,6 +1077,23 @@ export async function scheduleAssessment(
   if (!enrollments.some(({ enrollment }) => enrollment.batchId === batch.id && enrollment.traineeId === trainee.id)) {
     throw new AppError('The trainee must be enrolled in this batch first', 'NCCT_ENROLLMENT_REQUIRED', 409);
   }
+  if (data.evaluatorProfileId) {
+    const members = await listNcctInstitutionMembers(organizationId);
+    const evaluator = members.find(
+      ({ member }) =>
+        member.institutionId === trainee.institutionId &&
+        member.profileId === data.evaluatorProfileId &&
+        member.active &&
+        member.role === 'EVALUATOR'
+    );
+    if (!evaluator) {
+      throw new AppError(
+        'The evaluator must be an active evaluator at the trainee’s institution',
+        'NCCT_EVALUATOR_ACCESS_REQUIRED',
+        422
+      );
+    }
+  }
   const scheduledAt = new Date(data.scheduledAt);
   if (
     scheduledAt < new Date(`${batch.startsOn}T00:00:00.000Z`) ||
