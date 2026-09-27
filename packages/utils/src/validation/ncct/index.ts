@@ -217,6 +217,7 @@ export const ZUpdateNcctProgress = z.object({
 export const ZSearchNcctDirectory = z.object({
   q: z.string().trim().max(80).optional(),
   state: z.string().trim().max(80).optional(),
+  district: z.string().trim().max(80).optional(),
   skill: z.string().trim().max(80).optional(),
   institutionId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(12),
