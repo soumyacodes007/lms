@@ -19,6 +19,7 @@
     enrollmentsByStatus: Array<{ status: string; total: number }>;
     credentialsByStatus: Array<{ status: string; total: number }>;
     assessmentsByStatus: Array<{ status: string; total: number }>;
+    assessmentPassRate: number;
     completionRate: number;
     placements: { applications: number; shortlisted: number; selected: number; openJobs: number };
   };
@@ -141,7 +142,9 @@
           <p class="ui:text-muted-foreground text-sm">No assessments yet.</p>
         {/each}
       </div>
-      <p class="ui:text-muted-foreground mt-3 border-t pt-3 text-xs">Completion rate {report.completionRate}%</p>
+      <p class="ui:text-muted-foreground mt-3 border-t pt-3 text-xs">
+        Assessment pass rate {report.assessmentPassRate}% · Completion rate {report.completionRate}%
+      </p>
     </div>
   </div>
 

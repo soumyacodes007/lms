@@ -98,6 +98,7 @@ import { assertNcctApplicationTransition, assertNcctJobApplicationAllowed } from
 import { assertNcctAssessmentResultAllowed, assertNcctAssessmentSlotAvailable } from './assessments';
 import { assertNcctSyncDeviceActive } from './sync';
 import { hasNcctInstitutionCodeConflict, normalizeNcctInstitutionCode } from './institutions';
+import { getNcctAssessmentPassRate } from './reports';
 import { assertNcctCredentialIssuanceAllowed, assertNcctCredentialPrerequisites } from './credentials';
 import { assertNcctBatchInstructorRole, assertNcctBatchProgramme } from './batches';
 import { assertNcctTraineeNumberAvailable } from './trainees';
@@ -386,6 +387,7 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
           return counts;
         }, {})
       ).map(([status, total]) => ({ status, total })),
+      assessmentPassRate: getNcctAssessmentPassRate(visibleAssessments.map(({ assessment }) => assessment.status)),
       completionRate: visibleEnrollments.length
         ? Math.round(
             (visibleEnrollments.filter(({ enrollment }) => enrollment.status === 'COMPLETED').length /

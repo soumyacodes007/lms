@@ -172,6 +172,7 @@ type NcctOverview = {
       enrollmentsByStatus: Array<{ status: string; total: number }>;
       credentialsByStatus: Array<{ status: string; total: number }>;
       assessmentsByStatus: Array<{ status: string; total: number }>;
+      assessmentPassRate: number;
       completionRate: number;
       placements: { applications: number; shortlisted: number; selected: number; openJobs: number };
     };
