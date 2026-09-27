@@ -12,13 +12,14 @@
   type Batch = { id: string; institutionId: string; name: string; startsOn: string; endsOn: string; capacity: number };
   type Session = {
     id: string;
+    batchId: string;
     title: string;
     startsAt: string;
     endsAt: string;
     room: string | null;
     instructorProfileId: string | null;
   };
-  type Resource = { id: string; name: string; type: string; capacity: number };
+  type Resource = { id: string; institutionId: string; name: string; type: string; capacity: number };
   type Logistics = {
     logistics: {
       mealRequired: boolean;
@@ -73,6 +74,14 @@
   let bookingEndsAt = $state('');
   let bookingQuantity = $state('1');
   let bookingNotes = $state('');
+
+  let eligibleResources = $derived(
+    resources.filter((resource) => {
+      const session = sessions.find((item) => item.id === bookingSessionId);
+      const institutionId = batches.find((batch) => batch.id === session?.batchId)?.institutionId;
+      return !institutionId || resource.institutionId === institutionId;
+    })
+  );
 
   let resourceInstitutionId = $state('');
   let resourceType = $state('ROOM');
@@ -131,7 +140,9 @@
   function resetBooking() {
     const session = sessions[0];
     bookingSessionId = session?.id ?? '';
-    bookingResourceId = resources[0]?.id ?? '';
+    const institutionId = batches.find((batch) => batch.id === session?.batchId)?.institutionId;
+    bookingResourceId =
+      resources.find((resource) => !institutionId || resource.institutionId === institutionId)?.id ?? '';
     bookingStartsAt = session ? toDatetimeLocal(session.startsAt) : '';
     bookingEndsAt = session ? toDatetimeLocal(session.endsAt) : '';
     bookingQuantity = '1';
@@ -142,6 +153,9 @@
   function updateBookingSession(sessionId: string) {
     bookingSessionId = sessionId;
     const session = sessions.find((item) => item.id === sessionId);
+    const institutionId = batches.find((batch) => batch.id === session?.batchId)?.institutionId;
+    bookingResourceId =
+      resources.find((resource) => !institutionId || resource.institutionId === institutionId)?.id ?? '';
     if (session) {
       bookingStartsAt = toDatetimeLocal(session.startsAt);
       bookingEndsAt = toDatetimeLocal(session.endsAt);
@@ -407,7 +421,7 @@
       <label class="grid gap-2 text-sm font-medium">
         Resource
         <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={bookingResourceId}>
-          {#each resources as resource}<option value={resource.id}
+          {#each eligibleResources as resource}<option value={resource.id}
               >{resource.name} · capacity {resource.capacity}</option
             >{/each}
         </select>

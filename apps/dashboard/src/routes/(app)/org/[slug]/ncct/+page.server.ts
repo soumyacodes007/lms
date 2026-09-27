@@ -78,13 +78,21 @@ type NcctOverview = {
     }>;
     sessions: Array<{
       id: string;
+      batchId: string;
       title: string;
       startsAt: string;
       endsAt: string;
       room: string | null;
       instructorProfileId: string | null;
     }>;
-    resources: Array<{ id: string; type: string; name: string; capacity: number; active: boolean }>;
+    resources: Array<{
+      id: string;
+      institutionId: string;
+      type: string;
+      name: string;
+      capacity: number;
+      active: boolean;
+    }>;
     resourceBookings: Array<{
       booking: { startsAt: string; endsAt: string; quantity: number; notes: string | null };
       resource: { id: string; name: string; type: string };
