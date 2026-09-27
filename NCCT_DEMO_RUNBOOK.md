@@ -20,19 +20,18 @@ $env:NCCT_STUDENT_PROFILE_ID = 'your-student-profile-id'
 corepack pnpm@10.19.0 --filter @cio/api seed:ncct
 ```
 
-The seed is safe to run more than once. It creates two centres, three trainees, one published programme, one batch, one vacancy, and one pending nomination. When profile IDs are supplied, the first trainee is linked to the student profile and the tutor receives coordinator access to the first centre. Existing records with the same demo keys are reused.
+The seed is safe to run more than once. It creates two centres, three trainees, a published programme with two ordered courses, an approved nomination and completed enrolment, a passed practical assessment, a verifiable credential, a vacancy with a shortlisted application, a timetable session, room and hostel resources, a resource booking, and a trainee logistics record. When profile IDs are supplied, the first trainee is linked to the student profile and the tutor receives coordinator access to the first centre. Existing records with the same demo keys are reused.
 
 ## 2. Walk the training flow
 
 1. Open the organization’s **NCCT** page.
 2. Review the two centres and trainee profiles.
-3. Open **Centre nominations** and approve, reject, or waitlist nominations with an optional decision note.
-4. Confirm that the **Batch enrolment roster** gains the trainee.
-5. Use **Ordered programme progress** to start and complete each available step. A step with an unfinished prerequisite stays locked.
-6. Schedule a practical assessment, record a pass or fail with an optional score and evaluator feedback, and issue a credential.
-7. Copy the verification link shown after issuance and open it in a new tab.
-8. Use **Employment exchange** to apply for the seeded vacancy, then move the application through shortlist and selection. Active applications can be withdrawn by the trainee; closed vacancies and duplicate applications are rejected.
-9. Review **Recruiter dashboard** for vacancy-level application counts, then check **Operations report** and **NCCT workflow history** for the resulting totals and audit events.
+3. Open **Centre nominations** to review the seeded approval and its decision note. Create another nomination if you want to demonstrate the pending, waitlist, and rejection states.
+4. Confirm that the **Batch enrolment roster** contains the seeded trainee and that both ordered programme steps are complete.
+5. Open **Practical assessments** to review the passed evaluator result and feedback. The credential is already issued for this completed path.
+6. Copy the verification link shown in **Credentials** and open it in a new tab.
+7. Use **Employment exchange** to review the seeded shortlisted application and move it through selection. Active applications can be withdrawn by the trainee; closed vacancies and duplicate applications are rejected.
+8. Review **Recruiter dashboard** for vacancy-level application counts, then check **Operations report** and **NCCT workflow history** for the resulting totals and audit events.
 
 ## 3. Centre operations and offline sync
 
