@@ -17,11 +17,15 @@
     programme: { title: string };
     institution: { name: string; code: string };
   };
+  type Institution = { id: string; name: string; code: string };
+  type Props = { institutions: Institution[] };
 
+  let { institutions }: Props = $props();
   let rows = $state<DirectoryRow[]>([]);
   let query = $state('');
   let state = $state('');
   let skill = $state('');
+  let institutionId = $state('');
   let loading = $state(false);
   let message = $state('');
 
@@ -33,7 +37,8 @@
         query: {
           q: query.trim() || undefined,
           state: state.trim() || undefined,
-          skill: skill.trim() || undefined
+          skill: skill.trim() || undefined,
+          institutionId: institutionId || undefined
         }
       });
       if (!response.ok) {
@@ -72,16 +77,23 @@
     />
     <Input class="min-w-40" placeholder="State" bind:value={state} />
     <Input class="min-w-40" placeholder="Skill" bind:value={skill} />
+    <select class="ui:bg-background h-9 min-w-52 rounded-md border px-3 text-sm" bind:value={institutionId}>
+      <option value="">All institutions</option>
+      {#each institutions as institution}
+        <option value={institution.id}>{institution.name} · {institution.code}</option>
+      {/each}
+    </select>
     <Button variant="outline" disabled={loading} onclick={() => void search()}
       >{loading ? 'Searching…' : 'Search'}</Button
     >
     <Button
       variant="ghost"
-      disabled={loading || (!query && !state && !skill)}
+      disabled={loading || (!query && !state && !skill && !institutionId)}
       onclick={() => {
         query = '';
         state = '';
         skill = '';
+        institutionId = '';
         void search();
       }}>Clear</Button
     >

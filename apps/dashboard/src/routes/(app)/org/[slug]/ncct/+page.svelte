@@ -342,7 +342,7 @@
             institutionMembers={overview.institutionMembers}
           />
           <NcctProgressPanel enrollments={overview.enrollments} offline={!isOnline} onQueueEvent={queueOfflineEvent} />
-          <NcctDirectoryPanel />
+          <NcctDirectoryPanel institutions={overview.institutions} />
           <NcctAuditPanel events={overview.auditEvents} />
 
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
