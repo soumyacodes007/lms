@@ -168,6 +168,10 @@ export const ZCreateNcctResource = z.object({
   capacity: z.number().int().positive().max(10000)
 });
 
+export const ZUpdateNcctResource = z.object({
+  active: z.boolean()
+});
+
 export const ZBookNcctResource = z
   .object({
     sessionId: z.string().uuid(),
@@ -247,6 +251,7 @@ export type TSubmitNcctAssessment = z.infer<typeof ZSubmitNcctAssessment>;
 export type TIssueNcctCredential = z.infer<typeof ZIssueNcctCredential>;
 export type TCreateNcctSession = z.infer<typeof ZCreateNcctSession>;
 export type TCreateNcctResource = z.infer<typeof ZCreateNcctResource>;
+export type TUpdateNcctResource = z.infer<typeof ZUpdateNcctResource>;
 export type TBookNcctResource = z.infer<typeof ZBookNcctResource>;
 export type TSaveNcctTraineeLogistics = z.infer<typeof ZSaveNcctTraineeLogistics>;
 export type TCreateNcctSyncDevice = z.infer<typeof ZCreateNcctSyncDevice>;

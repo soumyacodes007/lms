@@ -19,6 +19,7 @@ import {
   ZCreateNcctProgramme,
   ZReorderNcctProgrammeStep,
   ZCreateNcctResource,
+  ZUpdateNcctResource,
   ZCreateNcctSession,
   ZCreateNcctSyncDevice,
   ZCreateNcctTrainee,
@@ -77,7 +78,8 @@ import {
   updateJobApplication,
   updateEmploymentJobStatus,
   updateEnrollmentProgress,
-  updateNcctBatchLifecycle
+  updateNcctBatchLifecycle,
+  updateResourceStatus
 } from '@api/services/ncct/ncct';
 import {
   listNcctBatches,
@@ -107,6 +109,7 @@ const memberParam = z.object({ memberId: z.string().uuid() });
 const enrollmentParam = z.object({ enrollmentId: z.string().uuid() });
 const verificationParam = z.object({ verificationToken: z.string().min(16).max(128) });
 const credentialParam = z.object({ credentialId: z.string().uuid() });
+const resourceParam = z.object({ resourceId: z.string().uuid() });
 const directoryQuery = ZSearchNcctDirectory;
 
 export const ncctRouter = new Hono()
@@ -942,6 +945,33 @@ export const ncctRouter = new Hono()
         );
       } catch (error) {
         return handleError(c, error, 'Failed to register resource');
+      }
+    }
+  )
+  .patch(
+    '/resources/:resourceId',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', resourceParam),
+    zValidator('json', ZUpdateNcctResource),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await updateResourceStatus(
+              c.get('orgId')!,
+              c.req.valid('param').resourceId,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to update resource status');
       }
     }
   )

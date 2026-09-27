@@ -10,6 +10,7 @@ import {
   createNcctNomination,
   createNcctProgramme,
   createNcctResource,
+  updateNcctResource,
   createNcctSession,
   createNcctSyncDevice,
   createNcctTrainee,
@@ -79,6 +80,7 @@ import type {
   TSubmitNcctAssessment,
   TBookNcctResource,
   TCreateNcctResource,
+  TUpdateNcctResource,
   TCreateNcctSession,
   TCreateNcctSyncDevice,
   TRecordNcctSyncEvents,
@@ -1469,6 +1471,31 @@ export async function registerResource(
     metadata: { type: resource.type, name: resource.name, capacity: resource.capacity }
   });
   return resource;
+}
+
+export async function updateResourceStatus(
+  organizationId: string,
+  resourceId: string,
+  data: TUpdateNcctResource,
+  actorProfileId?: string,
+  orgRole?: number
+) {
+  const resource = (await listNcctResources(organizationId)).find(
+    ({ resource: item }) => item.id === resourceId
+  )?.resource;
+  if (!resource) throw new AppError('Resource does not belong to this organization', 'NCCT_RESOURCE_NOT_FOUND', 404);
+  await assertNcctInstitutionAccess(organizationId, resource.institutionId, actorProfileId, orgRole);
+  const updated = await updateNcctResource(resourceId, data);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    institutionId: resource.institutionId,
+    action: data.active ? 'RESOURCE_ACTIVATED' : 'RESOURCE_DEACTIVATED',
+    entityType: 'resource',
+    entityId: resourceId,
+    metadata: { active: data.active }
+  });
+  return updated;
 }
 
 export async function bookResource(

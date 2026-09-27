@@ -718,6 +718,20 @@ export async function createNcctResource(data: typeof schema.ncctResource.$infer
   return resource;
 }
 
+export async function updateNcctResource(
+  resourceId: string,
+  data: Pick<typeof schema.ncctResource.$inferInsert, 'active'>,
+  client: DbOrTxClient = db
+) {
+  const [resource] = await client
+    .update(schema.ncctResource)
+    .set({ active: data.active, updatedAt: new Date().toISOString() })
+    .where(eq(schema.ncctResource.id, resourceId))
+    .returning();
+  if (!resource) throw new Error('Resource not found');
+  return resource;
+}
+
 export async function bookNcctResource(
   data: typeof schema.ncctResourceBooking.$inferInsert,
   client: DbOrTxClient = db

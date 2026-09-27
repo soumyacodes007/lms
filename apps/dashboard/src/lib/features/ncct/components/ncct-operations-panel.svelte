@@ -251,6 +251,17 @@
     if (saved) resourceOpen = false;
   }
 
+  async function toggleResource(resource: Resource) {
+    await save(
+      () =>
+        classroomio.ncct.resources[':resourceId'].$patch({
+          param: { resourceId: resource.id },
+          json: { active: !resource.active }
+        }),
+      resource.active ? 'Resource marked inactive.' : 'Resource activated.'
+    );
+  }
+
   async function bookResource() {
     const saved = await save(
       () =>
@@ -367,9 +378,16 @@
         <div class="flex items-center justify-between rounded-lg border p-3 text-sm">
           <div>
             <p class="font-medium">{resource.name}</p>
-            <p class="ui:text-muted-foreground mt-1 text-xs">{resource.type}</p>
+            <p class="ui:text-muted-foreground mt-1 text-xs">
+              {resource.type} · {resource.active ? 'Active' : 'Inactive'}
+            </p>
           </div>
-          <Badge variant="outline">Capacity {resource.capacity}</Badge>
+          <div class="flex items-center gap-2">
+            <Badge variant="outline">Capacity {resource.capacity}</Badge>
+            <Button variant="ghost" size="sm" disabled={busy} onclick={() => void toggleResource(resource)}>
+              {resource.active ? 'Deactivate' : 'Activate'}
+            </Button>
+          </div>
         </div>
       {:else}
         <p class="ui:text-muted-foreground text-sm">No centre resources have been registered yet.</p>
