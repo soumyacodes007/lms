@@ -1,5 +1,5 @@
 import * as schema from '@db/schema';
-import { and, asc, count, desc, eq, gt, inArray, lt } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { db, type DbOrTxClient } from '@db/drizzle';
 
 export type TNcctInstitution = typeof schema.ncctInstitution.$inferSelect;
@@ -405,6 +405,41 @@ export async function listNcctCredentials(organizationId: string) {
     .innerJoin(schema.ncctProgramme, eq(schema.ncctCredential.programmeId, schema.ncctProgramme.id))
     .where(eq(schema.ncctTrainee.organizationId, organizationId))
     .orderBy(desc(schema.ncctCredential.issuedAt));
+}
+
+export async function searchNcctCertifiedTrainees(organizationId: string, search?: string) {
+  const normalized = search?.trim();
+  const conditions = [
+    eq(schema.ncctTrainee.organizationId, organizationId),
+    eq(schema.ncctTrainee.directoryVisible, true),
+    isNull(schema.ncctCredential.revokedAt)
+  ];
+  if (normalized) {
+    const pattern = `%${normalized}%`;
+    conditions.push(
+      or(
+        ilike(schema.ncctTrainee.traineeNumber, pattern),
+        ilike(schema.ncctTrainee.cooperativeName, pattern),
+        ilike(schema.ncctTrainee.district, pattern),
+        ilike(schema.ncctTrainee.state, pattern),
+        sql`EXISTS (SELECT 1 FROM unnest(${schema.ncctTrainee.skills}) AS skill WHERE skill ILIKE ${pattern})`
+      )!
+    );
+  }
+
+  return db
+    .select({
+      trainee: schema.ncctTrainee,
+      credential: schema.ncctCredential,
+      programme: schema.ncctProgramme,
+      institution: schema.ncctInstitution
+    })
+    .from(schema.ncctCredential)
+    .innerJoin(schema.ncctTrainee, eq(schema.ncctCredential.traineeId, schema.ncctTrainee.id))
+    .innerJoin(schema.ncctProgramme, eq(schema.ncctCredential.programmeId, schema.ncctProgramme.id))
+    .innerJoin(schema.ncctInstitution, eq(schema.ncctTrainee.institutionId, schema.ncctInstitution.id))
+    .where(and(...conditions))
+    .orderBy(asc(schema.ncctTrainee.traineeNumber), desc(schema.ncctCredential.issuedAt));
 }
 
 export async function listNcctSessions(organizationId: string) {

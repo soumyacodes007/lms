@@ -23,6 +23,7 @@ import {
   ZBookNcctResource,
   ZRecordNcctSyncEvents,
   ZSaveNcctTraineeLogistics,
+  ZSearchNcctDirectory,
   ZUpdateNcctProgress
 } from '@cio/utils/validation/ncct';
 import { zValidator } from '@hono/zod-validator';
@@ -50,6 +51,7 @@ import {
   scheduleAssessment,
   scheduleNcctBatch,
   scheduleSession,
+  searchCertifiedTrainees,
   submitAssessment,
   submitJobApplication,
   submitNcctNomination,
@@ -78,6 +80,7 @@ const syncDeviceParam = z.object({ deviceId: z.string().uuid() });
 const careerParam = z.object({ traineeId: z.string().uuid() });
 const enrollmentParam = z.object({ enrollmentId: z.string().uuid() });
 const verificationParam = z.object({ verificationToken: z.string().min(16).max(128) });
+const directoryQuery = ZSearchNcctDirectory;
 
 export const ncctRouter = new Hono()
   .get('/credentials/verify/:verificationToken', zValidator('param', verificationParam), async (c) => {
@@ -384,6 +387,16 @@ export const ncctRouter = new Hono()
       return c.json({ success: true, data: await listNcctCredentials(c.get('orgId')!) }, 200);
     } catch (error) {
       return handleError(c, error, 'Failed to load credentials');
+    }
+  })
+  .get('/directory', authMiddleware, orgMemberMiddleware, zValidator('query', directoryQuery), async (c) => {
+    try {
+      return c.json(
+        { success: true, data: await searchCertifiedTrainees(c.get('orgId')!, c.req.valid('query').q) },
+        200
+      );
+    } catch (error) {
+      return handleError(c, error, 'Failed to search certified trainee directory');
     }
   })
   .get('/sessions', authMiddleware, orgMemberMiddleware, async (c) => {

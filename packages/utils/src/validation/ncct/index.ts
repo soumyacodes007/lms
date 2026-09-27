@@ -18,7 +18,8 @@ export const ZCreateNcctTrainee = z.object({
   district: z.string().trim().min(2).max(80),
   state: z.string().trim().min(2).max(80),
   phone: z.string().trim().max(30).optional(),
-  skills: z.array(z.string().trim().min(1).max(80)).max(30).default([])
+  skills: z.array(z.string().trim().min(1).max(80)).max(30).default([]),
+  directoryVisible: z.boolean().default(true)
 });
 
 export const ZCreateNcctProgramme = z.object({
@@ -166,6 +167,10 @@ export const ZUpdateNcctProgress = z.object({
   score: z.number().int().min(0).max(100).optional()
 });
 
+export const ZSearchNcctDirectory = z.object({
+  q: z.string().trim().max(80).optional()
+});
+
 export type TCreateNcctInstitution = z.infer<typeof ZCreateNcctInstitution>;
 export type TCreateNcctTrainee = z.infer<typeof ZCreateNcctTrainee>;
 export type TCreateNcctProgramme = z.infer<typeof ZCreateNcctProgramme>;
@@ -186,3 +191,4 @@ export type TSaveNcctTraineeLogistics = z.infer<typeof ZSaveNcctTraineeLogistics
 export type TCreateNcctSyncDevice = z.infer<typeof ZCreateNcctSyncDevice>;
 export type TRecordNcctSyncEvents = z.infer<typeof ZRecordNcctSyncEvents>;
 export type TUpdateNcctProgress = z.infer<typeof ZUpdateNcctProgress>;
+export type TSearchNcctDirectory = z.infer<typeof ZSearchNcctDirectory>;

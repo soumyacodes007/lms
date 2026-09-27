@@ -4306,6 +4306,7 @@ export const ncctTrainee = pgTable(
       .array()
       .default(sql`ARRAY[]::text[]`)
       .notNull(),
+    directoryVisible: boolean('directory_visible').default(true).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull()
   },
