@@ -6,6 +6,8 @@ import { handleErrorWithSentry } from '@sentry/sveltekit';
 const dsn = env.PUBLIC_SENTRY_DSN?.trim();
 const isSelfHosted = env.PUBLIC_IS_SELFHOSTED === 'true';
 
+export function init() {}
+
 if (dsn && !dev && !isSelfHosted) {
   Sentry.init({
     dsn,
