@@ -10,7 +10,11 @@
   import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
   import { Button } from '@cio/ui/base/button';
   import { classroomio } from '$lib/utils/services/api';
-  import { clearNcctOfflineSnapshot, saveNcctOfflineSnapshot } from '$lib/features/ncct/offline-cache';
+  import {
+    clearNcctOfflineSnapshot,
+    readNcctOfflineSnapshot,
+    saveNcctOfflineSnapshot
+  } from '$lib/features/ncct/offline-cache';
   import { createNcctOfflineQueue, type NcctQueuedEvent } from '$lib/features/ncct/offline-queue';
   import NcctSetupPanel from '$lib/features/ncct/components/ncct-setup-panel.svelte';
   import NcctProgrammePanel from '$lib/features/ncct/components/ncct-programme-panel.svelte';
@@ -31,7 +35,9 @@
   import { Badge } from '@cio/ui/base/badge';
 
   const { data } = $props();
-  const overview = $derived(data.overview);
+  const serverOverview = $derived(data.overview);
+  let cachedOverview = $state<typeof data.overview>(null);
+  const overview = $derived(serverOverview ?? cachedOverview);
   const summary = $derived(overview?.summary);
   const firstInstitution = $derived(overview?.institutions[0]);
 
@@ -166,7 +172,20 @@
       createQueue(storedDeviceId);
       void flushSync();
     }
-    void saveOfflineSnapshot();
+    if (serverOverview) {
+      void saveOfflineSnapshot();
+    } else {
+      void readNcctOfflineSnapshot<typeof data.overview>(`overview:${data.orgName}`)
+        .then((cached) => {
+          if (cached) {
+            cachedOverview = cached.value;
+            cacheMessage = `Showing the encrypted snapshot saved ${new Date(cached.savedAt).toLocaleTimeString()}.`;
+          }
+        })
+        .catch(() => {
+          cacheMessage = 'No readable offline workspace snapshot is available.';
+        });
+    }
 
     const handleOnline = () => {
       isOnline = true;
