@@ -247,7 +247,18 @@ export const ncctRouter = new Hono()
     zValidator('json', ZCreateNcctTrainee),
     async (c) => {
       try {
-        return c.json({ success: true, data: await registerNcctTrainee(c.get('orgId')!, c.req.valid('json')) }, 201);
+        return c.json(
+          {
+            success: true,
+            data: await registerNcctTrainee(
+              c.get('orgId')!,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          201
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to create trainee');
       }
@@ -269,7 +280,8 @@ export const ncctRouter = new Hono()
               c.get('orgId')!,
               c.req.valid('param').traineeId,
               c.req.valid('json'),
-              c.get('user')!.id
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
             )
           },
           200
@@ -345,7 +357,8 @@ export const ncctRouter = new Hono()
               c.get('orgId')!,
               c.req.valid('param').enrollmentId,
               c.req.valid('json'),
-              c.get('user')!.id
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
             )
           },
           200
@@ -402,7 +415,18 @@ export const ncctRouter = new Hono()
     zValidator('json', ZCreateNcctBatch),
     async (c) => {
       try {
-        return c.json({ success: true, data: await scheduleNcctBatch(c.get('orgId')!, c.req.valid('json')) }, 201);
+        return c.json(
+          {
+            success: true,
+            data: await scheduleNcctBatch(
+              c.get('orgId')!,
+              c.req.valid('json'),
+              c.get('user')!.id,
+              c.get('userRole') ?? undefined
+            )
+          },
+          201
+        );
       } catch (error) {
         return handleError(c, error, 'Failed to create batch');
       }
@@ -419,7 +443,12 @@ export const ncctRouter = new Hono()
         return c.json(
           {
             success: true,
-            data: await submitNcctNomination(c.get('orgId')!, c.get('user')!.id, c.req.valid('json'))
+            data: await submitNcctNomination(
+              c.get('orgId')!,
+              c.get('user')!.id,
+              c.req.valid('json'),
+              c.get('userRole') ?? undefined
+            )
           },
           201
         );
@@ -452,7 +481,8 @@ export const ncctRouter = new Hono()
               c.get('orgId')!,
               c.req.valid('param').nominationId,
               actorId,
-              c.req.valid('json')
+              c.req.valid('json'),
+              c.get('userRole') ?? undefined
             )
           },
           200

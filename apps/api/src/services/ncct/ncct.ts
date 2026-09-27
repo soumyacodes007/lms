@@ -98,6 +98,23 @@ async function recordNcctAudit(data: {
   }
 }
 
+async function assertNcctInstitutionAccess(
+  organizationId: string,
+  institutionId: string,
+  actorProfileId?: string,
+  orgRole?: number
+) {
+  if (orgRole !== ROLE.TUTOR || !actorProfileId) return;
+
+  const institutionMembers = await listNcctInstitutionMembers(organizationId);
+  const hasAccess = institutionMembers.some(
+    ({ member }) => member.institutionId === institutionId && member.profileId === actorProfileId && member.active
+  );
+  if (!hasAccess) {
+    throw new AppError('You do not have access to this training centre', 'NCCT_CENTRE_ACCESS_REQUIRED', 403);
+  }
+}
+
 export async function getNcctOverview(organizationId: string, actorProfileId?: string, orgRole?: number) {
   const [
     summary,
@@ -143,32 +160,31 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
           .map(({ member }) => member.institutionId)
       )
     : null;
+  const centreIds = assignedInstitutionIds ?? new Set<string>();
   const visibleInstitutions = hasCentreScope
-    ? institutions.filter((institution) => assignedInstitutionIds.has(institution.id))
+    ? institutions.filter((institution) => centreIds.has(institution.id))
     : institutions;
   const visibleTrainees = hasCentreScope
-    ? trainees.filter((trainee) => assignedInstitutionIds.has(trainee.institutionId))
+    ? trainees.filter((trainee) => centreIds.has(trainee.institutionId))
     : trainees;
-  const visibleBatches = hasCentreScope
-    ? batches.filter((batch) => assignedInstitutionIds.has(batch.institutionId))
-    : batches;
+  const visibleBatches = hasCentreScope ? batches.filter((batch) => centreIds.has(batch.institutionId)) : batches;
   const visibleNominations = hasCentreScope
-    ? nominations.filter(({ institution }) => assignedInstitutionIds.has(institution.id))
+    ? nominations.filter(({ institution }) => centreIds.has(institution.id))
     : nominations;
   const visibleSessions = hasCentreScope
     ? sessions.filter(({ session }) => visibleBatches.some((batch) => batch.id === session.batchId))
     : sessions;
   const visibleResources = hasCentreScope
-    ? resources.filter(({ resource }) => assignedInstitutionIds.has(resource.institutionId))
+    ? resources.filter(({ resource }) => centreIds.has(resource.institutionId))
     : resources;
   const visibleAssessments = hasCentreScope
     ? assessments.filter(({ assessment }) => visibleTrainees.some((trainee) => trainee.id === assessment.traineeId))
     : assessments;
   const visibleEnrollments = hasCentreScope
-    ? enrollments.filter(({ batch }) => assignedInstitutionIds.has(batch.institutionId))
+    ? enrollments.filter(({ batch }) => centreIds.has(batch.institutionId))
     : enrollments;
   const visibleCredentials = hasCentreScope
-    ? credentials.filter(({ trainee }) => assignedInstitutionIds.has(trainee.institutionId))
+    ? credentials.filter(({ trainee }) => centreIds.has(trainee.institutionId))
     : credentials;
   const visibleApplications = hasCentreScope
     ? applications.filter(({ trainee }) => visibleTrainees.some((item) => item.id === trainee.id))
@@ -193,7 +209,7 @@ export async function getNcctOverview(organizationId: string, actorProfileId?: s
     summary: visibleSummary,
     institutions: visibleInstitutions,
     institutionMembers: hasCentreScope
-      ? institutionMembers.filter(({ member }) => assignedInstitutionIds.has(member.institutionId))
+      ? institutionMembers.filter(({ member }) => centreIds.has(member.institutionId))
       : institutionMembers,
     trainees: visibleTrainees,
     programmes,
@@ -295,11 +311,17 @@ export async function updateNcctInstitutionMemberRole(
   return updated;
 }
 
-export async function registerNcctTrainee(organizationId: string, data: TCreateNcctTrainee) {
+export async function registerNcctTrainee(
+  organizationId: string,
+  data: TCreateNcctTrainee,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const institutions = await listNcctInstitutions(organizationId);
   if (!institutions.some((institution) => institution.id === data.institutionId)) {
     throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
   }
+  await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
   return createNcctTrainee({ ...data, organizationId });
 }
@@ -308,15 +330,18 @@ export async function updateNcctTrainee(
   organizationId: string,
   traineeId: string,
   data: TUpdateNcctTrainee,
-  actorProfileId?: string
+  actorProfileId?: string,
+  orgRole?: number
 ) {
   const trainee = (await listNcctTrainees(organizationId)).find((item) => item.id === traineeId);
   if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
+  await assertNcctInstitutionAccess(organizationId, trainee.institutionId, actorProfileId, orgRole);
   if (data.institutionId) {
     const institutions = await listNcctInstitutions(organizationId);
     if (!institutions.some((institution) => institution.id === data.institutionId)) {
       throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
     }
+    await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
   }
 
   const updated = await updateNcctTraineeQuery(traineeId, data);
@@ -352,11 +377,17 @@ export async function getProgrammeProgress(organizationId: string, programmeId: 
   return getNcctProgrammeProgress(programmeId, trainee.profileId);
 }
 
-export async function scheduleNcctBatch(organizationId: string, data: TCreateNcctBatch) {
+export async function scheduleNcctBatch(
+  organizationId: string,
+  data: TCreateNcctBatch,
+  actorProfileId?: string,
+  orgRole?: number
+) {
   const institutions = await listNcctInstitutions(organizationId);
   if (!institutions.some((institution) => institution.id === data.institutionId)) {
     throw new AppError('Institution does not belong to this organization', 'NCCT_INSTITUTION_NOT_FOUND', 404);
   }
+  await assertNcctInstitutionAccess(organizationId, data.institutionId, actorProfileId, orgRole);
 
   return createNcctBatch({ ...data, status: 'OPEN' });
 }
@@ -364,7 +395,8 @@ export async function scheduleNcctBatch(organizationId: string, data: TCreateNcc
 export async function submitNcctNomination(
   organizationId: string,
   profileId: string | null | undefined,
-  data: TCreateNcctNomination
+  data: TCreateNcctNomination,
+  orgRole?: number
 ) {
   const [trainees, batches] = await Promise.all([listNcctTrainees(organizationId), listNcctBatches(organizationId)]);
   const trainee = trainees.find((item) => item.id === data.traineeId);
@@ -376,6 +408,7 @@ export async function submitNcctNomination(
   if (trainee.institutionId !== batch.institutionId) {
     throw new AppError('Trainee and batch must belong to the same institution', 'NCCT_INSTITUTION_MISMATCH', 409);
   }
+  await assertNcctInstitutionAccess(organizationId, batch.institutionId, profileId ?? undefined, orgRole);
 
   const nomination = await createNcctNomination({ ...data, nominatedByProfileId: profileId ?? null });
   await recordNcctAudit({
@@ -393,13 +426,15 @@ export async function decideNomination(
   organizationId: string,
   nominationId: string,
   profileId: string,
-  data: TDecideNcctNomination
+  data: TDecideNcctNomination,
+  orgRole?: number
 ) {
   const row = await getNcctNomination(organizationId, nominationId);
   if (!row) throw new AppError('Nomination does not belong to this organization', 'NCCT_NOMINATION_NOT_FOUND', 404);
   if (row.nomination.status !== 'PENDING') {
     throw new AppError('Only pending nominations can be decided', 'NCCT_NOMINATION_ALREADY_DECIDED', 409);
   }
+  await assertNcctInstitutionAccess(organizationId, row.institution.id, profileId, orgRole);
 
   try {
     const result = await decideNcctNominationAndEnroll(nominationId, data.status, profileId, data.decisionNote);
@@ -544,9 +579,11 @@ export async function updateEnrollmentProgress(
   organizationId: string,
   enrollmentId: string,
   data: TUpdateNcctProgress,
-  actorProfileId?: string
+  actorProfileId?: string,
+  orgRole?: number
 ) {
   const enrollment = await getNcctEnrollment(organizationId, enrollmentId);
+  await assertNcctInstitutionAccess(organizationId, enrollment.trainee.institutionId, actorProfileId, orgRole);
   const steps = await listNcctProgrammeSteps(enrollment.batch.programmeId);
   const step = steps.find((item) => item.id === data.programmeStepId);
   if (!step) throw new AppError('Programme step does not belong to this batch', 'NCCT_STEP_NOT_FOUND', 404);
