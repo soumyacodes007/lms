@@ -6,36 +6,64 @@
   import { Badge } from '@cio/ui/base/badge';
   import { classroomio } from '$lib/utils/services/api';
 
-  type Trainee = { id: string; traineeNumber: string; district: string; state: string };
-  type Batch = { id: string; name: string };
+  type Trainee = { id: string; institutionId: string; traineeNumber: string; district: string; state: string };
+  type Batch = { id: string; institutionId: string; name: string };
+  type InstitutionMember = {
+    member: { institutionId: string; profileId: string; role: string; active: boolean };
+    profile: { fullname: string };
+  };
   type Assessment = {
     id: string;
     batchId: string;
     traineeId: string;
+    evaluatorProfileId: string | null;
     title: string;
     scheduledAt: string;
     score: number | null;
     status: string;
     feedback: string | null;
   };
-  type Props = { trainees: Trainee[]; batches: Batch[]; assessments: Assessment[] };
+  type Props = {
+    trainees: Trainee[];
+    batches: Batch[];
+    assessments: Assessment[];
+    institutionMembers: InstitutionMember[];
+  };
 
-  let { trainees, batches, assessments }: Props = $props();
+  let { trainees, batches, assessments, institutionMembers }: Props = $props();
   let open = $state(false);
   let busy = $state(false);
   let resultId = $state<string | null>(null);
   let message = $state('');
   let traineeId = $state('');
   let batchId = $state('');
+  let evaluatorProfileId = $state('');
   let title = $state('Practical certification interview');
   let scheduledAt = $state('');
+
+  function evaluatorsFor(traineeId: string) {
+    const institutionId = trainees.find((trainee) => trainee.id === traineeId)?.institutionId;
+    return institutionMembers.filter(
+      ({ member }) => member.institutionId === institutionId && member.active && member.role === 'EVALUATOR'
+    );
+  }
 
   function reset() {
     traineeId = trainees[0]?.id ?? '';
     batchId = batches[0]?.id ?? '';
+    evaluatorProfileId = evaluatorsFor(traineeId)[0]?.member.profileId ?? '';
     title = 'Practical certification interview';
     scheduledAt = '';
     message = '';
+  }
+
+  function updateTrainee(traineeIdValue: string) {
+    traineeId = traineeIdValue;
+    evaluatorProfileId = evaluatorsFor(traineeIdValue)[0]?.member.profileId ?? '';
+  }
+
+  function evaluatorLabel(profileId: string | null) {
+    return institutionMembers.find(({ member }) => member.profileId === profileId)?.profile.fullname ?? 'Unassigned';
   }
 
   function traineeLabel(id: string) {
@@ -51,7 +79,13 @@
     message = '';
     try {
       const response = await classroomio.ncct.assessments.$post({
-        json: { batchId, traineeId, title: title.trim(), scheduledAt: new Date(scheduledAt).toISOString() }
+        json: {
+          batchId,
+          traineeId,
+          evaluatorProfileId: evaluatorProfileId || null,
+          title: title.trim(),
+          scheduledAt: new Date(scheduledAt).toISOString()
+        }
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
@@ -114,7 +148,7 @@
           <p class="font-medium">{assessment.title}</p>
           <p class="ui:text-muted-foreground text-sm">
             {traineeLabel(assessment.traineeId)} · {batchLabel(assessment.batchId)} ·
-            {new Date(assessment.scheduledAt).toLocaleString()}
+            {new Date(assessment.scheduledAt).toLocaleString()} · {evaluatorLabel(assessment.evaluatorProfileId)}
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -151,11 +185,25 @@
     <div class="grid gap-4">
       <label class="grid gap-2 text-sm font-medium">
         Trainee
-        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={traineeId}>
+        <select
+          class="ui:bg-background h-9 rounded-md border px-3"
+          value={traineeId}
+          onchange={(event) => updateTrainee(event.currentTarget.value)}
+        >
           {#each trainees as trainee}
             <option value={trainee.id}>{trainee.traineeNumber} · {trainee.district}, {trainee.state}</option>
           {/each}
         </select>
+      </label>
+      <label class="grid gap-2 text-sm font-medium">
+        Evaluator
+        <select class="ui:bg-background h-9 rounded-md border px-3" bind:value={evaluatorProfileId}>
+          <option value="">No evaluator assigned</option>
+          {#each evaluatorsFor(traineeId) as evaluator}
+            <option value={evaluator.member.profileId}>{evaluator.profile.fullname}</option>
+          {/each}
+        </select>
+        <span class="ui:text-muted-foreground text-xs">Only active evaluators at the trainee’s centre are listed.</span>
       </label>
       <label class="grid gap-2 text-sm font-medium">
         Batch

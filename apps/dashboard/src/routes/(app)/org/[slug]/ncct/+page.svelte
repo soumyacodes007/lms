@@ -313,6 +313,7 @@
             trainees={overview.trainees}
             batches={overview.batches}
             assessments={overview.assessments}
+            institutionMembers={overview.institutionMembers}
           />
           <NcctCredentialPanel
             trainees={overview.trainees}

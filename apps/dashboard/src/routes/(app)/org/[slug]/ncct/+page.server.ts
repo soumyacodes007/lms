@@ -51,6 +51,7 @@ type NcctOverview = {
     batches: Array<{
       id: string;
       programmeId: string;
+      institutionId: string;
       name: string;
       startsOn: string;
       endsOn: string;
