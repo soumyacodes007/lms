@@ -15,7 +15,7 @@
     };
     credential: { certificateNumber: string; issuedAt: string };
     programme: { title: string };
-    institution: { name: string; code: string };
+    institution: { name: string; code: string; contactEmail: string | null };
   };
   type Institution = { id: string; name: string; code: string };
   type Props = { institutions: Institution[] };
@@ -122,6 +122,11 @@
             {#each row.trainee.skills.slice(0, 6) as skill}<Badge variant="secondary">{skill}</Badge>{/each}
           </div>
           <p class="ui:text-muted-foreground mt-3 text-xs">Certificate {row.credential.certificateNumber}</p>
+          {#if row.institution.contactEmail}
+            <a class="ui:text-primary mt-1 block text-xs underline" href={`mailto:${row.institution.contactEmail}`}>
+              Contact centre
+            </a>
+          {/if}
         </div>
       {/each}
     </div>
