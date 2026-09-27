@@ -1,9 +1,15 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Building2Icon from '@lucide/svelte/icons/building-2';
   import BriefcaseBusinessIcon from '@lucide/svelte/icons/briefcase-business';
   import CalendarDaysIcon from '@lucide/svelte/icons/calendar-days';
   import ClipboardListIcon from '@lucide/svelte/icons/clipboard-list';
   import PackageOpenIcon from '@lucide/svelte/icons/package-open';
+  import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+  import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
+  import { Button } from '@cio/ui/base/button';
+  import { classroomio } from '$lib/utils/services/api';
+  import { createNcctOfflineQueue, type NcctQueuedEvent } from '$lib/features/ncct/offline-queue';
   import GraduationCapIcon from '@lucide/svelte/icons/graduation-cap';
   import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
   import UsersIcon from '@lucide/svelte/icons/users';
@@ -13,6 +19,93 @@
   const { data } = $props();
   const overview = $derived(data.overview);
   const summary = $derived(overview?.summary);
+  const firstInstitution = $derived(overview?.institutions[0]);
+
+  let syncDeviceId = $state<string | null>(null);
+  let pendingSync = $state(0);
+  let isOnline = $state(true);
+  let syncMessage = $state('Offline centre sync is ready to configure.');
+  let syncQueue: ReturnType<typeof createNcctOfflineQueue> | null = null;
+
+  function createQueue(deviceId: string) {
+    syncQueue = createNcctOfflineQueue(deviceId, async (events: NcctQueuedEvent[]) => {
+      try {
+        const response = await classroomio.ncct['sync-devices'][':deviceId'].events.$post({
+          param: { deviceId },
+          json: { events }
+        });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    });
+    pendingSync = syncQueue.pendingCount();
+  }
+
+  async function flushSync() {
+    if (!syncQueue || !isOnline) return;
+    const sent = await syncQueue.flush();
+    pendingSync = syncQueue.pendingCount();
+    if (sent > 0) syncMessage = `${sent} queued event${sent === 1 ? '' : 's'} synchronized.`;
+  }
+
+  async function registerSyncDevice() {
+    if (!firstInstitution) {
+      syncMessage = 'Register an institution before enabling offline sync.';
+      return;
+    }
+
+    try {
+      const response = await classroomio.ncct['sync-devices'].$post({
+        json: {
+          institutionId: firstInstitution.id,
+          name: `Centre PC ${navigator.platform || 'device'}`
+        }
+      });
+      if (!response.ok) {
+        syncMessage = 'The centre device could not be registered.';
+        return;
+      }
+
+      const result = (await response.json()) as { data?: { id?: string } };
+      const deviceId = result.data?.id;
+      if (!deviceId) {
+        syncMessage = 'The centre device response was incomplete.';
+        return;
+      }
+
+      syncDeviceId = deviceId;
+      localStorage.setItem(`ncct-sync-device:${data.orgName}`, deviceId);
+      createQueue(deviceId);
+      syncMessage = 'This centre PC is registered for offline sync.';
+    } catch {
+      syncMessage = 'The centre device could not be registered.';
+    }
+  }
+
+  onMount(() => {
+    isOnline = navigator.onLine;
+    const storedDeviceId = localStorage.getItem(`ncct-sync-device:${data.orgName}`);
+    if (storedDeviceId) {
+      syncDeviceId = storedDeviceId;
+      createQueue(storedDeviceId);
+      void flushSync();
+    }
+
+    const handleOnline = () => {
+      isOnline = true;
+      void flushSync();
+    };
+    const handleOffline = () => {
+      isOnline = false;
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  });
 
   const cards = [
     { key: 'institutions', label: 'Institutions', icon: Building2Icon },
@@ -61,6 +154,37 @@
           </div>
 
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <section class="ui:bg-card rounded-xl border p-5 xl:col-span-2">
+              <div class="flex flex-wrap items-start justify-between gap-4">
+                <div class="flex items-start gap-3">
+                  <div class="ui:bg-muted rounded-lg p-2">
+                    <WifiOffIcon class="ui:text-muted-foreground size-5" />
+                  </div>
+                  <div>
+                    <h2 class="font-semibold">Offline centre sync</h2>
+                    <p class="ui:text-muted-foreground mt-1 text-sm">
+                      Keep centre activity queued until connectivity returns.
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  {#if syncDeviceId}
+                    <Button variant="outline" size="sm" onclick={() => void flushSync()} disabled={!isOnline}>
+                      <RefreshCwIcon class="mr-2 size-4" />
+                      Sync now
+                    </Button>
+                  {:else}
+                    <Button size="sm" onclick={() => void registerSyncDevice()}>Register this PC</Button>
+                  {/if}
+                </div>
+              </div>
+              <div class="ui:text-muted-foreground mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <span>{isOnline ? 'Online' : 'Offline'}</span>
+                <span>{pendingSync} pending event{pendingSync === 1 ? '' : 's'}</span>
+                <span>{syncMessage}</span>
+              </div>
+            </section>
+
             <section class="ui:bg-card rounded-xl border p-5">
               <div class="mb-4 flex items-center justify-between">
                 <h2 class="font-semibold">Programmes</h2>
