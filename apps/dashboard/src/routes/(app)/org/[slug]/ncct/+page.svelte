@@ -22,6 +22,7 @@
   import NcctOperationsPanel from '$lib/features/ncct/components/ncct-operations-panel.svelte';
   import NcctProgressPanel from '$lib/features/ncct/components/ncct-progress-panel.svelte';
   import NcctDirectoryPanel from '$lib/features/ncct/components/ncct-directory-panel.svelte';
+  import NcctAuditPanel from '$lib/features/ncct/components/ncct-audit-panel.svelte';
   import GraduationCapIcon from '@lucide/svelte/icons/graduation-cap';
   import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
   import UsersIcon from '@lucide/svelte/icons/users';
@@ -215,6 +216,7 @@
           />
           <NcctProgressPanel enrollments={overview.enrollments} />
           <NcctDirectoryPanel />
+          <NcctAuditPanel events={overview.auditEvents} />
 
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <section class="ui:bg-card rounded-xl border p-5 xl:col-span-2">

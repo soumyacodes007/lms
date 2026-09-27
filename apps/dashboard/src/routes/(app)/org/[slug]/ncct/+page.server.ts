@@ -76,6 +76,14 @@ type NcctOverview = {
       batchesByStatus: Array<{ status: string; total: number }>;
       placements: { applications: number; shortlisted: number; selected: number; openJobs: number };
     };
+    auditEvents: Array<{
+      id: string;
+      action: string;
+      entityType: string;
+      entityId: string | null;
+      metadata: Record<string, unknown>;
+      createdAt: string;
+    }>;
   };
 };
 
