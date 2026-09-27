@@ -14,6 +14,7 @@ import {
   ZCreateNcctJob,
   ZCreateNcctNomination,
   ZCreateNcctProgramme,
+  ZReorderNcctProgrammeStep,
   ZCreateNcctResource,
   ZCreateNcctSession,
   ZCreateNcctSyncDevice,
@@ -45,6 +46,7 @@ import {
   getEnrollmentProgress,
   getNcctOfflineProgrammePack,
   getNcctProgrammeSteps,
+  reorderProgrammeStep,
   getProgrammeProgress,
   bookResource,
   issueCredential,
@@ -480,6 +482,34 @@ export const ncctRouter = new Hono()
         );
       } catch (error) {
         return handleError(c, error, 'Failed to add programme step');
+      }
+    }
+  )
+  .patch(
+    '/programmes/:programmeId/steps/:stepId/order',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', z.object({ programmeId: z.string().uuid(), stepId: z.string().uuid() })),
+    zValidator('json', ZReorderNcctProgrammeStep),
+    async (c) => {
+      try {
+        const params = c.req.valid('param');
+        return c.json(
+          {
+            success: true,
+            data: await reorderProgrammeStep(
+              c.get('orgId')!,
+              params.programmeId,
+              params.stepId,
+              c.req.valid('json'),
+              c.get('user')!.id
+            )
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to reorder programme step');
       }
     }
   )

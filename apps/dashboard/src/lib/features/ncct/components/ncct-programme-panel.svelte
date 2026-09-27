@@ -44,6 +44,7 @@
   let batchBusy = $state(false);
   let stepOpen = $state(false);
   let stepBusy = $state(false);
+  let movingStepId = $state<string | null>(null);
   let formMessage = $state('');
 
   let programmeTitle = $state('');
@@ -195,6 +196,27 @@
       stepBusy = false;
     }
   }
+
+  async function moveStep(programmeId: string, stepId: string, direction: 'UP' | 'DOWN') {
+    movingStepId = stepId;
+    formMessage = '';
+    try {
+      const response = await classroomio.ncct.programmes[':programmeId'].steps[':stepId'].order.$patch({
+        param: { programmeId, stepId },
+        json: { direction }
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        formMessage = body.error ?? 'The programme step order could not be updated.';
+        return;
+      }
+      await invalidateAll();
+    } catch {
+      formMessage = 'The programme step order could not be updated.';
+    } finally {
+      movingStepId = null;
+    }
+  }
 </script>
 
 <section class="ui:bg-card rounded-xl border p-5">
@@ -251,11 +273,25 @@
           </div>
         </div>
         <div class="mt-3 space-y-2">
-          {#each steps as step}
+          {#each steps as step, index}
             <div class="ui:bg-muted/40 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs">
               <Badge variant="outline">{step.position}</Badge>
               <span class="truncate">{courseTitle(step.courseId)}</span>
               {#if step.required}<span class="ui:text-muted-foreground ml-auto">Required</span>{/if}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={movingStepId !== null || index === 0}
+                aria-label="Move step up"
+                onclick={() => void moveStep(programme.id, step.id, 'UP')}>↑</Button
+              >
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={movingStepId !== null || index === steps.length - 1}
+                aria-label="Move step down"
+                onclick={() => void moveStep(programme.id, step.id, 'DOWN')}>↓</Button
+              >
             </div>
           {:else}
             <p class="ui:text-muted-foreground text-xs">No ordered course steps yet.</p>

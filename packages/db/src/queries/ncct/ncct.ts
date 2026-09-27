@@ -195,6 +195,36 @@ export async function listNcctProgrammeSteps(programmeId: string) {
     .orderBy(asc(schema.ncctProgrammeStep.position));
 }
 
+export async function moveNcctProgrammeStep(programmeId: string, stepId: string, direction: 'UP' | 'DOWN') {
+  return db.transaction(async (tx) => {
+    const steps = await tx
+      .select()
+      .from(schema.ncctProgrammeStep)
+      .where(eq(schema.ncctProgrammeStep.programmeId, programmeId))
+      .orderBy(asc(schema.ncctProgrammeStep.position));
+    const currentIndex = steps.findIndex((step) => step.id === stepId);
+    if (currentIndex < 0) throw new Error('Programme step not found');
+
+    const targetIndex = direction === 'UP' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= steps.length) return steps[currentIndex];
+
+    const current = steps[currentIndex];
+    const target = steps[targetIndex];
+    await tx
+      .update(schema.ncctProgrammeStep)
+      .set({
+        position: sql`CASE WHEN ${schema.ncctProgrammeStep.id} = ${current.id} THEN ${target.position} WHEN ${schema.ncctProgrammeStep.id} = ${target.id} THEN ${current.position} ELSE ${schema.ncctProgrammeStep.position} END`
+      })
+      .where(inArray(schema.ncctProgrammeStep.id, [current.id, target.id]));
+
+    const [updated] = await tx
+      .select()
+      .from(schema.ncctProgrammeStep)
+      .where(eq(schema.ncctProgrammeStep.id, current.id));
+    return updated ?? current;
+  });
+}
+
 export async function getNcctProgrammeProgress(programmeId: string, profileId: string | null) {
   const steps = await listNcctProgrammeSteps(programmeId);
   const courseIds = steps.map((step) => step.courseId);

@@ -28,6 +28,7 @@ import {
   listNcctJobApplicationEvents,
   listNcctProgrammeSteps,
   listNcctProgrammes,
+  moveNcctProgrammeStep,
   listNcctNominations,
   listNcctResources,
   listNcctSessions,
@@ -53,6 +54,7 @@ import {
 } from '@cio/db/queries/ncct';
 import type {
   TAddNcctProgrammeStep,
+  TReorderNcctProgrammeStep,
   TApplyToNcctJob,
   TCreateNcctBatch,
   TCreateNcctAssessment,
@@ -638,6 +640,30 @@ export async function addProgrammeStep(organizationId: string, data: TAddNcctPro
     metadata: { programmeId: programme.id, courseId: data.courseId, position: data.position }
   });
   return step;
+}
+
+export async function reorderProgrammeStep(
+  organizationId: string,
+  programmeId: string,
+  stepId: string,
+  data: TReorderNcctProgrammeStep,
+  actorProfileId?: string
+) {
+  const programme = (await listNcctProgrammes(organizationId)).find((item) => item.id === programmeId);
+  if (!programme) throw new AppError('Programme does not belong to this organization', 'NCCT_PROGRAMME_NOT_FOUND', 404);
+  const step = (await listNcctProgrammeSteps(programmeId)).find((item) => item.id === stepId);
+  if (!step) throw new AppError('Programme step not found', 'NCCT_PROGRAMME_STEP_NOT_FOUND', 404);
+
+  const updated = await moveNcctProgrammeStep(programmeId, stepId, data.direction);
+  await recordNcctAudit({
+    organizationId,
+    actorProfileId,
+    action: 'PROGRAMME_STEP_REORDERED',
+    entityType: 'programme_step',
+    entityId: stepId,
+    metadata: { programmeId, direction: data.direction, position: updated.position }
+  });
+  return updated;
 }
 
 export async function getNcctProgrammeSteps(organizationId: string, programmeId: string) {

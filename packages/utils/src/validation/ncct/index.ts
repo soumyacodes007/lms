@@ -57,6 +57,10 @@ export const ZAddNcctProgrammeStep = z.object({
   required: z.boolean().default(true)
 });
 
+export const ZReorderNcctProgrammeStep = z.object({
+  direction: z.enum(['UP', 'DOWN'])
+});
+
 export const ZCreateNcctBatch = z
   .object({
     programmeId: z.string().uuid(),
@@ -204,6 +208,7 @@ export type TCreateNcctTrainee = z.infer<typeof ZCreateNcctTrainee>;
 export type TUpdateNcctTrainee = z.infer<typeof ZUpdateNcctTrainee>;
 export type TCreateNcctProgramme = z.infer<typeof ZCreateNcctProgramme>;
 export type TAddNcctProgrammeStep = z.infer<typeof ZAddNcctProgrammeStep>;
+export type TReorderNcctProgrammeStep = z.infer<typeof ZReorderNcctProgrammeStep>;
 export type TCreateNcctBatch = z.infer<typeof ZCreateNcctBatch>;
 export type TCreateNcctNomination = z.infer<typeof ZCreateNcctNomination>;
 export type TDecideNcctNomination = z.infer<typeof ZDecideNcctNomination>;
