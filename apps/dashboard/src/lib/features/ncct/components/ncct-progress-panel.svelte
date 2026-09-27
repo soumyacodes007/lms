@@ -32,6 +32,8 @@
   let savingId = $state<string | null>(null);
   let scoreByStep = $state<Record<string, string>>({});
   let message = $state('');
+  let completedSteps = $derived(snapshot?.steps.filter((item) => item.status === 'COMPLETED').length ?? 0);
+  let totalSteps = $derived(snapshot?.steps.length ?? 0);
 
   $effect(() => {
     if (!enrollments.some((row) => row.enrollment.id === selectedId)) {
@@ -156,6 +158,10 @@
         <p class="ui:text-muted-foreground text-sm">Loading ordered steps…</p>
       {:else if snapshot}
         <div class="space-y-3">
+          <div class="flex flex-wrap gap-2">
+            <Badge variant="secondary">{completedSteps}/{totalSteps} steps completed</Badge>
+            {#if completedSteps === totalSteps && totalSteps > 0}<Badge>Programme step sequence complete</Badge>{/if}
+          </div>
           {#each snapshot.steps as item}
             <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
               <div>
