@@ -38,7 +38,8 @@ import {
   bookNcctResource,
   recordNcctSyncEvents,
   saveNcctTraineeLogistics,
-  submitNcctAssessment as submitNcctAssessmentQuery
+  submitNcctAssessment as submitNcctAssessmentQuery,
+  updateNcctJobApplication
 } from '@cio/db/queries/ncct';
 import type {
   TAddNcctProgrammeStep,
@@ -60,7 +61,8 @@ import type {
   TCreateNcctSyncDevice,
   TRecordNcctSyncEvents,
   TSaveNcctTraineeLogistics,
-  TUpdateNcctProgress
+  TUpdateNcctProgress,
+  TUpdateNcctJobApplication
 } from '@cio/utils/validation/ncct';
 import { AppError } from '@api/utils/errors';
 import { randomUUID } from 'node:crypto';
@@ -230,6 +232,20 @@ export async function submitJobApplication(organizationId: string, jobId: string
   if (!trainee) throw new AppError('Trainee does not belong to this organization', 'NCCT_TRAINEE_NOT_FOUND', 404);
 
   return applyToNcctJob({ ...data, jobId });
+}
+
+export async function updateJobApplication(
+  organizationId: string,
+  applicationId: string,
+  data: TUpdateNcctJobApplication
+) {
+  const application = (await listNcctJobApplications(organizationId)).find(
+    ({ application: item }) => item.id === applicationId
+  );
+  if (!application) {
+    throw new AppError('Job application does not belong to this organization', 'NCCT_APPLICATION_NOT_FOUND', 404);
+  }
+  return updateNcctJobApplication(applicationId, data.status);
 }
 
 async function getNcctCareerTrainee(organizationId: string, traineeId: string) {

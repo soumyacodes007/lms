@@ -74,6 +74,10 @@ export const ZApplyToNcctJob = z.object({
   coverNote: z.string().trim().max(2000).optional()
 });
 
+export const ZUpdateNcctJobApplication = z.object({
+  status: z.enum(['APPLIED', 'SHORTLISTED', 'SELECTED', 'REJECTED', 'WITHDRAWN'])
+});
+
 export const ZNcctCareerChat = z.object({
   message: z.string().trim().min(1).max(2000)
 });
@@ -180,6 +184,7 @@ export type TCreateNcctNomination = z.infer<typeof ZCreateNcctNomination>;
 export type TDecideNcctNomination = z.infer<typeof ZDecideNcctNomination>;
 export type TCreateNcctJob = z.infer<typeof ZCreateNcctJob>;
 export type TApplyToNcctJob = z.infer<typeof ZApplyToNcctJob>;
+export type TUpdateNcctJobApplication = z.infer<typeof ZUpdateNcctJobApplication>;
 export type TNcctCareerChat = z.infer<typeof ZNcctCareerChat>;
 export type TCreateNcctAssessment = z.infer<typeof ZCreateNcctAssessment>;
 export type TSubmitNcctAssessment = z.infer<typeof ZSubmitNcctAssessment>;

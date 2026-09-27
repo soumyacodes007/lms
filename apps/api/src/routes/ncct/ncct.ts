@@ -24,6 +24,7 @@ import {
   ZRecordNcctSyncEvents,
   ZSaveNcctTraineeLogistics,
   ZSearchNcctDirectory,
+  ZUpdateNcctJobApplication,
   ZUpdateNcctProgress
 } from '@cio/utils/validation/ncct';
 import { zValidator } from '@hono/zod-validator';
@@ -55,6 +56,7 @@ import {
   submitAssessment,
   submitJobApplication,
   submitNcctNomination,
+  updateJobApplication,
   updateEnrollmentProgress
 } from '@api/services/ncct/ncct';
 import {
@@ -75,6 +77,7 @@ const programmeParam = z.object({ programmeId: z.string().uuid() });
 const programmeProgressParam = z.object({ programmeId: z.string().uuid(), traineeId: z.string().uuid() });
 const nominationParam = z.object({ nominationId: z.string().uuid() });
 const jobParam = z.object({ jobId: z.string().uuid() });
+const applicationParam = z.object({ applicationId: z.string().uuid() });
 const assessmentParam = z.object({ assessmentId: z.string().uuid() });
 const syncDeviceParam = z.object({ deviceId: z.string().uuid() });
 const careerParam = z.object({ traineeId: z.string().uuid() });
@@ -516,6 +519,27 @@ export const ncctRouter = new Hono()
       return handleError(c, error, 'Failed to load job applications');
     }
   })
+  .post(
+    '/applications/:applicationId/status',
+    authMiddleware,
+    orgMemberMiddleware,
+    orgTeamMemberMiddleware,
+    zValidator('param', applicationParam),
+    zValidator('json', ZUpdateNcctJobApplication),
+    async (c) => {
+      try {
+        return c.json(
+          {
+            success: true,
+            data: await updateJobApplication(c.get('orgId')!, c.req.valid('param').applicationId, c.req.valid('json'))
+          },
+          200
+        );
+      } catch (error) {
+        return handleError(c, error, 'Failed to update job application');
+      }
+    }
+  )
   .post(
     '/jobs',
     authMiddleware,

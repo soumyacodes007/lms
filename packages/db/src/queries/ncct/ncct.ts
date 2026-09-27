@@ -380,6 +380,20 @@ export async function listNcctJobApplications(organizationId: string) {
     .orderBy(desc(schema.ncctJobApplication.createdAt));
 }
 
+export async function updateNcctJobApplication(
+  applicationId: string,
+  status: 'APPLIED' | 'SHORTLISTED' | 'SELECTED' | 'REJECTED' | 'WITHDRAWN',
+  client: DbOrTxClient = db
+) {
+  const [application] = await client
+    .update(schema.ncctJobApplication)
+    .set({ status, updatedAt: new Date().toISOString() })
+    .where(eq(schema.ncctJobApplication.id, applicationId))
+    .returning();
+  if (!application) throw new Error('Job application not found');
+  return application;
+}
+
 export async function listNcctCareerMessages(traineeId: string) {
   return db
     .select()
