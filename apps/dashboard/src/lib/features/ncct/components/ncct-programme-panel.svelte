@@ -349,6 +349,12 @@
             <div class="ui:bg-muted/40 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs">
               <Badge variant="outline">{step.position}</Badge>
               <span class="truncate">{courseTitle(step.courseId)}</span>
+              {#if step.prerequisiteStepId}
+                {@const prerequisite = steps.find((candidate) => candidate.id === step.prerequisiteStepId)}
+                <span class="ui:text-muted-foreground truncate"
+                  >after {prerequisite ? courseTitle(prerequisite.courseId) : 'previous step'}</span
+                >
+              {/if}
               {#if step.required}<span class="ui:text-muted-foreground ml-auto">Required</span>{/if}
               <Button
                 variant="ghost"
