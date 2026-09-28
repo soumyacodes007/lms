@@ -19,6 +19,7 @@ import { seedProfile } from '@db/utils/seed/profile';
 import { seedQuestionTypes } from '@db/utils/seed/questionType';
 import { seedQuestions } from '@db/utils/seed/question';
 import { seedReactCoursePeopleProgress } from '@db/utils/seed/reactCoursePeopleProgress';
+import { seedReactCourseNewsfeed } from '@db/utils/seed/reactCourseNewsfeed';
 import { seedRoles } from '@db/utils/seed/role';
 import { seedSubmissions } from '@db/utils/seed/submission';
 import { seedUsers } from '@db/utils/seed/users';
@@ -64,6 +65,7 @@ const orderedSeeds = [
   'compliance',
   'react-people-progress',
   'learner-lifecycle',
+  'react-newsfeed',
   'newsfeed-threads'
 ] as const;
 
@@ -103,7 +105,8 @@ const DEMO_ORGANIZATION_SEEDS: Record<DemoOrganizationSlug, DemoOrganizationSeed
       'exercises',
       'questions',
       'react-people-progress',
-      'learner-lifecycle'
+      'learner-lifecycle',
+      'react-newsfeed'
     ]
   },
   'coursera-test': {
@@ -210,6 +213,7 @@ Flags:
   --compliance               Seed compliance demo data (coursera-test org)
   --newsfeed-threads         Seed nested newsfeed comment threads (coursera-test org)
   --react-people-progress    Seed React course students with varied progress (udemy-test)
+  --react-newsfeed            Seed the React course admin welcome post (udemy-test)
   --help, -h                  Show this help message
 
 Examples:
@@ -377,6 +381,14 @@ const seedFunctions = {
       testOrgId: TEST_ORG_ID,
       reactGroupId: REACT_GROUP_ID,
       reactCourseId: REACT_COURSE_ID
+    });
+  },
+  'react-newsfeed': async () => {
+    console.log('📝 Seeding React course admin welcome post (udemy-test)...');
+    await seedReactCourseNewsfeed({
+      reactCourseId: REACT_COURSE_ID,
+      reactGroupId: REACT_GROUP_ID,
+      adminProfileId: ADMIN_USER_ID
     });
   },
   'newsfeed-threads': async () => {
